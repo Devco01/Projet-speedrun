@@ -35,11 +35,8 @@ Ce projet est construit avec une architecture moderne en full-stack TypeScript :
 - ✅ Liste complète des jeux avec système de filtrage avancé
 - ✅ Recherche par titre, genre, plateforme
 - ✅ Fiches détaillées pour chaque jeu
-- ✅ Catégories de speedrun configurables
 
 ### ⏱️ Gestion des speedruns
-- ✅ Soumission de nouveaux records avec validation
-- ✅ Système de vérification par modérateurs
 - ✅ Classements dynamiques par jeu et catégorie
 - ✅ Intégration vidéo (YouTube/Twitch)
 - ✅ Système de commentaires

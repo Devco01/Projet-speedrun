@@ -17,6 +17,52 @@ declare global {
 }
 
 /**
+ * Middleware d'authentification JWT
+ */
+export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: 'Token d\'accès requis'
+    });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default_secret') as any;
+    req.user = {
+      userId: decoded.userId,
+      email: decoded.email
+    };
+    next();
+  } catch (error) {
+    return res.status(403).json({
+      success: false,
+      message: 'Token invalide ou expiré'
+    });
+  }
+};
+
+/**
+ * Middleware pour vérifier si l'utilisateur est admin
+ * (À implémenter selon vos besoins - pour l'instant, tous les utilisateurs authentifiés sont admin)
+ */
+export const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
+  // Pour l'instant, on considère que tous les utilisateurs authentifiés sont admin
+  // Dans un vrai projet, vous vérifieriez le rôle de l'utilisateur en base
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentification requise'
+    });
+  }
+  
+  next();
+};
+
+/**
  * Middleware qui vérifie si l'utilisateur est authentifié
  */
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {

@@ -8,6 +8,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes';
 import gameRoutes from './routes/gameRoutes';
 import runRoutes from './routes/runRoutes';
+import eventRoutes from './routes/eventRoutes';
 
 // Configuration
 dotenv.config();
@@ -41,6 +42,7 @@ async function connectDB() {
 app.use('/api/auth', authRoutes);
 app.use('/api/games', gameRoutes);
 app.use('/api/runs', runRoutes);
+app.use('/api/events', eventRoutes);
 
 // Route de test
 app.get('/', (req, res) => {

@@ -153,3 +153,10 @@ prisma/migrations/
 # Logs
 logs
 *.log
+
+# TP DWWM - Documentation et scripts de développement
+DOCUMENTATION_TP_DWWM.md
+PROGRESSION_PROJET.md
+PRESENTATION_SOUTENANCE.md
+start-dev.ps1
+start-dev.sh
