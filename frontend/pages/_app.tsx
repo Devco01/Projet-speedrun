@@ -67,8 +67,7 @@ export default function App({ Component, pageProps }: AppProps) {
                 </div>
                 <h3 className="text-xl font-bold text-white">SpeedRun Platform</h3>
               </div>
-              <p className="text-slate-400 mb-6 max-w-lg">
-                La plateforme de référence pour les speedrunners. 
+              <p className="text-slate-400 mb-6 max-w-lg"> 
                 Suivez vos performances, participez aux événements et rejoignez la communauté !
               </p>
             </div>
@@ -96,7 +95,7 @@ export default function App({ Component, pageProps }: AppProps) {
               &copy; 2025 SpeedRun Platform - Projet TP DWWM 🎯
             </p>
             <p className="text-slate-500 text-sm mt-2 md:mt-0">
-              Backend fonctionnel avec données de test • Interface professionnelle
+              Backend fonctionnel avec données de test
             </p>
           </div>
         </div>
