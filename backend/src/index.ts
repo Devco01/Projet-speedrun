@@ -7,6 +7,10 @@ import authRoutes from './routes/authRoutes';
 import gameRoutes from './routes/gameRoutes';
 import runRoutes from './routes/runRoutes';
 import eventRoutes from './routes/eventRoutes';
+import userRoutes from './routes/userRoutes';
+import categoryRoutes from './routes/categoryRoutes';
+import leaderboardRoutes from './routes/leaderboardRoutes';
+import speedrunRoutes from './routes/speedrunRoutes';
 
 // Configuration
 dotenv.config();
@@ -30,6 +34,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/games', gameRoutes);
 app.use('/api/runs', runRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/leaderboards', leaderboardRoutes);
+app.use('/api/speedrun', speedrunRoutes);
 
 // Route de test
 app.get('/', (req, res) => {
@@ -37,7 +45,17 @@ app.get('/', (req, res) => {
     message: 'API SpeedRun Platform opérationnelle !',
     version: '1.0.0',
     status: 'running',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      auth: '/api/auth',
+      games: '/api/games',
+      runs: '/api/runs',
+      events: '/api/events',
+      users: '/api/users',
+      categories: '/api/categories',
+      leaderboards: '/api/leaderboards',
+      speedrun: '/api/speedrun'
+    }
   });
 });
 
@@ -46,7 +64,102 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
     uptime: process.uptime(),
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    memory: process.memoryUsage(),
+    apis: {
+      auth: 'operational',
+      games: 'operational',
+      runs: 'operational',
+      events: 'operational',
+      users: 'operational',
+      categories: 'operational',
+      leaderboards: 'operational',
+      speedrun: 'operational'
+    }
+  });
+});
+
+// Documentation API simple
+app.get('/api', (req, res) => {
+  res.json({
+    name: 'SpeedRun Platform API',
+    version: '1.0.0',
+    description: 'API complète pour plateforme de speedrunning',
+    endpoints: {
+      auth: {
+        base: '/api/auth',
+        routes: [
+          'POST /register - Inscription',
+          'POST /login - Connexion',
+          'GET /me - Profil utilisateur'
+        ]
+      },
+      games: {
+        base: '/api/games',
+        routes: [
+          'GET / - Liste des jeux',
+          'GET /:id - Détails d\'un jeu',
+          'GET /:id/categories - Catégories d\'un jeu',
+          'GET /:id/leaderboard - Classement d\'un jeu'
+        ]
+      },
+      runs: {
+        base: '/api/runs',
+        routes: [
+          'GET / - Liste des runs',
+          'GET /:id - Détails d\'un run',
+          'POST / - Créer un run',
+          'POST /:id/verify - Vérifier un run'
+        ]
+      },
+      events: {
+        base: '/api/events',
+        routes: [
+          'GET / - Liste des événements',
+          'GET /:id - Détails d\'un événement'
+        ]
+      },
+      users: {
+        base: '/api/users',
+        routes: [
+          'GET / - Liste des utilisateurs',
+          'GET /:id - Profil utilisateur',
+          'GET /:id/runs - Runs d\'un utilisateur',
+          'GET /:id/stats - Statistiques utilisateur'
+        ]
+      },
+      categories: {
+        base: '/api/categories',
+        routes: [
+          'GET / - Liste des catégories',
+          'GET /:id - Détails d\'une catégorie',
+          'GET /:id/leaderboard - Classement d\'une catégorie'
+        ]
+      },
+      leaderboards: {
+        base: '/api/leaderboards',
+        routes: [
+          'GET / - Classements globaux',
+          'GET /games/:gameId - Classements d\'un jeu',
+          'GET /categories/:categoryId - Classement d\'une catégorie',
+          'GET /recent - Runs récents',
+          'GET /top-runners - Top runners'
+        ]
+      },
+      speedrun: {
+        base: '/api/speedrun',
+        routes: [
+          'GET /test - Test connexion API speedrun.com',
+          'GET /games/popular - Jeux populaires depuis speedrun.com',
+          'GET /games/search - Recherche de jeux',
+          'GET /games/:gameId - Détails d\'un jeu speedrun.com',
+          'GET /games/:gameId/categories - Catégories d\'un jeu',
+          'GET /games/:gameId/runs/recent - Runs récents d\'un jeu',
+          'GET /leaderboards/:gameId/:categoryId - Leaderboard d\'une catégorie',
+          'GET /users/:userId/runs - Runs d\'un utilisateur speedrun.com'
+        ]
+      }
+    }
   });
 });
 
@@ -65,18 +178,33 @@ app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
     message: 'Route non trouvée',
-    path: req.originalUrl
+    path: req.originalUrl,
+    suggestion: 'Consultez /api pour voir les endpoints disponibles'
   });
 });
 
 // Start server
 app.listen(PORT, () => {
   console.log('🚀 ======================================');
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 SpeedRun Platform API Server`);
+  console.log(`🚀 Port: ${PORT}`);
   console.log(`🚀 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🚀 API URL: http://localhost:${PORT}`);
   console.log(`🚀 Health check: http://localhost:${PORT}/health`);
-  console.log('🚀 Using mock data for testing');
+  console.log(`🚀 Documentation: http://localhost:${PORT}/api`);
+  console.log('🚀 ======================================');
+  console.log('📊 Available APIs:');
+  console.log('   • Auth: /api/auth');
+  console.log('   • Games: /api/games');
+  console.log('   • Runs: /api/runs');
+  console.log('   • Events: /api/events');
+  console.log('   • Users: /api/users');
+  console.log('   • Categories: /api/categories');
+  console.log('   • Leaderboards: /api/leaderboards');
+  console.log('   • Speedrun: /api/speedrun');
+  console.log('🚀 ======================================');
+  console.log('💾 Using mock data for testing');
+  console.log('🎯 Ready for TP DWWM demonstration!');
   console.log('🚀 ======================================');
 });
 

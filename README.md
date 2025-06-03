@@ -203,7 +203,6 @@ speedrun-platform/
 - [ ] Chat en direct pendant les événements
 - [ ] API pour applications mobiles
 - [ ] Système de badges et achievements
-- [ ] Intégration avec les plateformes de streaming
 
 ## 👨‍💻 Développement
 
