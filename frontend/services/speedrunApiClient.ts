@@ -15,8 +15,6 @@ export interface SpeedrunGame {
   genres: string[];
   developers: string[];
   publishers: string[];
-  isOfficial: boolean;
-  gameType: 'official' | 'community';
   externalData: {
     speedruncom: {
       id: string;
@@ -134,15 +132,11 @@ class SpeedrunApiClient {
   /**
    * Récupère les jeux populaires
    */
-  async getPopularGames(limit = 30, offset = 0, officialOnly = false): Promise<SpeedrunGame[]> {
+  async getPopularGames(limit = 30, offset = 0): Promise<SpeedrunGame[]> {
     const params = new URLSearchParams({
       limit: limit.toString(),
       offset: offset.toString()
     });
-    
-    if (officialOnly) {
-      params.append('officialOnly', 'true');
-    }
     
     return this.request(`/games/popular?${params.toString()}`);
   }
@@ -157,33 +151,13 @@ class SpeedrunApiClient {
   /**
    * Recherche des jeux par nom
    */
-  async searchGames(query: string, limit = 30, officialOnly = false): Promise<SpeedrunGame[]> {
+  async searchGames(query: string, limit = 30): Promise<SpeedrunGame[]> {
     const params = new URLSearchParams({
       q: query,
       limit: limit.toString()
     });
     
-    if (officialOnly) {
-      params.append('officialOnly', 'true');
-    }
-    
     return this.request(`/games/search?${params.toString()}`);
-  }
-
-  /**
-   * Recherche exhaustive des jeux par nom (récupère TOUS les résultats)
-   */
-  async searchGamesExhaustive(query: string, max = 150, officialOnly = false): Promise<SpeedrunGame[]> {
-    const params = new URLSearchParams({
-      q: query,
-      max: max.toString()
-    });
-    
-    if (officialOnly) {
-      params.append('officialOnly', 'true');
-    }
-    
-    return this.request(`/games/search/exhaustive?${params.toString()}`);
   }
 
   /**

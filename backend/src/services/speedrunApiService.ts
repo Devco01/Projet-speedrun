@@ -231,7 +231,7 @@ export class SpeedrunApiService {
           params: {
             max: Math.min(limit * 2, 200),
             offset: offset,
-            orderby: 'runs',
+            orderby: 'similarity',
             direction: 'desc',
             embed: 'platforms,regions,genres'
           }
@@ -284,7 +284,7 @@ export class SpeedrunApiService {
             params: {
               name: gameName,
               max: 10,
-              orderby: 'runs',
+              orderby: 'similarity',
               direction: 'desc',
               embed: 'platforms,regions,genres'
             }
@@ -534,58 +534,40 @@ export class SpeedrunApiService {
         }
       }
 
-      // === STRATÉGIE CRITIQUE : RECHERCHE FORCÉE POUR JEUX ZELDA MANQUANTS ===
+      // === STRATÉGIE CRITIQUE : AJOUT DIRECT DES JEUX ZELDA POPULAIRES ===
       if (queryLower.includes('zelda')) {
-        console.log('🎯 Recherche forcée des jeux Zelda populaires manquants...');
+        console.log('🎯 Ajout direct des jeux Zelda populaires manquants...');
         
-        // Liste des jeux Zelda critiques qui doivent ABSOLUMENT être trouvés
-        const criticalZeldaGames = [
-          'The Legend of Zelda: The Wind Waker',
-          'The Legend of Zelda: The Wind Waker HD', 
-          'The Legend of Zelda: The Minish Cap',
-          'The Legend of Zelda: Ocarina of Time',
-          'The Legend of Zelda: Ocarina of Time 3D',
-          'The Legend of Zelda: Majora\'s Mask',
-          'The Legend of Zelda: Majora\'s Mask 3D',
-          'The Legend of Zelda: A Link to the Past',
-          'The Legend of Zelda: Link\'s Awakening',
-          'The Legend of Zelda: Twilight Princess',
-          'The Legend of Zelda: Twilight Princess HD',
-          'The Legend of Zelda: Breath of the Wild',
-          'The Legend of Zelda: Tears of the Kingdom'
-        ];
+        // Jeux Zelda populaires à chercher individuellement (approche simplifiée)
+        const popularZeldaQueries = ['Wind Waker', 'Minish Cap', 'Ocarina of Time', 'Majora Mask'];
         
-        for (const criticalGame of criticalZeldaGames) {
+        for (const zeldaQuery of popularZeldaQueries) {
           try {
-            console.log(`🔍 Recherche forcée: "${criticalGame}"`);
-            
-            // Recherche exacte du jeu
-            const exactResponse = await this.api.get('/games', {
+            console.log(`🔍 Recherche simple: "${zeldaQuery}"`);
+            const response = await this.api.get('/games', {
               params: {
-                name: criticalGame,
-                max: 2,
+                name: zeldaQuery,
+                max: 3,
                 embed: 'platforms,regions,genres'
               }
             });
             
-            const games = exactResponse.data.data;
-            if (games && games.length > 0) {
-              games.forEach((game: any) => {
+            if (response.data.data && response.data.data.length > 0) {
+              response.data.data.forEach((game: any) => {
                 const gameName = game.names.international.toLowerCase();
-                
-                // Vérifier que c'est bien le jeu exact (pas Category Extensions)
-                if (gameName === criticalGame.toLowerCase() && 
+                // Ajouter seulement les vrais jeux Zelda (pas les extensions)
+                if (gameName.includes('legend of zelda') && 
                     !gameName.includes('category extensions') &&
                     !gameName.includes('extension')) {
                   allGames.set(game.id, game);
-                  console.log(`🎯 FORCÉ : Ajouté "${game.names.international}" via recherche forcée`);
+                  console.log(`🎯 Ajouté Zelda populaire: "${game.names.international}"`);
                 }
               });
             }
             
             await new Promise(resolve => setTimeout(resolve, 100));
           } catch (error) {
-            console.log(`❌ Erreur recherche forcée "${criticalGame}":`, error);
+            console.log(`❌ Erreur recherche Zelda populaire "${zeldaQuery}":`, error);
           }
         }
       }
@@ -676,26 +658,32 @@ export class SpeedrunApiService {
         const aName = a.names.international.toLowerCase();
         const bName = b.names.international.toLowerCase();
 
-        // Priorité 1: Match exact du nom
+        // Priorité 1: Préférer les jeux principaux (non-extensions) AVANT TOUT
+        const aIsExtension = aName.includes('extension') || aName.includes('category extension') || (a as any).romhack;
+        const bIsExtension = bName.includes('extension') || bName.includes('category extension') || (b as any).romhack;
+        if (!aIsExtension && bIsExtension) return -1;
+        if (aIsExtension && !bIsExtension) return 1;
+
+        // Priorité 2: Match exact du nom
         if (aName === queryLower && bName !== queryLower) return -1;
         if (bName === queryLower && aName !== queryLower) return 1;
 
-        // Priorité 2: Commence par le terme recherché
+        // Priorité 3: Correspond exactement à des mots clés importants de la recherche
+        const queryWords = queryLower.split(' ');
+        const aMatchesKeywords = queryWords.filter(word => aName.includes(word)).length;
+        const bMatchesKeywords = queryWords.filter(word => bName.includes(word)).length;
+        if (aMatchesKeywords !== bMatchesKeywords) return bMatchesKeywords - aMatchesKeywords;
+
+        // Priorité 4: Commence par le terme recherché
         if (aName.startsWith(queryLower) && !bName.startsWith(queryLower)) return -1;
         if (bName.startsWith(queryLower) && !aName.startsWith(queryLower)) return 1;
 
-        // Priorité 3: Contient le terme recherché au début d'un mot
-        const aWordStart = aName.includes(' ' + queryLower) || aName.startsWith(queryLower);
-        const bWordStart = bName.includes(' ' + queryLower) || bName.startsWith(queryLower);
-        if (aWordStart && !bWordStart) return -1;
-        if (bWordStart && !aWordStart) return 1;
-
-        // Priorité 4: Trier par nombre de liens (indicateur de popularité)
+        // Priorité 5: Trier par nombre de liens (indicateur de popularité)
         const aLinks = a.links ? a.links.length : 0;
         const bLinks = b.links ? b.links.length : 0;
         if (bLinks !== aLinks) return bLinks - aLinks;
 
-        // Priorité 5: Tri alphabétique pour stabilité
+        // Priorité 6: Tri alphabétique pour stabilité
         return aName.localeCompare(bName);
       });
 
@@ -720,43 +708,107 @@ export class SpeedrunApiService {
     try {
       console.log(`🔍 Recherche de jeux pour: "${query}" (limite: ${limit})`);
       
-      // Pour l'instant, utiliser la recherche simple qui fonctionne
-      const response = await this.api.get('/games', {
-        params: {
-          name: query,
-          max: Math.min(limit * 2, 50), // Récupérer un peu plus pour avoir le choix
-          embed: 'platforms,regions,genres',
-          orderby: 'runs',
-          direction: 'desc'
-        }
-      });
-
-      const games = response.data.data || [];
-      console.log(`📊 ${games.length} jeux trouvés pour "${query}"`);
-
-      // Trier par pertinence
+      const allGames = new Map<string, SpeedrunGame>();
       const queryLower = query.toLowerCase();
-      games.sort((a: any, b: any) => {
+      
+      // Définir plusieurs variantes de recherche
+      const searchTerms = [query];
+      
+      // Ajouter des variantes spécifiques pour Zelda
+      if (queryLower.includes('zelda')) {
+        searchTerms.push('The Legend of Zelda', 'Legend of Zelda');
+        
+        // Variantes spécifiques pour Twilight Princess
+        if (queryLower.includes('twilight')) {
+          searchTerms.push('Twilight Princess', 'The Legend of Zelda: Twilight Princess');
+        }
+      }
+      
+      // Pour chaque terme de recherche
+      for (const searchTerm of searchTerms) {
+        console.log(`🔍 Test avec le terme: "${searchTerm}"`);
+        
+        try {
+          const response = await this.api.get('/games', {
+            params: {
+              name: searchTerm,
+              max: Math.min(50, limit * 3), // Plus de résultats pour avoir plus de choix
+              embed: 'platforms,regions,genres'
+              // Pas de orderby pour éviter les erreurs
+            }
+          });
+
+          const games = response.data.data || [];
+          console.log(`📊 ${games.length} jeux trouvés pour "${searchTerm}"`);
+
+          // Ajouter tous les jeux qui correspondent
+          games.forEach((game: any) => {
+            const gameName = game.names.international.toLowerCase();
+            const gameAbbr = game.abbreviation.toLowerCase();
+            
+            // Vérifier que le jeu correspond vraiment au terme recherché original
+            const matchesOriginal = gameName.includes(queryLower) || 
+                                   gameAbbr.includes(queryLower) ||
+                                   // Vérifier que tous les mots de la recherche sont présents (insensible à la casse)
+                                   queryLower.split(' ').every(word => 
+                                     gameName.toLowerCase().includes(word.toLowerCase()) ||
+                                     gameAbbr.toLowerCase().includes(word.toLowerCase())
+                                   );
+            
+            if (matchesOriginal) {
+              allGames.set(game.id, game);
+              console.log(`✅ Ajouté: "${game.names.international}"`);
+            }
+          });
+          
+          // Petit délai pour éviter le rate limiting
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+        } catch (error) {
+          console.error(`❌ Erreur pour le terme "${searchTerm}":`, error);
+          continue;
+        }
+      }
+
+      // Convertir en array et trier par pertinence
+      const games = Array.from(allGames.values());
+      
+      // Trier par pertinence 
+      games.sort((a, b) => {
         const aName = a.names.international.toLowerCase();
         const bName = b.names.international.toLowerCase();
 
-        // Priorité 1: Match exact du nom
+        // Priorité 1: Préférer les jeux principaux (non-extensions) AVANT TOUT
+        const aIsExtension = aName.includes('extension') || aName.includes('category extension') || (a as any).romhack;
+        const bIsExtension = bName.includes('extension') || bName.includes('category extension') || (b as any).romhack;
+        if (!aIsExtension && bIsExtension) return -1;
+        if (aIsExtension && !bIsExtension) return 1;
+
+        // Priorité 2: Match exact du nom
         if (aName === queryLower && bName !== queryLower) return -1;
         if (bName === queryLower && aName !== queryLower) return 1;
 
-        // Priorité 2: Commence par le terme recherché
+        // Priorité 3: Correspond exactement à des mots clés importants de la recherche
+        const queryWords = queryLower.split(' ');
+        const aMatchesKeywords = queryWords.filter(word => aName.includes(word)).length;
+        const bMatchesKeywords = queryWords.filter(word => bName.includes(word)).length;
+        if (aMatchesKeywords !== bMatchesKeywords) return bMatchesKeywords - aMatchesKeywords;
+
+        // Priorité 4: Commence par le terme recherché
         if (aName.startsWith(queryLower) && !bName.startsWith(queryLower)) return -1;
         if (bName.startsWith(queryLower) && !aName.startsWith(queryLower)) return 1;
 
-        // Priorité 3: Contient le terme recherché
-        if (aName.includes(queryLower) && !bName.includes(queryLower)) return -1;
-        if (bName.includes(queryLower) && !aName.includes(queryLower)) return 1;
+        // Priorité 5: Trier par nombre de liens (indicateur de popularité)
+        const aLinks = a.links ? a.links.length : 0;
+        const bLinks = b.links ? b.links.length : 0;
+        if (bLinks !== aLinks) return bLinks - aLinks;
 
-        return 0;
+        // Priorité 6: Tri alphabétique pour stabilité
+        return aName.localeCompare(bName);
       });
 
       const finalGames = games.slice(0, limit);
-      console.log(`✅ Retour de ${finalGames.length} jeux triés`);
+      console.log(`✅ Retour de ${finalGames.length} jeux triés par pertinence`);
       return finalGames;
 
     } catch (error) {
@@ -991,7 +1043,7 @@ export class SpeedrunApiService {
                 max: 200,
                 offset: offset,
                 embed: 'platforms,regions,genres',
-                orderby: 'runs',
+                orderby: 'similarity',
                 direction: 'desc'
               }
             });
@@ -1080,10 +1132,48 @@ export class SpeedrunApiService {
   }
 
   /**
-   * Transforme les données speedrun.com vers notre format interne
+   * Transforme les données de jeu speedrun.com vers notre format
    */
   transformGameData(speedrunGame: SpeedrunGame) {
     const isOfficial = this.isOfficialGame(speedrunGame);
+    
+    // Assurer que platforms est toujours un tableau valide
+    let platforms: string[] = [];
+    
+    // Vérifier la structure platforms.data[] de speedrun.com
+    const platformsObj = speedrunGame.platforms as any;
+    if (platformsObj && typeof platformsObj === 'object') {
+      // Structure speedrun.com avec embed: platforms.data[]
+      if (platformsObj.data && Array.isArray(platformsObj.data)) {
+        platforms = platformsObj.data.map((platform: any) => {
+          return platform.name || platform.title || platform.id || 'Plateforme inconnue';
+        }).filter((p: any) => p && p !== 'Plateforme inconnue');
+      }
+      // Fallback: platforms est directement un objet avec un nom
+      else if (platformsObj.name) {
+        platforms = [platformsObj.name];
+      }
+    }
+    // Fallback: si platforms est un tableau direct (ancienne structure)
+    else if (Array.isArray(speedrunGame.platforms)) {
+      const platformsArray = speedrunGame.platforms as any[];
+      platforms = platformsArray.map((platform: any) => {
+        // Si c'est un objet avec un nom, extraire le nom
+        if (typeof platform === 'object' && platform !== null) {
+          return platform.name || platform.title || platform.id || 'Plateforme inconnue';
+        }
+        // Si c'est déjà une string, la garder
+        if (typeof platform === 'string') {
+          return platform;
+        }
+        // Fallback pour autres types
+        return String(platform);
+      }).filter((p: any) => p && p !== 'Plateforme inconnue');
+    }
+    // Dernier fallback: string directe
+    else if (typeof speedrunGame.platforms === 'string') {
+      platforms = [speedrunGame.platforms];
+    }
     
     return {
       id: speedrunGame.id,
@@ -1097,10 +1187,10 @@ export class SpeedrunApiService {
                   speedrunGame.assets['cover-small']?.uri,
       logoImage: speedrunGame.assets.logo?.uri,
       backgroundImage: speedrunGame.assets.background?.uri,
-      platforms: speedrunGame.platforms || [],
-      genres: speedrunGame.genres || [],
-      developers: speedrunGame.developers || [],
-      publishers: speedrunGame.publishers || [],
+      platforms: platforms,
+      genres: Array.isArray(speedrunGame.genres) ? speedrunGame.genres : [],
+      developers: Array.isArray(speedrunGame.developers) ? speedrunGame.developers : [],
+      publishers: Array.isArray(speedrunGame.publishers) ? speedrunGame.publishers : [],
       isOfficial: isOfficial, // Nouveau champ pour indiquer si le jeu est officiel
       gameType: isOfficial ? 'official' : 'community', // Type lisible
       externalData: {
@@ -1246,9 +1336,9 @@ export class SpeedrunApiService {
         
         // Faire des recherches avec différents paramètres de tri
         const searchConfigs = [
-          { orderby: 'runs', direction: 'desc' },          // Plus populaires
+          { orderby: 'similarity', direction: 'desc' },          // Plus populaires
           { orderby: 'created', direction: 'desc' },       // Plus récents
-          { orderby: 'name.international', direction: 'asc' } // Alphabétique
+          { orderby: 'name.int', direction: 'asc' } // Alphabétique
         ];
         
         for (const config of searchConfigs) {
@@ -1299,28 +1389,33 @@ export class SpeedrunApiService {
         const aName = a.names.international.toLowerCase();
         const bName = b.names.international.toLowerCase();
 
-        // Priorité 1: Match exact du nom
+        // Priorité 1: Préférer les jeux principaux (non-extensions) AVANT TOUT
+        const aIsExtension = aName.includes('extension') || aName.includes('category extension') || (a as any).romhack;
+        const bIsExtension = bName.includes('extension') || bName.includes('category extension') || (b as any).romhack;
+        if (!aIsExtension && bIsExtension) return -1;
+        if (aIsExtension && !bIsExtension) return 1;
+
+        // Priorité 2: Match exact du nom
         if (aName === queryLower && bName !== queryLower) return -1;
         if (bName === queryLower && aName !== queryLower) return 1;
 
-        // Priorité 2: Commence par le terme recherché
+        // Priorité 3: Correspond exactement à des mots clés importants de la recherche
+        const queryWords = queryLower.split(' ');
+        const aMatchesKeywords = queryWords.filter(word => aName.includes(word)).length;
+        const bMatchesKeywords = queryWords.filter(word => bName.includes(word)).length;
+        if (aMatchesKeywords !== bMatchesKeywords) return bMatchesKeywords - aMatchesKeywords;
+
+        // Priorité 4: Commence par le terme recherché
         if (aName.startsWith(queryLower) && !bName.startsWith(queryLower)) return -1;
         if (bName.startsWith(queryLower) && !aName.startsWith(queryLower)) return 1;
 
-        // Priorité 3: Contient le terme au début d'un mot
-        const aWordStart = aName.includes(' ' + queryLower) || aName.startsWith(queryLower);
-        const bWordStart = bName.includes(' ' + queryLower) || bName.startsWith(queryLower);
-        if (aWordStart && !bWordStart) return -1;
-        if (bWordStart && !aWordStart) return 1;
-
-        // Priorité 4: Contient le terme recherché
-        if (aName.includes(queryLower) && !bName.includes(queryLower)) return -1;
-        if (bName.includes(queryLower) && !aName.includes(queryLower)) return 1;
-
-        // Priorité 5: Popularité (nombre de liens)
+        // Priorité 5: Trier par nombre de liens (indicateur de popularité)
         const aLinks = a.links ? a.links.length : 0;
         const bLinks = b.links ? b.links.length : 0;
-        return bLinks - aLinks;
+        if (bLinks !== aLinks) return bLinks - aLinks;
+
+        // Priorité 6: Tri alphabétique pour stabilité
+        return aName.localeCompare(bName);
       });
       
       const result = finalGames.slice(0, max);
@@ -1374,7 +1469,7 @@ export class SpeedrunApiService {
         params: {
           name: 'Mario',
           max: 10,
-          orderby: 'runs',
+          orderby: 'similarity',
           direction: 'desc'
         }
       });
@@ -1441,404 +1536,27 @@ export class SpeedrunApiService {
 
   /**
    * Détermine si un jeu est officiel ou non-officiel (ROM hack, fan game, etc.)
-   * Approche stricte : Par défaut non-officiel sauf preuves solides du contraire
+   * Simplifié : tous les jeux sont considérés comme officiels
    */
   isOfficialGame(game: SpeedrunGame): boolean {
-    const gameName = game.names.international.toLowerCase();
-    const gameAbbr = game.abbreviation.toLowerCase();
-    
-    // === ÉTAPE 1: VÉRIFICATION DES HACKS ÉVIDENTS EN PREMIER (priorité absolue) ===
-    
-    // Patterns très spécifiques pour les hacks évidents qui ont priorité sur tout
-    const obviousHackPatterns = [
-      // PATTERN CRITIQUE : Zelda II: Ocarina of Time est un ROM hack évident
-      /zelda ii.*ocarina/i,            // "Zelda II: Ocarina of Time" = ROM hack évident
-      /zelda 2.*ocarina/i,             // "Zelda 2: Ocarina" = ROM hack  
-      /ocarina.*beta quest/i,          // "Ocarina of Time Beta Quest" = ROM hack
-      /shadow's fall/i,                // "The Shadow's Fall" = ROM hack vu dans interface
-      
-      /\bhack\b/i,                    // Mot "hack" isolé
-      /\brom hack\b/i,                // ROM hack explicite
-      /\bkaizo\b/i,                   // Kaizo hacks
-      /\brandomizer?\b/i,             // Randomizers
-      /\[(hack|mod|fan|translation|patch)\]/i,  // Tags entre crochets
-      /\(hack|mod|fan|custom|patch\)/i,         // Tags entre parenthèses
-      /category extensions/i,         // Extensions de catégories
-      /\bco-op.*pc\b/i,              // Co-Op PC (généralement des mods)
-      
-      // Patterns pour ROM hacks qui mélangent des noms de jeux
-      /sm64.*ocarina|ocarina.*sm64/i,                       // SM64 + Zelda = hack
-      /ocarina.*minecraft|minecraft.*ocarina/i,             // Zelda dans Minecraft = mod
-      /minecraft.*zelda|zelda.*minecraft/i,                 // Minecraft + Zelda = crossover mod
-      /mario.*zelda|zelda.*mario/i,                         // Mario + Zelda = crossover
-      /sonic.*mario|mario.*sonic/i,                         // Sonic + Mario = crossover
-      
-      // Patterns pour sous-titres suspects très spécifiques (tous les ROM hacks détectés)
-      /hero of rhyme/i,               // Hero of Rhyme = hack connu
-      /specters of/i,                 // Specters = hack connu
-      /link no bouken/i,              // Version japonaise non-officielle
-      /chaos edition/i,               // Chaos editions = hacks
-      /ship of harkinian/i,           // Ship of Harkinian = port PC non-officiel
-      /\d+ hours past/i,              // "X Hours Past" = hack
-      /backyard/i,                    // "Link's Backyard" = hack
-      /allhallows eve/i,              // Allhallows Eve = hack
-      /bruce campbell/i,              // Bruce Campbell = hack
-      /eternal rain/i,                // Eternal Rain = hack
-      /gerudo exile/i,                // Gerudo Exile = hack
-      /goddess of wisdom/i,           // Goddess of Wisdom = hack
-      /horn of balance/i,             // Horn of Balance = hack
-      /master of time/i,              // Master of Time = hack
-      /vs ganon/i,                    // "vs Ganon" = hack
-      /parallel worlds/i,             // Parallel Worlds = hack connu
-      /beta quest/i,                  // Beta Quest = ROM hack
-      
-      // Patterns additionnels pour ROM hacks Zelda manqués
-      /ancient stone tablets/i,       // Ancient Stone Tablets = hack
-      /missing link/i,                // Missing Link = hack
-      /chronicles of/i,               // Chronicles of = hack général
-      /tales of/i,                    // Tales of = hack général
-      /return of/i,                   // Return of = hack
-      /revenge of/i,                  // Revenge of = hack
-      /curse of/i,                    // Curse of = hack
-      /legend of link/i,              // Legend of Link = hack
-      /link adventure/i,              // Link Adventure = hack
-      /ganon.*quest/i,                // Ganon Quest = hack
-      /triforce.*quest/i,             // Triforce Quest = hack
-      /hyrule.*conquest/i,            // Hyrule Conquest = hack
-      /zelda.*classic/i,              // Zelda Classic = éditeur
-      /zelda.*maker/i,                // Zelda Maker = éditeur
-      /custom.*quest/i,               // Custom Quest = hack
-      
-      // NOUVEAUX PATTERNS pour les ROM hacks vus dans l'interface
-      /resurrection of ganon/i,       // "Resurrection of Ganon" = ROM hack
-      /mini quest/i,                  // "Mini Quest" = ROM hack
-      /hover to ganon/i,              // "Hover to Ganon" = ROM hack
-      /master quest/i,                // "Master Quest" (non-Nintendo) = ROM hack
-      /battle quest/i,                // "Battle Quest" = ROM hack
-      /crypt of the/i,                // "Crypt of the..." = crossover/indie
-      /cadence of hyrule/i,           // Cadence of Hyrule = crossover indé
-      /nintendo land.*zelda/i,        // Nintendo Land Zelda = mini-jeu
-      /2d zelda games/i,              // Collections non-officielles
-      /3d zelda games/i,              // Collections non-officielles
-      
-      // Patterns généraux pour détecter plus de ROM hacks
-      /resurrection of/i,             // "Resurrection of" = hack pattern
-      /revival of/i,                  // "Revival of" = hack pattern
-      /awakening of/i,                // "Awakening of" = hack pattern
-      /rebirth of/i,                  // "Rebirth of" = hack pattern
-      /destiny of/i,                  // "Destiny of" = hack pattern
-      /legend of.*[^(zelda)]/i,       // "Legend of X" (sauf Zelda) = suspect
-      /quest of/i,                    // "Quest of" = hack pattern
-      /adventure of.*[^(link)]/i,     // "Adventure of X" (sauf Link) = suspect
-    ];
-    
-    // Si c'est un hack évident, retourner false immédiatement (PRIORITÉ ABSOLUE)
-    const isObviousHack = obviousHackPatterns.some(pattern => 
-      pattern.test(gameName) || pattern.test(gameAbbr)
-    );
-    
-    if (isObviousHack) {
-      return false; // Hack évident détecté - priorité absolue
-    }
-    
-    // === ÉTAPE 2: VÉRIFICATION DES TITRES OFFICIELS EXACTS (priorité secondaire) ===
-    
-    // Franchises officielles connues (noms exacts) - VÉRIFICATION PRIORITAIRE
-    const officialGameNames = [
-      // Mario (officiels uniquement)
-      'super mario bros.', 'super mario bros. 2', 'super mario bros. 3',
-      'super mario world', 'super mario 64', 'super mario sunshine',
-      'super mario galaxy', 'super mario galaxy 2', 'super mario 3d land',
-      'super mario 3d world', 'super mario odyssey', 'new super mario bros.',
-      'mario kart', 'mario kart 64', 'mario kart: super circuit', 'mario kart: double dash!!',
-      'mario party', 'mario tennis', 'mario golf', 'paper mario',
-      'mario & luigi', 'luigi\'s mansion',
-      
-      // Zelda (LISTE EXHAUSTIVE des vrais jeux Nintendo)
-      'the legend of zelda', 'zelda ii: the adventure of link', 
-      'a link to the past', 'link\'s awakening', 'ocarina of time',
-      'majora\'s mask', 'oracle of', 'wind waker', 'the wind waker', 'wind waker hd', 'the wind waker hd',
-      'four swords', 'four swords adventures', 'minish cap', 'the minish cap',
-      'twilight princess', 'twilight princess hd', 'phantom hourglass', 'spirit tracks',
-      'skyward sword', 'skyward sword hd', 'a link between worlds', 'tri force heroes',
-      'breath of the wild', 'tears of the kingdom',
-      
-      // Noms complets Zelda pour correspondance exacte
-      'the legend of zelda: a link to the past', 'the legend of zelda: link\'s awakening',
-      'the legend of zelda: ocarina of time', 'the legend of zelda: majora\'s mask',
-      'the legend of zelda: oracle of ages', 'the legend of zelda: oracle of seasons',
-      'the legend of zelda: the wind waker', 'the legend of zelda: the wind waker hd',
-      'the legend of zelda: four swords', 'the legend of zelda: four swords adventures',
-      'the legend of zelda: the minish cap', 'the legend of zelda: twilight princess',
-      'the legend of zelda: twilight princess hd', 'the legend of zelda: phantom hourglass',
-      'the legend of zelda: spirit tracks', 'the legend of zelda: skyward sword',
-      'the legend of zelda: skyward sword hd', 'the legend of zelda: a link between worlds',
-      'the legend of zelda: tri force heroes', 'the legend of zelda: breath of the wild',
-      'the legend of zelda: tears of the kingdom', 'the legend of zelda: link\'s awakening (2019)',
-      
-      // Autres franchises majeures
-      'metroid', 'castlevania', 'mega man', 'sonic the hedgehog',
-      'final fantasy', 'dragon quest', 'street fighter',
-      'resident evil', 'metal gear'
-    ];
-    
-    // Vérifier si c'est un titre officiel exact (PRIORITÉ ABSOLUE)
-    const gameNameFormatted = gameName.replace(/[:\-\s]+/g, ' ').trim();
-    const isOfficialTitle = officialGameNames.some(officialName => {
-      const officialNameFormatted = officialName.replace(/[:\-\s]+/g, ' ').trim();
-      
-      // Match exact ou très proche
-      return gameNameFormatted === officialNameFormatted || 
-             (gameNameFormatted.includes(officialNameFormatted) && 
-              Math.abs(gameNameFormatted.length - officialNameFormatted.length) <= 10) ||
-             (officialNameFormatted.includes(gameNameFormatted) && 
-              Math.abs(gameNameFormatted.length - officialNameFormatted.length) <= 10);
-    });
-    
-    // Si c'est un titre officiel, vérifier que ce n'est PAS une extension de catégorie
-    if (isOfficialTitle) {
-      // Exceptions : Category Extensions ne sont pas des jeux officiels
-      if (gameName.includes('category extensions') || gameName.includes('extension')) {
-        return false; // Category Extensions = non-officiel
-      }
-      return true; // Titre officiel confirmé
-    }
-    
-    // === ÉTAPE 3: DÉTECTION DES DÉVELOPPEURS/ÉDITEURS OFFICIELS ===
-    
-    // Développeurs/éditeurs officiels connus et vérifiés
-    const officialDevelopers = [
-      // Nintendo
-      'nintendo', 'nintendo ead', 'nintendo epd', 'retro studios', 'monolith soft',
-      'intelligent systems', 'hal laboratory', 'game freak', 'creatures inc',
-      
-      // Sony
-      'sony', 'sony interactive entertainment', 'sony computer entertainment',
-      'naughty dog', 'insomniac games', 'sucker punch', 'santa monica studio',
-      
-      // Microsoft 
-      'microsoft', 'microsoft studios', 'xbox game studios', '343 industries',
-      'rare', 'turn 10 studios', 'the coalition',
-      
-      // Grandes compagnies
-      'sega', 'capcom', 'square enix', 'square', 'enix', 'konami', 'bandai namco',
-      'ubisoft', 'activision', 'activision blizzard', 'electronic arts', 'ea games',
-      'valve', 'rockstar games', 'rockstar north', 'bethesda', 'id software',
-      'epic games', 'blizzard entertainment', 'cd projekt red',
-      
-      // Studios reconnus
-      'platinum games', 'fromsoft', 'from software', 'team cherry', 
-      'supergiant games', 'team17', 'devolver digital', 'arc system works',
-      'atlus', 'koei tecmo', 'level-5', 'falcom', 'compile heart'
-    ];
-    
-    // Vérifier les développeurs/éditeurs
-    const developers = Array.isArray(game.developers) ? game.developers.map(dev => dev.toLowerCase()) : [];
-    const publishers = Array.isArray(game.publishers) ? game.publishers.map(pub => pub.toLowerCase()) : [];
-    
-    const hasOfficialDev = developers.some(dev => 
-      officialDevelopers.some(official => 
-        dev.includes(official) || official.includes(dev)
-      )
-    );
-    
-    const hasOfficialPub = publishers.some(pub => 
-      officialDevelopers.some(official => 
-        pub.includes(official) || official.includes(pub)
-      )
-    );
-    
-    if (hasOfficialDev || hasOfficialPub) {
-      return true; // Développeur/éditeur officiel confirmé
-    }
-    
-    // === ÉTAPE 4: DÉTECTION PAR TITRE DE JEU CONNU ===
-    
-    // Jeux populaires connus pour être officiels (même sans métadonnées dev/publisher)
-    const knownOfficialGames = [
-      // JRPG populaires
-      /bravely default/i, /final fantasy/i, /dragon quest/i, /chrono/i,
-      /tales of/i, /persona/i, /shin megami tensei/i, /nier/i, /xenoblade/i,
-      
-      // Jeux d'action/aventure
-      /assassin'?s creed/i, /grand theft auto/i, /red dead/i, /tomb raider/i,
-      /horizon/i, /god of war/i, /spider-man/i, /batman/i, /mortal kombat/i,
-      
-      // FPS populaires  
-      /call of duty/i, /battlefield/i, /halo/i, /doom/i, /quake/i, /half-life/i,
-      /counter-strike/i, /valorant/i, /overwatch/i, /apex legends/i,
-      
-      // Jeux de plateforme classiques
-      /crash bandicoot/i, /spyro/i, /rayman/i, /donkey kong/i, /kirby/i,
-      /metroid/i, /castlevania/i, /mega man/i, /sonic/i,
-      
-      // Jeux de course
-      /gran turismo/i, /forza/i, /need for speed/i, /burnout/i,
-      
-      // Jeux de stratégie
-      /civilization/i, /age of empires/i, /starcraft/i, /warcraft/i,
-      
-      // Jeux indépendants reconnus
-      /hollow knight/i, /celeste/i, /ori and/i, /cuphead/i, /undertale/i,
-      /stardew valley/i, /terraria/i, /minecraft/i, /among us/i,
-      
-      // Séries Nintendo sans "Mario" ou "Zelda" 
-      /animal crossing/i, /fire emblem/i, /star fox/i, /f-zero/i,
-      /pikmin/i, /splatoon/i, /arms/i, /xenoblade/i,
-      
-      // Autres franchises majeures
-      /metal gear/i, /silent hill/i, /resident evil/i, /devil may cry/i,
-      /street fighter/i, /tekken/i, /king of fighters/i, /guilty gear/i,
-      /dark souls/i, /bloodborne/i, /sekiro/i, /elden ring/i,
-    ];
-    
-    // Vérifier si le titre correspond à un jeu connu officiel
-    const isKnownOfficialGame = knownOfficialGames.some(pattern => 
-      pattern.test(gameName) || pattern.test(gameAbbr)
-    );
-    
-    if (isKnownOfficialGame) {
-      return true; // Jeu reconnu comme officiel par son titre
-    }
-    
-    // === ÉTAPE 5: DÉTECTION SECONDAIRE DE PATTERNS NON-OFFICIELS ===
-    
-    // Mots-clés qui indiquent clairement un jeu non-officiel (patterns moins stricts)
-    const nonOfficialKeywords = [
-      // ROM Hacks & Mods
-      'mod', 'modification', 'modded', 'hacked', 
-      'modified', 'edited', 'alteration', 'patch', 'translation', 'homebrew',
-      
-      // Fan-made
-      'fan', 'fan made', 'fan-made', 'unofficial', 'community', 'amateur',
-      'custom', 'indie hack', 'fan game', 'fangame',
-      
-      // Types spéciaux
-      'difficulty hack', 'practice', 'trainer', 'demo hack', 'beta hack', 'prototype hack',
-      
-      // Extensions & Variations
-      'extended', 'expansion', 'continuation', 
-      'sequel hack', 'prequel hack', 'spin-off hack', 'remake hack',
-      'remaster hack', 'improvement', 'enhanced', 'plus hack', 'deluxe hack',
-      
-      // Mots suspects dans les titres
-      'untold', 'around the world', 'colorful lands', 'parallel',
-      'adventure hack', 'quest hack', 'saga hack',
-      'chronicles hack', 'tales hack', 'legends hack', 'mystery hack',
-      'secret hack', 'hidden hack', 'dark hack', 'shadow hack',
-      'lost hack', 'forgotten hack', 'new adventure', 'super new',
-      
-      // Sous-titres suspects spécifiques à Zelda
-      'dawn & dusk', 'feng yin dao',
-      'dungeons of infinity', 'wand of gamelon',
-      
-      // Indicateurs techniques
-      'by ', 'hack by', 'created by', 'made by', 'version', 'v1.', 'v2.',
-      'v3.', 'beta', 'alpha', 'wip', 'work in progress'
-    ];
-    
-    // Patterns regex pour détecter les non-officiels (patterns moins stricts)
-    const nonOfficialPatterns = [
-      /\bmod\b/i,                     // Mot "mod" isolé  
-      /\bfan\b/i,                     // Mot "fan" isolé
-      /\bv\d+\.\d+\b/i,              // Numéros de version (v1.0, v2.3, etc.)
-      /\b(version|ver\.?) \d+/i,      // Version explicite
-      /^[A-Z]{2,6}:/,                 // Abréviations au début (SMW:, SMB3:, etc.)
-      /\b(by|created by|made by) [a-z]/i,  // Créé par quelqu'un
-      /\b(beta|alpha|demo|wip)\b/i,   // Versions de développement
-      /\d+% hack/i,                   // Pourcentage hacks
-      /\bmini\b.*\bgame/i,            // Mini games
-      /\beditor\b/i,                  // Éditeurs de niveaux
-      /\bcombat\b/i,                  // Jeux de combat non-officiels
-      /\bforever\b/i,                 // Forever hacks
-      /\bheroes\b.*\d+/i,             // Heroes + numéro
-      
-      // Patterns spécifiques pour faux jeux de franchise
-      /mario.*\b(pc|fusion|z|x|ultimate|extreme|advanced|evolution)\b/i,  // Mario suspects
-      /zelda.*\b(pc|fusion|z|x|ultimate|extreme|advanced|evolution)\b/i,  // Zelda suspects
-      /sonic.*\b(pc|fusion|z|x|ultimate|extreme|advanced|evolution)\b/i,  // Sonic suspects
-      /\b(mario|zelda|sonic).*\b[0-9]{4,}\b/i,     // Franchise + année (souvent fan-made)
-      /\b(mario|zelda|sonic).*\b(remix|mix|mashup|collection)\b/i,  // Mélanges
-      
-      // Patterns pour jeux officiels avec suffixes suspects
-      /super mario 64\s+(extra|land|madness|plus|special|deluxe)/i,  // SM64 avec suffixes
-      /mario kart\s+(fusion|ultimate|deluxe|special|plus)/i,         // Mario Kart avec suffixes  
-      /zelda.*\b(extra|plus|special|deluxe|ultimate|extended)/i,     // Zelda avec suffixes
-      
-      // Noms trop courts ou génériques pour être officiels
-      /^mario$/i,                     // Juste "Mario" 
-      /^zelda$/i,                     // Juste "Zelda"
-      /^sonic$/i,                     // Juste "Sonic"
-      
-      // Titres avec des suffixes suspects
-      /\b(project|remake|reborn|origins|chronicles|saga|adventure|quest|story)\b/i,
-    ];
-    
-    // Vérifier les mots-clés non-officiels
-    const hasNonOfficialKeywords = nonOfficialKeywords.some(keyword => 
-      gameName.includes(keyword) || gameAbbr.includes(keyword)
-    );
-    
-    // Vérifier les patterns non-officiels
-    const hasNonOfficialPattern = nonOfficialPatterns.some(pattern => 
-      pattern.test(gameName) || pattern.test(gameAbbr)
-    );
-    
-    // === ÉTAPE 6: DÉCISION FINALE AVEC HEURISTIQUES ===
-    
-    // Si détecté comme non-officiel par les patterns, retourner false
-    if (hasNonOfficialKeywords || hasNonOfficialPattern) {
-      return false;
-    }
-    
-    // Heuristiques pour les jeux qui semblent légitimes
-    // 1. Jeux avec des noms "propres" (pas de caractères bizarres, longueur raisonnable)
-    const hasReasonableName = gameName.length >= 3 && gameName.length <= 80 && 
-                             !/[^\w\s\-':&!.,()]/i.test(gameName);
-    
-    // 2. Jeux qui ne ressemblent pas à des tests ou démos                         
-    const notTestGame = !gameName.includes('test') && 
-                       !gameName.includes('demo') && 
-                       !gameName.includes('prototype') &&
-                       !gameName.includes('example');
-    
-    // 3. Jeux avec une abréviation raisonnable
-    const hasReasonableAbbr = gameAbbr.length >= 2 && gameAbbr.length <= 15;
-    
-    // Si le jeu semble légitime selon ces critères, le considérer comme potentiellement officiel
-    if (hasReasonableName && notTestGame && hasReasonableAbbr) {
-      return true; // Jeu qui semble légitime
-    }
-    
-    // Sinon, rester prudent et considérer comme non-officiel
-    return false;
+    // Tous les jeux sont maintenant considérés comme officiels
+    // pour simplifier l'interface et éviter la complexité de détection
+    return true;
   }
 
   /**
-   * Filtre et trie les jeux par statut officiel/non-officiel
+   * Filtre et trie les jeux (simplifié : plus de filtrage officiel/non-officiel)
    */
   filterAndSortGamesByOfficial(games: SpeedrunGame[], officialOnly: boolean = false): SpeedrunGame[] {
-    let filteredGames = games;
-    
-    if (officialOnly) {
-      filteredGames = games.filter(game => this.isOfficialGame(game));
-    }
-    
-    // Trier avec les jeux officiels en premier
-    return filteredGames.sort((a, b) => {
-      const aIsOfficial = this.isOfficialGame(a);
-      const bIsOfficial = this.isOfficialGame(b);
-      
-      // Jeux officiels en premier
-      if (aIsOfficial && !bIsOfficial) return -1;
-      if (!aIsOfficial && bIsOfficial) return 1;
-      
-      // Ensuite trier par popularité (nombre de liens)
+    // Plus de filtrage officiel/non-officiel - retourner tous les jeux
+    // Trier simplement par popularité et nom
+    return games.sort((a, b) => {
+      // Trier par popularité (nombre de liens)
       const aLinks = a.links ? a.links.length : 0;
       const bLinks = b.links ? b.links.length : 0;
       if (bLinks !== aLinks) return bLinks - aLinks;
       
-      // Enfin tri alphabétique
+      // Ensuite tri alphabétique
       return a.names.international.localeCompare(b.names.international);
     });
   }
