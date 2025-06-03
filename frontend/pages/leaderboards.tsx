@@ -1,570 +1,591 @@
-import { useState, useEffect } from 'react';
-
-interface User {
-  id: string;
-  username: string;
-  email: string;
-  profileImage?: string;
-  bio?: string;
-  createdAt: string;
-}
-
-interface Game {
-  id: string;
-  title: string;
-  cover?: string;
-  description: string;
-  platform: string[];
-  genre: string[];
-  developer: string;
-  publisher: string;
-  releaseDate: string;
-  createdAt: string;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  rules: string;
-  gameId: string;
-}
-
-interface Run {
-  id: string;
-  time: number;
-  videoUrl?: string;
-  submittedAt: string;
-  isVerified: boolean;
-  verifiedAt?: string;
-  userId: string;
-  gameId: string;
-  categoryId: string;
-}
-
-interface LeaderboardEntry {
-  run: Run;
-  user: User;
-  game: Game;
-  category: Category;
-  rank: number;
-}
+import { useState, useEffect, useRef } from 'react';
+import { speedrunApiClient, SpeedrunGame, LeaderboardEntry, Leaderboard } from '../services/speedrunApiClient';
 
 export default function LeaderboardsPage() {
-  const [leaderboards, setLeaderboards] = useState<LeaderboardEntry[]>([]);
-  const [games, setGames] = useState<Game[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [runs, setRuns] = useState<Run[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [popularGames, setPopularGames] = useState<SpeedrunGame[]>([]);
+  const [selectedGame, setSelectedGame] = useState<SpeedrunGame | null>(null);
+  const [gameCategories, setGameCategories] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<any | null>(null);
+  const [leaderboard, setLeaderboard] = useState<Leaderboard | null>(null);
   
-  const [selectedGame, setSelectedGame] = useState<string>('all');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [verifiedOnly, setVerifiedOnly] = useState(true);
+  // États pour la recherche
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SpeedrunGame[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [loadingSearch, setLoadingSearch] = useState(false);
+  
+  const [loadingGames, setLoadingGames] = useState(true);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasUserSelected, setHasUserSelected] = useState(false);
 
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchResultsRef = useRef<HTMLDivElement>(null);
+
+  // Rechercher et charger Super Mario 64 par défaut
   useEffect(() => {
-    const fetchAllData = async () => {
+    // Ne charger Mario 64 par défaut que si l'utilisateur n'a pas encore fait de sélection
+    if (hasUserSelected) return;
+    
+    const loadDefaultGame = async () => {
       try {
-        // Pour cette démo, on va créer des données simulées pour les classements
-        // En attendant que le backend ait des endpoints pour users, categories et runs
-        const simulatedLeaderboards: LeaderboardEntry[] = [
-          {
-            run: {
-              id: "1",
-              time: 294000, // 4:54
-              videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-              submittedAt: "2024-06-01T15:30:00Z",
-              isVerified: true,
-              verifiedAt: "2024-06-01T16:00:00Z",
-              userId: "1",
-              gameId: "1",
-              categoryId: "1"
-            },
-            user: {
-              id: "1",
-              username: "SpeedRunner123",
-              email: "speedrunner@example.com",
-              profileImage: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
-              bio: "Passionné de speedrun depuis 5 ans, spécialisé dans les plateformers.",
-              createdAt: "2024-01-15T10:00:00Z"
-            },
-            game: {
-              id: "1",
-              title: "Super Mario Bros.",
-              cover: "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=300",
-              description: "Le classique platformer de Nintendo",
-              platform: ["NES", "Switch"],
-              genre: ["Platformer", "Action"],
-              developer: "Nintendo",
-              publisher: "Nintendo",
-              releaseDate: "1985-09-13",
-              createdAt: "2024-01-01T00:00:00Z"
-            },
-            category: {
-              id: "1",
-              name: "Any%",
-              rules: "Finir le jeu le plus rapidement possible, glitches autorisés.",
-              gameId: "1"
-            },
-            rank: 1
-          },
-          {
-            run: {
-              id: "2",
-              time: 1140000, // 19:00
-              videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-              submittedAt: "2024-06-02T10:15:00Z",
-              isVerified: true,
-              verifiedAt: "2024-06-02T11:00:00Z",
-              userId: "2",
-              gameId: "1",
-              categoryId: "2"
-            },
-            user: {
-              id: "2",
-              username: "FastGamer",
-              email: "fastgamer@example.com",
-              profileImage: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=150",
-              bio: "Records holder en Any% sur plusieurs jeux rétro.",
-              createdAt: "2024-02-20T14:30:00Z"
-            },
-            game: {
-              id: "1",
-              title: "Super Mario Bros.",
-              cover: "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=300",
-              description: "Le classique platformer de Nintendo",
-              platform: ["NES", "Switch"],
-              genre: ["Platformer", "Action"],
-              developer: "Nintendo",
-              publisher: "Nintendo",
-              releaseDate: "1985-09-13",
-              createdAt: "2024-01-01T00:00:00Z"
-            },
-            category: {
-              id: "2",
-              name: "100%",
-              rules: "Finir le jeu avec tous les collectibles et niveaux.",
-              gameId: "1"
-            },
-            rank: 1
-          },
-          {
-            run: {
-              id: "3",
-              time: 1020000, // 17:00
-              videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-              submittedAt: "2024-06-03T14:45:00Z",
-              isVerified: false,
-              userId: "3",
-              gameId: "2",
-              categoryId: "3"
-            },
-            user: {
-              id: "3",
-              username: "RetroRunner",
-              email: "retro@example.com",
-              bio: "Fan des jeux 16-bit, toujours à la recherche du run parfait.",
-              createdAt: "2024-03-10T09:15:00Z"
-            },
-            game: {
-              id: "2",
-              title: "The Legend of Zelda: Ocarina of Time",
-              cover: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300",
-              description: "Un RPG d'action épique",
-              platform: ["N64", "3DS", "Switch"],
-              genre: ["RPG", "Action", "Adventure"],
-              developer: "Nintendo EAD",
-              publisher: "Nintendo",
-              releaseDate: "1998-11-21",
-              createdAt: "2024-01-02T00:00:00Z"
-            },
-            category: {
-              id: "3",
-              name: "Any%",
-              rules: "Finir le jeu principal le plus vite possible.",
-              gameId: "2"
-            },
-            rank: 1
-          },
-          {
-            run: {
-              id: "4",
-              time: 1800000, // 30:00
-              submittedAt: "2024-06-04T09:20:00Z",
-              isVerified: true,
-              verifiedAt: "2024-06-04T10:00:00Z",
-              userId: "1",
-              gameId: "3",
-              categoryId: "5"
-            },
-            user: {
-              id: "1",
-              username: "SpeedRunner123",
-              email: "speedrunner@example.com",
-              profileImage: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
-              bio: "Passionné de speedrun depuis 5 ans, spécialisé dans les plateformers.",
-              createdAt: "2024-01-15T10:00:00Z"
-            },
-            game: {
-              id: "3",
-              title: "Celeste",
-              cover: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300",
-              description: "Un platformer challengeant",
-              platform: ["PC", "Switch", "PS4", "Xbox One"],
-              genre: ["Platformer", "Indie"],
-              developer: "Maddy Makes Games",
-              publisher: "Maddy Makes Games",
-              releaseDate: "2018-01-25",
-              createdAt: "2024-01-03T00:00:00Z"
-            },
-            category: {
-              id: "5",
-              name: "Any%",
-              rules: "Atteindre le sommet de la montagne.",
-              gameId: "3"
-            },
-            rank: 1
-          }
-        ];
-
-        // Récupérer les jeux depuis l'API
-        const gamesResponse = await fetch('http://localhost:5000/api/games');
-        if (gamesResponse.ok) {
-          const gamesData = await gamesResponse.json();
-          if (gamesData.success && Array.isArray(gamesData.data)) {
-            setGames(gamesData.data);
+        setLoadingGames(true);
+        setError(null);
+        
+        // D'abord, récupérer quelques jeux populaires pour la grille
+        const popularGamesData = await speedrunApiClient.getPopularGames(12);
+        setPopularGames(popularGamesData);
+        
+        // Rechercher spécifiquement Super Mario 64
+        const mario64Results = await speedrunApiClient.searchGames('Super Mario 64', 10);
+        
+        // Trouver le vrai Super Mario 64
+        const mario64 = mario64Results.find(game => 
+          game.name.toLowerCase().includes('super mario 64') &&
+          !game.name.toLowerCase().includes('hack') &&
+          !game.name.toLowerCase().includes('mod')
+        );
+        
+        if (mario64) {
+          setSelectedGame(mario64);
+        } else {
+          if (popularGamesData.length > 0) {
+            setSelectedGame(popularGamesData[0]);
           }
         }
-
-        setLeaderboards(simulatedLeaderboards);
-        
-        // Extraire les catégories uniques
-        const uniqueCategories = simulatedLeaderboards.reduce((acc, entry) => {
-          const exists = acc.find(cat => cat.id === entry.category.id);
-          if (!exists) acc.push(entry.category);
-          return acc;
-        }, [] as Category[]);
-        setCategories(uniqueCategories);
-
       } catch (error) {
-        console.error('Erreur lors du chargement des classements:', error);
-        setError('Impossible de charger les classements');
+        console.error('Erreur lors du chargement du jeu par défaut:', error);
+        setError('Erreur lors du chargement du jeu par défaut');
       } finally {
-        setLoading(false);
+        setLoadingGames(false);
       }
     };
 
-    fetchAllData();
+    loadDefaultGame();
+  }, [hasUserSelected]);
+
+  // Récupérer les catégories quand un jeu est sélectionné
+  useEffect(() => {
+    if (!selectedGame) return;
+
+    const fetchCategories = async () => {
+      try {
+        setLoadingCategories(true);
+        setError(null);
+        const categories = await speedrunApiClient.getGameCategories(selectedGame.id);
+        setGameCategories(categories);
+        
+        // Essayer de trouver une catégorie avec des runs disponibles
+        if (categories.length > 0) {
+          // Essayer les catégories dans l'ordre de priorité
+          const priorityOrder = categories.sort((a, b) => {
+            // Priorité aux catégories principales
+            if (!a.isMiscellaneous && b.isMiscellaneous) return -1;
+            if (a.isMiscellaneous && !b.isMiscellaneous) return 1;
+            
+            // Ensuite par nom (Any% en premier)
+            if (a.name.toLowerCase().includes('any%')) return -1;
+            if (b.name.toLowerCase().includes('any%')) return 1;
+            
+            return a.name.localeCompare(b.name);
+          });
+          
+          // Essayer chaque catégorie jusqu'à en trouver une qui fonctionne
+          for (const category of priorityOrder) {
+            try {
+              const testLeaderboard = await speedrunApiClient.getLeaderboard(
+                selectedGame.id, 
+                category.id,
+                { top: 5, videoOnly: false }
+              );
+              
+              if (testLeaderboard && testLeaderboard.runs && testLeaderboard.runs.length > 0) {
+                console.log(`✅ Catégorie fonctionnelle trouvée: ${category.name}`);
+                setSelectedCategory(category);
+                break;
+              }
+            } catch (categoryError) {
+              console.log(`❌ Catégorie ${category.name} n'a pas de runs disponibles`);
+              continue;
+            }
+          }
+          
+          // Si aucune catégorie ne fonctionne, sélectionner la première quand même
+          if (!selectedCategory) {
+            console.log(`⚠️ Aucune catégorie avec des runs trouvée, sélection de la première`);
+            setSelectedCategory(priorityOrder[0]);
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des catégories:', error);
+        setError('Erreur lors du chargement des catégories');
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, [selectedGame]);
+
+  // Récupérer le leaderboard quand une catégorie est sélectionnée
+  useEffect(() => {
+    if (!selectedGame || !selectedCategory) return;
+
+    const fetchLeaderboard = async () => {
+      try {
+        setLoadingLeaderboard(true);
+        setError(null);
+        const leaderboardData = await speedrunApiClient.getLeaderboard(
+          selectedGame.id, 
+          selectedCategory.id,
+          { top: 20, videoOnly: false }
+        );
+        
+        if (leaderboardData && leaderboardData.runs && leaderboardData.runs.length > 0) {
+          setLeaderboard(leaderboardData);
+        } else {
+          // Essayer sans filtres pour voir s'il y a des runs
+          const leaderboardWithoutFilters = await speedrunApiClient.getLeaderboard(
+            selectedGame.id, 
+            selectedCategory.id,
+            { top: 50 }
+          );
+          
+          if (leaderboardWithoutFilters && leaderboardWithoutFilters.runs && leaderboardWithoutFilters.runs.length > 0) {
+            setLeaderboard(leaderboardWithoutFilters);
+          } else {
+            setLeaderboard(null);
+            setError(`Aucun run trouvé pour la catégorie "${selectedCategory.name}" de ${selectedGame.name}`);
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement du leaderboard:', error);
+        setLeaderboard(null);
+        setError(`Impossible de charger le classement pour "${selectedCategory.name}". Cette catégorie n'a peut-être pas de runs disponibles.`);
+      } finally {
+        setLoadingLeaderboard(false);
+      }
+    };
+
+    fetchLeaderboard();
+  }, [selectedGame, selectedCategory]);
+
+  // Recherche de jeux avec debounce
+  useEffect(() => {
+    if (searchQuery.length < 2) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    const delayedSearch = setTimeout(async () => {
+      try {
+        setLoadingSearch(true);
+        const results = await speedrunApiClient.searchGames(searchQuery, 8);
+        setSearchResults(results);
+        setShowSearchResults(true);
+      } catch (error) {
+        console.error('Erreur lors de la recherche:', error);
+      } finally {
+        setLoadingSearch(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayedSearch);
+  }, [searchQuery]);
+
+  // Fermer les résultats de recherche en cliquant à l'extérieur
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchResultsRef.current && !searchResultsRef.current.contains(event.target as Node) &&
+          searchInputRef.current && !searchInputRef.current.contains(event.target as Node)) {
+        setShowSearchResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Filtrer les classements
-  const filteredLeaderboards = leaderboards.filter(entry => {
-    const gameFilter = selectedGame === 'all' || entry.game.id === selectedGame;
-    const categoryFilter = selectedCategory === 'all' || entry.category.id === selectedCategory;
-    const verifiedFilter = !verifiedOnly || entry.run.isVerified;
-    
-    return gameFilter && categoryFilter && verifiedFilter;
-  });
+  const handleGameSelect = (game: SpeedrunGame) => {
+    setSelectedGame(game);
+    setSelectedCategory(null);
+    setLeaderboard(null);
+    setShowSearchResults(false);
+    setSearchQuery('');
+    setHasUserSelected(true);
+  };
 
-  // Fonction pour formater le temps
-  const formatTime = (milliseconds: number): string => {
-    const totalSeconds = Math.floor(milliseconds / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    const ms = milliseconds % 1000;
-    
-    if (minutes > 0) {
-      return `${minutes}:${seconds.toString().padStart(2, '0')}.${Math.floor(ms / 10).toString().padStart(2, '0')}`;
-    } else {
-      return `${seconds}.${Math.floor(ms / 10).toString().padStart(2, '0')}`;
+  const handleSearchResultSelect = (game: SpeedrunGame) => {
+    handleGameSelect(game);
+  };
+
+  const formatTime = (seconds: number): string => {
+    return speedrunApiClient.formatTime(seconds);
+  };
+
+  const getPlayerName = (run: any): string => {
+    return speedrunApiClient.getPlayerName(run);
+  };
+
+  const getPlatformName = (run: any, leaderboardData: any): string => {
+    // Essayer d'obtenir le nom de la plateforme depuis les métadonnées du leaderboard
+    if (leaderboardData && leaderboardData.metadata && leaderboardData.metadata.platforms) {
+      const platformData = leaderboardData.metadata.platforms.data;
+      if (platformData && Array.isArray(platformData)) {
+        const platform = platformData.find((p: any) => p.id === run.platform);
+        if (platform && platform.name) {
+          return platform.name;
+        }
+      }
     }
+    
+    // Fallback : retourner la plateforme telle quelle si c'est déjà un nom
+    if (typeof run.platform === 'string' && run.platform.length > 0 && !run.platform.includes('_')) {
+      return run.platform;
+    }
+    
+    // Dernier fallback : nom générique
+    return 'Plateforme inconnue';
   };
-
-  // Fonction pour formater la date
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR');
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <span className="text-2xl">🏆</span>
-          </div>
-          <p className="text-slate-300 text-lg">Chargement des classements...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl">⚠️</span>
-          </div>
-          <h3 className="text-xl font-bold text-white mb-2">Erreur de chargement</h3>
-          <p className="text-slate-300 mb-4">{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="btn-primary"
-          >
-            🔄 Réessayer
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-8">
-      {/* Header de la page */}
-      <section className="text-center py-12">
-        <div className="mb-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl mb-4">
-            <span className="text-2xl">🏆</span>
-          </div>
-        </div>
-        <h1 className="text-4xl md:text-5xl font-bold mb-4">
-          <span className="bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
-            Classements Speedrun
+      {/* Header */}
+      <div className="text-center">
+        <h1 className="text-4xl font-bold mb-4">
+          <span className="bg-gradient-to-r from-violet-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+            🏆 Classements Speedrun
           </span>
         </h1>
-        <p className="text-xl text-slate-300 max-w-2xl mx-auto">
-          Découvrez les meilleurs temps et performances de la communauté speedrun
+        <p className="text-slate-300 text-lg">
+          Découvrez les meilleurs temps sur les jeux les plus populaires
         </p>
-      </section>
+      </div>
 
-      {/* Filtres */}
-      <section>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          {/* Filtre par jeu */}
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Jeu</label>
-            <select
-              value={selectedGame}
-              onChange={(e) => setSelectedGame(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+      {error && (
+        <div className="bg-red-900/50 border border-red-700/50 text-red-200 px-6 py-4 rounded-lg">
+          <p className="font-semibold">Erreur :</p>
+          <p>{error}</p>
+        </div>
+      )}
+
+      {/* Barre de recherche rapide */}
+      <div className="card">
+        <h2 className="text-2xl font-semibold text-white mb-6 flex items-center">
+          <span className="mr-3">🔍</span>
+          Recherche rapide de jeu
+        </h2>
+        
+        <div className="relative">
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Tapez le nom d'un jeu (ex: Mario, Zelda, Sonic...)"
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+          />
+          
+          {loadingSearch && (
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-violet-500"></div>
+            </div>
+          )}
+
+          {/* Résultats de recherche */}
+          {showSearchResults && searchResults.length > 0 && (
+            <div
+              ref={searchResultsRef}
+              className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto"
             >
-              <option value="all">Tous les jeux</option>
-              {games.map((game) => (
-                <option key={game.id} value={game.id}>{game.title}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Filtre par catégorie */}
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Catégorie</label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
-            >
-              <option value="all">Toutes les catégories</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>{category.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Switch pour runs vérifiés */}
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Filtres</label>
-            <div className="flex items-center space-x-3">
-              <label className="flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={verifiedOnly}
-                  onChange={(e) => setVerifiedOnly(e.target.checked)}
-                  className="sr-only"
-                />
-                <div className={`w-11 h-6 rounded-full transition-colors ${verifiedOnly ? 'bg-violet-600' : 'bg-slate-600'}`}>
-                  <div className={`w-5 h-5 bg-white rounded-full transition-transform ${verifiedOnly ? 'translate-x-5' : 'translate-x-0'} mt-0.5 ml-0.5`}></div>
+              {searchResults.map((game) => (
+                <div
+                  key={game.id}
+                  onClick={() => handleSearchResultSelect(game)}
+                  className="flex items-center p-3 hover:bg-slate-700 cursor-pointer border-b border-slate-700 last:border-b-0"
+                >
+                  {game.coverImage && (
+                    <img
+                      src={game.coverImage}
+                      alt={game.name}
+                      className="w-12 h-12 object-cover rounded-lg mr-3 flex-shrink-0"
+                    />
+                  )}
+                  <div className="flex-grow min-w-0">
+                    <h3 className="font-semibold text-white truncate">{game.name}</h3>
+                    <p className="text-sm text-slate-400 truncate">
+                      {(() => {
+                        if (!game.platforms) {
+                          return 'Plateformes non disponibles';
+                        }
+                        
+                        if (Array.isArray(game.platforms)) {
+                          const validPlatforms = game.platforms
+                            .filter(p => p && typeof p === 'string' && p.trim().length > 0)
+                            .map(p => p.toString().trim());
+                          
+                          if (validPlatforms.length === 0) {
+                            return 'Plateformes non disponibles';
+                          }
+                          
+                          const displayPlatforms = validPlatforms.slice(0, 2);
+                          return displayPlatforms.join(', ') + (validPlatforms.length > 2 ? '...' : '');
+                        }
+                        
+                        if (typeof game.platforms === 'string') {
+                          return String(game.platforms).trim() || 'Plateformes non disponibles';
+                        }
+                        
+                        return 'Plateformes non disponibles';
+                      })()}
+                    </p>
+                  </div>
                 </div>
-                <span className="ml-3 text-sm text-slate-300">Runs vérifiés uniquement</span>
-              </label>
+              ))}
             </div>
-          </div>
-        </div>
-      </section>
+          )}
 
-      {/* Statistiques */}
-      <section>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="card text-center">
-            <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-lg flex items-center justify-center mx-auto mb-3">
-              <span className="text-xl">🎮</span>
+          {showSearchResults && searchResults.length === 0 && !loadingSearch && searchQuery.length >= 2 && (
+            <div
+              ref={searchResultsRef}
+              className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 p-4 text-center"
+            >
+              <p className="text-slate-400">Aucun jeu trouvé pour "{searchQuery}"</p>
             </div>
-            <h3 className="text-2xl font-bold text-white mb-1">{games.length}</h3>
-            <p className="text-slate-400">Jeux classés</p>
-          </div>
-          <div className="card text-center">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center mx-auto mb-3">
-              <span className="text-xl">🏆</span>
-            </div>
-            <h3 className="text-2xl font-bold text-white mb-1">{categories.length}</h3>
-            <p className="text-slate-400">Catégories</p>
-          </div>
-          <div className="card text-center">
-            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center mx-auto mb-3">
-              <span className="text-xl">✅</span>
-            </div>
-            <h3 className="text-2xl font-bold text-white mb-1">
-              {leaderboards.filter(entry => entry.run.isVerified).length}
-            </h3>
-            <p className="text-slate-400">Runs vérifiés</p>
-          </div>
-          <div className="card text-center">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-500 rounded-lg flex items-center justify-center mx-auto mb-3">
-              <span className="text-xl">👥</span>
-            </div>
-            <h3 className="text-2xl font-bold text-white mb-1">
-              {new Set(leaderboards.map(entry => entry.user.id)).size}
-            </h3>
-            <p className="text-slate-400">Runners actifs</p>
-          </div>
+          )}
         </div>
-      </section>
+      </div>
 
-      {/* Classements */}
-      <section>
-        {filteredLeaderboards.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-slate-800 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl">😕</span>
-            </div>
-            <h3 className="text-xl font-bold text-white mb-2">Aucun classement trouvé</h3>
-            <p className="text-slate-400">Aucun run ne correspond aux filtres sélectionnés</p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-white">
-                Classements ({filteredLeaderboards.length} runs)
+      {/* Jeu sélectionné et ses informations */}
+      {selectedGame && (
+        <div className="card">
+          <div className="flex items-center mb-6">
+            {selectedGame.coverImage && (
+              <img
+                src={selectedGame.coverImage}
+                alt={selectedGame.name}
+                className="w-16 h-16 object-cover rounded-lg mr-4"
+              />
+            )}
+            <div>
+              <h2 className="text-2xl font-semibold text-white flex items-center">
+                <span className="mr-3">🎮</span>
+                {selectedGame.name}
               </h2>
-              <div className="text-sm text-slate-400">
-                Mis à jour en temps réel
-              </div>
-            </div>
-
-            <div className="bg-slate-800 rounded-xl overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-700">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                        Rang
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                        Runner
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                        Jeu / Catégorie
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                        Temps
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                        Date
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                        Statut
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                        Vidéo
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-700">
-                    {filteredLeaderboards.map((entry, index) => (
-                      <tr key={entry.run.id} className="hover:bg-slate-700/50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                              index === 0 ? 'bg-gradient-to-br from-yellow-400 to-orange-500 text-white' :
-                              index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-gray-800' :
-                              index === 2 ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-white' :
-                              'bg-slate-600 text-slate-300'
-                            }`}>
-                              {index + 1}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            {entry.user.profileImage ? (
-                              <img
-                                src={entry.user.profileImage}
-                                alt={entry.user.username}
-                                className="w-10 h-10 rounded-full mr-3"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full flex items-center justify-center mr-3">
-                                <span className="text-white font-bold text-sm">
-                                  {entry.user.username[0].toUpperCase()}
-                                </span>
-                              </div>
-                            )}
-                            <div>
-                              <div className="text-sm font-medium text-white">{entry.user.username}</div>
-                              <div className="text-xs text-slate-400">{entry.user.bio?.substring(0, 30)}...</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <div className="text-sm font-medium text-white">{entry.game.title}</div>
-                            <div className="text-xs text-violet-400">{entry.category.name}</div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-lg font-mono font-bold text-white">
-                            {formatTime(entry.run.time)}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
-                          {formatDate(entry.run.submittedAt)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {entry.run.isVerified ? (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              <span className="mr-1">✅</span>
-                              Vérifié
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                              <span className="mr-1">⏳</span>
-                              En attente
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {entry.run.videoUrl ? (
-                            <a
-                              href={entry.run.videoUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
-                            >
-                              <span className="mr-1">📺</span>
-                              Voir
-                            </a>
-                          ) : (
-                            <span className="text-xs text-slate-500">Pas de vidéo</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <p className="text-slate-400">
+                {(() => {
+                  if (!selectedGame.platforms) {
+                    return 'Plateformes non disponibles';
+                  }
+                  
+                  // Si c'est un tableau
+                  if (Array.isArray(selectedGame.platforms)) {
+                    const validPlatforms = selectedGame.platforms
+                      .filter(p => p && typeof p === 'string' && p.trim().length > 0)
+                      .map(p => p.toString().trim());
+                    
+                    return validPlatforms.length > 0 ? validPlatforms.join(', ') : 'Plateformes non disponibles';
+                  }
+                  
+                  // Si c'est une string
+                  if (typeof selectedGame.platforms === 'string') {
+                    const platformStr = String(selectedGame.platforms).trim();
+                    return platformStr || 'Plateformes non disponibles';
+                  }
+                  
+                  // Autre cas - on ne tente pas d'afficher un objet
+                  return 'Plateformes non disponibles';
+                })()}
+              </p>
             </div>
           </div>
-        )}
-      </section>
+
+          {/* Sélection de catégorie */}
+          {loadingCategories ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-500 mx-auto mb-4"></div>
+              <p className="text-slate-300">Chargement des catégories...</p>
+            </div>
+          ) : gameCategories.length > 0 ? (
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-4">📊 Catégories disponibles</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+                {gameCategories.map((category) => (
+                  <div
+                    key={category.id}
+                    onClick={() => setSelectedCategory(category)}
+                    className={`cursor-pointer p-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
+                      selectedCategory?.id === category.id
+                        ? 'border-violet-500 bg-violet-900/20'
+                        : 'border-slate-700 hover:border-violet-400 bg-slate-800/50'
+                    }`}
+                  >
+                    <h4 className="font-semibold text-white mb-1">{category.name}</h4>
+                    <div className="flex items-center space-x-2">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        category.isMiscellaneous 
+                          ? 'bg-yellow-900/50 text-yellow-300' 
+                          : 'bg-green-900/50 text-green-300'
+                      }`}>
+                        {category.isMiscellaneous ? 'Misc' : 'Principal'}
+                      </span>
+                      <span className="px-2 py-1 text-xs rounded-full bg-blue-900/50 text-blue-300">
+                        {category.type}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-slate-400 text-center py-4">Aucune catégorie trouvée pour ce jeu</p>
+          )}
+        </div>
+      )}
+
+      {/* Leaderboard */}
+      {selectedGame && selectedCategory && (
+        <div className="card">
+          <h2 className="text-2xl font-semibold text-white mb-6 flex items-center">
+            <span className="mr-3">🏅</span>
+            Classement - {selectedCategory.name}
+          </h2>
+          
+          {loadingLeaderboard ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-500 mx-auto mb-4"></div>
+              <p className="text-slate-300">Chargement du classement...</p>
+            </div>
+          ) : leaderboard && leaderboard.runs.length > 0 ? (
+            <div className="space-y-4">
+              {leaderboard.runs.map((entry, index) => (
+                <div
+                  key={entry.run.id}
+                  className={`flex items-center p-4 rounded-lg border transition-colors ${
+                    index === 0
+                      ? 'border-yellow-500/50 bg-gradient-to-r from-yellow-900/20 to-amber-900/20'
+                      : index === 1
+                      ? 'border-gray-400/50 bg-gradient-to-r from-gray-800/20 to-slate-800/20'
+                      : index === 2
+                      ? 'border-orange-500/50 bg-gradient-to-r from-orange-900/20 to-red-900/20'
+                      : 'border-slate-700 bg-slate-800/30 hover:bg-slate-800/50'
+                  }`}
+                >
+                  {/* Rang */}
+                  <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-600 text-white font-bold text-lg mr-4">
+                    {entry.placement}
+                  </div>
+                  
+                  {/* Informations du run */}
+                  <div className="flex-grow">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-6">
+                        {/* Nom du joueur */}
+                        <div>
+                          <h3 className="font-semibold text-white text-lg">
+                            {getPlayerName(entry.run)}
+                          </h3>
+                        </div>
+                        
+                        {/* Temps */}
+                        <div className="flex items-center">
+                          <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+                          <span className="font-mono font-bold text-green-400 text-lg">
+                            {formatTime(entry.run.time)}
+                          </span>
+                        </div>
+                        
+                        {/* Plateforme */}
+                        <div className="flex items-center space-x-2">
+                          <span className="text-slate-300">{getPlatformName(entry.run, leaderboard)}</span>
+                          {entry.run.isEmulated && (
+                            <span className="px-2 py-1 bg-blue-900/50 text-blue-300 rounded-full text-xs">
+                              Émulé
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Actions */}
+                      <div className="flex items-center space-x-2">
+                        {entry.run.videoUrl && (
+                          <a
+                            href={entry.run.videoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors flex items-center"
+                          >
+                            <span className="mr-1">📺</span>
+                            Vidéo
+                          </a>
+                        )}
+                        <a
+                          href={entry.run.externalData.speedruncom.weblink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-sm rounded-lg transition-colors"
+                        >
+                          Voir sur speedrun.com
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-slate-300 text-lg">Aucun run trouvé pour cette catégorie</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Grille des jeux populaires (réduite) */}
+      {popularGames.length > 0 && (
+        <div className="card">
+          <h2 className="text-2xl font-semibold text-white mb-6 flex items-center">
+            <span className="mr-3">🌟</span>
+            Autres jeux populaires
+          </h2>
+          
+          {loadingGames ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-500 mx-auto mb-4"></div>
+              <p className="text-slate-300">Chargement des jeux populaires...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+              {popularGames.slice(0, 12).map((game) => (
+                <div
+                  key={game.id}
+                  onClick={() => handleGameSelect(game)}
+                  className={`group cursor-pointer rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
+                    selectedGame?.id === game.id
+                      ? 'border-violet-500 bg-violet-900/20'
+                      : 'border-slate-700 hover:border-violet-400 bg-slate-800/50'
+                  }`}
+                >
+                  <div className="p-3">
+                    {game.coverImage && (
+                      <img
+                        src={game.coverImage}
+                        alt={game.name}
+                        className="w-full h-20 object-cover rounded-lg mb-2"
+                      />
+                    )}
+                    <h3 className="font-semibold text-white text-sm group-hover:text-violet-300 transition-colors truncate">
+                      {game.name}
+                    </h3>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 } 

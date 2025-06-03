@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 export default function HomePage() {
   return (
     <div className="space-y-12">
@@ -18,13 +20,10 @@ export default function HomePage() {
             La plateforme dédiée aux speedrunners. Suivez vos performances, 
             participez aux événements et rejoignez une communauté passionnée.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="btn-primary text-lg px-8 py-4">
-              🚀 Commencer maintenant
-            </button>
-            <button className="btn-secondary text-lg px-8 py-4">
+          <div className="flex justify-center">
+            <Link href="/leaderboards" className="btn-secondary text-lg px-8 py-4 inline-flex items-center">
               📊 Voir les classements
-            </button>
+            </Link>
           </div>
         </div>
       </section>
