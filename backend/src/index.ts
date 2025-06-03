@@ -1,7 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import { PrismaClient } from '@prisma/client';
-import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 
 // Routes
@@ -14,29 +12,18 @@ import eventRoutes from './routes/eventRoutes';
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
-const prisma = new PrismaClient();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || "http://localhost:3000"
+}));
 app.use(express.json());
 
-// Database connections
-async function connectDB() {
-  try {
-    // PostgreSQL via Prisma
-    await prisma.$connect();
-    console.log('PostgreSQL connected via Prisma');
-    
-    // MongoDB via Mongoose
-    if (process.env.MONGODB_URI) {
-      await mongoose.connect(process.env.MONGODB_URI);
-      console.log('MongoDB connected via Mongoose');
-    }
-  } catch (error) {
-    console.error('Database connection error:', error);
-    process.exit(1);
-  }
-}
+// Logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -46,18 +33,60 @@ app.use('/api/events', eventRoutes);
 
 // Route de test
 app.get('/', (req, res) => {
-  res.send('API SpeedRun Platform opérationnelle !');
-});
-
-// Start server
-connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+  res.json({
+    message: 'API SpeedRun Platform opérationnelle !',
+    version: '1.0.0',
+    status: 'running',
+    timestamp: new Date().toISOString()
   });
 });
 
+// Route de santé
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Middleware de gestion d'erreurs
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Error:', err);
+  res.status(500).json({
+    success: false,
+    message: 'Erreur interne du serveur',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
+// Gestion des routes non trouvées
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route non trouvée',
+    path: req.originalUrl
+  });
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log('🚀 ======================================');
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🚀 API URL: http://localhost:${PORT}`);
+  console.log(`🚀 Health check: http://localhost:${PORT}/health`);
+  console.log('🚀 Using mock data for testing');
+  console.log('🚀 ======================================');
+});
+
 // Graceful shutdown
-process.on('SIGINT', async () => {
-  await prisma.$disconnect();
+process.on('SIGINT', () => {
+  console.log('\n🛑 Arrêt du serveur...');
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('\n🛑 Arrêt du serveur...');
   process.exit(0);
 }); 
