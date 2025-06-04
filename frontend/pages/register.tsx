@@ -239,22 +239,16 @@ export default function RegisterPage() {
             </div>
 
             {/* Bouton d'inscription */}
-            <button
+            <button 
               type="submit"
               disabled={isLoading}
-              className={`w-full font-semibold py-3 px-4 rounded-lg transition-all duration-200 ${
-                isLoading
-                  ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl'
-              }`}
+              className="group w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-600 text-white px-6 py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-green-500/25 border border-green-500/20 disabled:transform-none disabled:shadow-none"
             >
-              {isLoading ? (
-                <div className="flex items-center justify-center">
-                  <div className="w-5 h-5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin mr-2"></div>
-                  Création du compte...
-                </div>
-              ) : (
-                'Créer mon compte'
+              <span>
+                {isLoading ? 'Création en cours...' : 'Créer mon compte'}
+              </span>
+              {!isLoading && (
+                <span className="ml-2 opacity-75 group-hover:opacity-100 transition-opacity">→</span>
               )}
             </button>
           </form>
@@ -272,12 +266,8 @@ export default function RegisterPage() {
           {/* Inscription sociale */}
           <div className="space-y-3">
             <button className="w-full flex items-center justify-center px-4 py-3 border border-slate-700 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors">
-              <span className="mr-2">📺</span>
-              <span className="text-white">S'inscrire avec Twitch</span>
-            </button>
-            <button className="w-full flex items-center justify-center px-4 py-3 border border-slate-700 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors">
-              <span className="mr-2">💬</span>
-              <span className="text-white">S'inscrire avec Discord</span>
+              <span className="mr-2">🔍</span>
+              <span className="text-white">S'inscrire avec Google</span>
             </button>
           </div>
 
@@ -290,17 +280,6 @@ export default function RegisterPage() {
               </Link>
             </p>
           </div>
-        </div>
-
-        {/* Info démo */}
-        <div className="bg-green-900/30 border border-green-700/50 rounded-lg p-4 text-center">
-          <div className="flex items-center justify-center mb-2">
-            <span className="text-green-400 mr-2">✨</span>
-            <span className="text-green-300 font-medium">Inscription Démo</span>
-          </div>
-          <p className="text-green-200 text-sm">
-            Formulaire d'inscription complet avec validation pour le projet TP DWWM.
-          </p>
         </div>
       </div>
     </div>

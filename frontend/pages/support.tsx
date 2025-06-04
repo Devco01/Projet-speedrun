@@ -12,28 +12,28 @@ export default function SupportPage() {
 
   const faqs = [
     {
-      question: "Comment créer mon premier speedrun ?",
-      answer: "Pour créer votre premier speedrun, inscrivez-vous sur la plateforme, choisissez un jeu dans notre catalogue, sélectionnez une catégorie (Any%, 100%, etc.), enregistrez votre run et soumettez-le avec une vidéo de preuve."
+      question: "Comment utiliser la plateforme de speedrun ?",
+      answer: "Naviguez dans notre catalogue de jeux, consultez les classements, recherchez vos jeux favoris et découvrez les meilleurs temps réalisés par la communauté speedrun mondiale."
     },
     {
-      question: "Quels sont les critères de vérification d'un run ?",
-      answer: "Un run doit contenir une vidéo claire du gameplay, respecter les règles de la catégorie, avoir un timer visible, et ne pas utiliser de modifications non autorisées. Nos modérateurs vérifient chaque soumission."
+      question: "D'où viennent les données des runs ?",
+      answer: "Toutes les données proviennent directement de speedrun.com, la référence mondiale pour les records de speedrun. Les informations sont synchronisées régulièrement pour vous offrir les temps les plus récents."
     },
     {
-      question: "Puis-je modifier mon run après soumission ?",
-      answer: "Une fois soumis, un run ne peut plus être modifié. Cependant, vous pouvez le supprimer et en soumettre un nouveau si vous avez fait une erreur ou amélioré votre temps."
+      question: "Comment trouver un jeu spécifique ?",
+      answer: "Utilisez la barre de recherche sur la page des classements ou parcourez les jeux populaires sur la page d'accueil. Vous pouvez rechercher par nom de jeu ou par série."
     },
     {
-      question: "Comment rejoindre la communauté Discord ?",
-      answer: "Cliquez sur le lien Discord dans le footer de la page ou dans la section communauté. Notre serveur Discord est ouvert à tous les speedrunners, débutants comme experts."
+      question: "Quelles informations puis-je voir sur les runs ?",
+      answer: "Pour chaque run, vous pouvez consulter le temps réalisé, la date de réalisation, la plateforme utilisée, le nom du joueur et souvent un lien vers la vidéo de la performance."
     },
     {
       question: "Que faire si je trouve un bug ?",
       answer: "Signalez tout bug via le formulaire de contact ci-dessous en décrivant précisément le problème rencontré. Notre équipe technique s'en occupera rapidement."
     },
     {
-      question: "Comment devenir modérateur ?",
-      answer: "Les modérateurs sont choisis parmi les membres actifs et respectés de la communauté. Participez aux discussions, aidez les nouveaux runners et contactez-nous si vous êtes intéressé."
+      question: "Les temps affichés sont-ils à jour ?",
+      answer: "Oui, nous synchronisons régulièrement avec speedrun.com pour vous proposer les classements et records les plus récents. Les mises à jour se font plusieurs fois par jour."
     }
   ];
 
@@ -70,71 +70,6 @@ export default function SupportPage() {
         <p className="text-xl text-slate-300 max-w-2xl mx-auto">
           Trouvez des réponses à vos questions ou contactez notre équipe
         </p>
-      </section>
-
-      {/* Liens rapides */}
-      <section>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <a
-            href="https://discord.gg/speedrun"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="card hover-scale group"
-          >
-            <div className="flex items-center mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-xl">💬</span>
-              </div>
-              <h3 className="text-xl font-semibold text-white">Discord</h3>
-            </div>
-            <p className="text-slate-300 mb-4">
-              Rejoignez notre communauté Discord pour discuter, trouver des partenaires de course et obtenir de l'aide en temps réel.
-            </p>
-            <div className="text-indigo-400 font-medium group-hover:text-indigo-300 transition-colors">
-              Rejoindre le Discord →
-            </div>
-          </a>
-
-          <a
-            href="https://twitch.tv/speedrunplatform"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="card hover-scale group"
-          >
-            <div className="flex items-center mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-xl">📺</span>
-              </div>
-              <h3 className="text-xl font-semibold text-white">Twitch</h3>
-            </div>
-            <p className="text-slate-300 mb-4">
-              Suivez nos streams en direct, regardez les meilleures runs et participez aux événements communautaires.
-            </p>
-            <div className="text-purple-400 font-medium group-hover:text-purple-300 transition-colors">
-              Suivre sur Twitch →
-            </div>
-          </a>
-
-          <a
-            href="https://youtube.com/@speedrunplatform"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="card hover-scale group"
-          >
-            <div className="flex items-center mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-orange-500 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-xl">🎥</span>
-              </div>
-              <h3 className="text-xl font-semibold text-white">YouTube</h3>
-            </div>
-            <p className="text-slate-300 mb-4">
-              Découvrez nos tutoriels, highlights des meilleurs runs et documentaires sur le speedrunning.
-            </p>
-            <div className="text-red-400 font-medium group-hover:text-red-300 transition-colors">
-              Voir sur YouTube →
-            </div>
-          </a>
-        </div>
       </section>
 
       {/* FAQ */}
@@ -223,8 +158,8 @@ export default function SupportPage() {
                   <option value="bug">Signaler un bug</option>
                   <option value="feature">Demande de fonctionnalité</option>
                   <option value="account">Problème de compte</option>
-                  <option value="run">Question sur un run</option>
-                  <option value="moderation">Modération</option>
+                  <option value="data">Problème avec les données</option>
+                  <option value="performance">Performance du site</option>
                   <option value="other">Autre</option>
                 </select>
               </div>
@@ -262,29 +197,6 @@ export default function SupportPage() {
                 )}
               </button>
             </form>
-          </div>
-        </div>
-      </section>
-
-      {/* Informations supplémentaires */}
-      <section>
-        <div className="max-w-3xl mx-auto">
-          <div className="card">
-            <div className="flex items-center mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-xl">📖</span>
-              </div>
-              <h3 className="text-xl font-semibold text-white">Documentation</h3>
-            </div>
-            <p className="text-slate-300 mb-4">
-              Consultez notre documentation complète pour apprendre les bases du speedrunning et utiliser efficacement la plateforme.
-            </p>
-            <ul className="space-y-2 text-sm text-slate-400">
-              <li>• Guide du débutant speedrunner</li>
-              <li>• Règles et catégories des jeux</li>
-              <li>• Tutoriels enregistrement/streaming</li>
-              <li>• API et intégrations</li>
-            </ul>
           </div>
         </div>
       </section>

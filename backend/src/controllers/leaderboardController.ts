@@ -9,6 +9,7 @@ import {
   getCategoryById,
   formatTime 
 } from '../data/mockData';
+import { speedrunApiService } from '../services/speedrunApiService';
 
 class LeaderboardController {
   // GET /api/leaderboards - Récupérer les classements globaux
@@ -294,57 +295,64 @@ class LeaderboardController {
   // GET /api/leaderboards/recent - Runs récents
   async getRecentRuns(req: Request, res: Response) {
     try {
-      const { limit = 20, offset = 0, verified = 'true' } = req.query;
+      const { limit = 20 } = req.query;
       
-      let runs = [...mockRuns];
+      console.log('🔍 Récupération des runs récents depuis speedrun.com...');
       
-      if (verified === 'true') {
-        runs = runs.filter(run => run.isVerified);
-      }
-
-      const recentRuns = runs
-        .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
-        .slice(
-          parseInt(offset as string), 
-          parseInt(offset as string) + parseInt(limit as string)
-        )
-        .map(run => {
-          const user = getUserById(run.userId);
-          const game = getGameById(run.gameId);
-          const category = getCategoryById(run.categoryId);
-          
-          return {
-            id: run.id,
-            user: user ? {
-              id: user.id,
-              username: user.username,
-              profileImage: user.profileImage
-            } : null,
-            game: game ? {
-              id: game.id,
-              title: game.title,
-              cover: game.cover
-            } : null,
-            category: category ? {
-              id: category.id,
-              name: category.name
-            } : null,
-            time: run.time,
-            formattedTime: formatTime(run.time),
-            submittedAt: run.submittedAt,
-            verifiedAt: run.verifiedAt,
-            isVerified: run.isVerified,
-            videoUrl: run.videoUrl
-          };
-        });
+      // Récupérer les runs récents depuis speedrun.com
+      const recentRuns = await speedrunApiService.getGlobalRecentRuns(parseInt(limit as string));
+      
+      console.log(`📊 ${recentRuns.length} runs récents récupérés`);
+      
+      // Transformer les données au format attendu par le frontend
+      const transformedRuns = recentRuns.map((run: any) => {
+        // Extraire les informations du jeu
+        const gameData = run.game?.data || {};
+        const categoryData = run.category?.data || {};
+        const playersData = run.players?.data || [];
+        
+        // Extraire le nom du joueur
+        let playerName = 'Joueur inconnu';
+        if (playersData.length > 0) {
+          const firstPlayer = playersData[0];
+          if (firstPlayer.rel === 'user') {
+            playerName = firstPlayer.names?.international || firstPlayer.name || 'Joueur inconnu';
+          } else if (firstPlayer.rel === 'guest') {
+            playerName = firstPlayer.name || 'Invité';
+          }
+        }
+        
+        return {
+          id: run.id,
+          user: {
+            id: playersData[0]?.id || 'guest',
+            username: playerName,
+            profileImage: null // speedrun.com n'expose pas les images de profil dans l'API
+          },
+          game: {
+            id: gameData.id || 'unknown',
+            title: gameData.names?.international || gameData.name || 'Jeu inconnu',
+            cover: gameData.assets?.['cover-large']?.uri || null
+          },
+          category: {
+            id: categoryData.id || 'unknown',
+            name: categoryData.name || 'Catégorie inconnue'
+          },
+          time: run.times?.primary_t || 0,
+          formattedTime: formatTime(run.times?.primary_t || 0),
+          submittedAt: run.submitted || new Date().toISOString(),
+          verifiedAt: run.status?.['verify-date'] || null,
+          isVerified: run.status?.status === 'verified'
+        };
+      });
 
       res.json({
         success: true,
-        data: recentRuns,
+        data: transformedRuns,
         pagination: {
-          total: runs.length,
+          total: transformedRuns.length,
           limit: parseInt(limit as string),
-          offset: parseInt(offset as string)
+          offset: 0
         }
       });
     } catch (error) {

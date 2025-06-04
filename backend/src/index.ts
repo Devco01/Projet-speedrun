@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 
 // Routes
 import authRoutes from './routes/authRoutes';
-import gameRoutes from './routes/gameRoutes';
 import runRoutes from './routes/runRoutes';
 import eventRoutes from './routes/eventRoutes';
 import userRoutes from './routes/userRoutes';
@@ -31,7 +30,6 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/games', gameRoutes);
 app.use('/api/runs', runRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/users', userRoutes);
@@ -48,7 +46,6 @@ app.get('/', (req, res) => {
     timestamp: new Date().toISOString(),
     endpoints: {
       auth: '/api/auth',
-      games: '/api/games',
       runs: '/api/runs',
       events: '/api/events',
       users: '/api/users',
@@ -68,7 +65,6 @@ app.get('/health', (req, res) => {
     memory: process.memoryUsage(),
     apis: {
       auth: 'operational',
-      games: 'operational',
       runs: 'operational',
       events: 'operational',
       users: 'operational',
@@ -92,15 +88,6 @@ app.get('/api', (req, res) => {
           'POST /register - Inscription',
           'POST /login - Connexion',
           'GET /me - Profil utilisateur'
-        ]
-      },
-      games: {
-        base: '/api/games',
-        routes: [
-          'GET / - Liste des jeux',
-          'GET /:id - Détails d\'un jeu',
-          'GET /:id/categories - Catégories d\'un jeu',
-          'GET /:id/leaderboard - Classement d\'un jeu'
         ]
       },
       runs: {
@@ -195,7 +182,6 @@ app.listen(PORT, () => {
   console.log('🚀 ======================================');
   console.log('📊 Available APIs:');
   console.log('   • Auth: /api/auth');
-  console.log('   • Games: /api/games');
   console.log('   • Runs: /api/runs');
   console.log('   • Events: /api/events');
   console.log('   • Users: /api/users');

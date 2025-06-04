@@ -92,6 +92,34 @@ export interface Leaderboard {
   };
 }
 
+export interface RecentRun {
+  id: string;
+  user: {
+    id: string;
+    username: string;
+    profileImage?: string;
+  };
+  game: {
+    id: string;
+    title: string;
+    cover?: string;
+  };
+  category: {
+    id: string;
+    name: string;
+  };
+  time: number;
+  formattedTime: string;
+  submittedAt: string;
+  verifiedAt?: string;
+  isVerified: boolean;
+}
+
+// Type pour les runs enrichis avec les détails du jeu (utilisé dans la page activity)
+export interface EnrichedRecentRun extends RecentRun {
+  gameDetails?: SpeedrunGame | null;
+}
+
 class SpeedrunApiClient {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const url = `${BASE_URL}/speedrun${endpoint}`;
@@ -118,6 +146,35 @@ class SpeedrunApiClient {
       return data.data;
     } catch (error) {
       console.error(`Erreur API speedrun.com (${endpoint}):`, error);
+      throw error;
+    }
+  }
+
+  private async requestDirect<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    const url = `${BASE_URL}${endpoint}`;
+    
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...options?.headers,
+        },
+        ...options,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.message || 'Erreur API');
+      }
+
+      return data.data;
+    } catch (error) {
+      console.error(`Erreur API directe (${endpoint}):`, error);
       throw error;
     }
   }
@@ -182,6 +239,13 @@ class SpeedrunApiClient {
   }
 
   /**
+   * Récupère les runs récents globaux (tous jeux confondus)
+   */
+  async getGlobalRecentRuns(limit = 20): Promise<RecentRun[]> {
+    return this.requestDirect(`/leaderboards/recent?limit=${limit}`);
+  }
+
+  /**
    * Récupère le leaderboard d'une catégorie
    */
   async getLeaderboard(
@@ -218,7 +282,24 @@ class SpeedrunApiClient {
     const queryString = params.toString();
     const endpoint = `/leaderboards/${gameId}/${categoryId}${queryString ? `?${queryString}` : ''}`;
     
-    return this.request(endpoint);
+    const leaderboard = await this.request<Leaderboard>(endpoint);
+    
+    // Post-traitement : convertir les dates string en objets Date
+    if (leaderboard.runs) {
+      leaderboard.runs.forEach(entry => {
+        if (entry.run.date && typeof entry.run.date === 'string') {
+          entry.run.date = new Date(entry.run.date);
+        }
+        if (entry.run.submittedAt && typeof entry.run.submittedAt === 'string') {
+          entry.run.submittedAt = new Date(entry.run.submittedAt);
+        }
+        if (entry.run.verifiedAt && typeof entry.run.verifiedAt === 'string') {
+          entry.run.verifiedAt = new Date(entry.run.verifiedAt);
+        }
+      });
+    }
+    
+    return leaderboard;
   }
 
   /**
@@ -255,6 +336,11 @@ class SpeedrunApiClient {
       return run.playerName;
     }
 
+    // Vérifier que externalData existe
+    if (!run.externalData || !run.externalData.speedruncom) {
+      return 'Joueur inconnu';
+    }
+
     // Fallback sur les données enrichies
     const playersData = run.externalData.speedruncom.playersData;
     if (playersData && playersData.length > 0) {
@@ -273,6 +359,13 @@ class SpeedrunApiClient {
     }
 
     return 'Joueur inconnu';
+  }
+
+  /**
+   * Extrait le nom du joueur depuis les données de RecentRun
+   */
+  getPlayerNameFromRecentRun(run: RecentRun): string {
+    return run.user?.username || 'Joueur inconnu';
   }
 
   /**

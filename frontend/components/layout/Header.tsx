@@ -16,11 +16,11 @@ export default function Header() {
               <span className="text-2xl font-bold text-purple-700">SpeedRun</span>
             </Link>
             <nav className="hidden md:ml-8 md:flex md:space-x-8">
-              <Link href="/games" className="text-gray-700 hover:text-purple-600 px-3 py-2 text-sm font-medium">
-                Jeux
-              </Link>
               <Link href="/leaderboards" className="text-gray-700 hover:text-purple-600 px-3 py-2 text-sm font-medium">
                 Classements
+              </Link>
+              <Link href="/activity" className="text-gray-700 hover:text-purple-600 px-3 py-2 text-sm font-medium">
+                Activité
               </Link>
               <Link href="/events" className="text-gray-700 hover:text-purple-600 px-3 py-2 text-sm font-medium">
                 Événements
@@ -111,11 +111,11 @@ export default function Header() {
       {/* Mobile menu */}
       <div className={`${isMenuOpen ? 'block' : 'hidden'} md:hidden`}>
         <div className="pt-2 pb-3 space-y-1">
-          <Link href="/games" className="block pl-3 pr-4 py-2 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-purple-600">
-            Jeux
-          </Link>
           <Link href="/leaderboards" className="block pl-3 pr-4 py-2 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-purple-600">
             Classements
+          </Link>
+          <Link href="/activity" className="block pl-3 pr-4 py-2 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-purple-600">
+            Activité
           </Link>
           <Link href="/events" className="block pl-3 pr-4 py-2 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-purple-600">
             Événements

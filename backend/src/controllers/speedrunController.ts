@@ -80,7 +80,7 @@ export class SpeedrunController {
       }
 
       console.log(`🔍 Recherche contrôleur pour: "${query.trim()}" (limite: ${numLimit}, officialOnly: ${officialOnly})`);
-      const games = await speedrunApiService.searchGamesSimple(query.trim(), numLimit);
+      const games = await speedrunApiService.searchGames(query.trim(), numLimit);
       
       // Filtrer par statut officiel si demandé
       const filteredGames = officialOnly 
@@ -113,7 +113,8 @@ export class SpeedrunController {
       res.status(500).json({
         success: false,
         message: 'Erreur lors de la recherche de jeux',
-        error: errorMessage
+        error: errorMessage,
+        data: []
       });
     }
   }
@@ -149,22 +150,22 @@ export class SpeedrunController {
       }
 
       console.log(`Recherche exhaustive demandée pour: "${query.trim()}" (officialOnly: ${officialOnly})`);
-      const games = await speedrunApiService.searchGamesExhaustive(query.trim(), numMax);
+      const games = await speedrunApiService.searchGamesSimple(query.trim(), numMax);
       
       // Filtrer par statut officiel si demandé
       const filteredGames = officialOnly 
         ? speedrunApiService.filterAndSortGamesByOfficial(games, true)
         : games;
       
-      const transformedGames = filteredGames.map(game => speedrunApiService.transformGameData(game));
+      const transformedGames = filteredGames.map((game: any) => speedrunApiService.transformGameData(game));
 
       // Compter les jeux par type
-      const officialCount = transformedGames.filter(g => g.isOfficial).length;
-      const communityCount = transformedGames.filter(g => !g.isOfficial).length;
+      const officialCount = transformedGames.filter((g: any) => g.isOfficial).length;
+      const communityCount = transformedGames.filter((g: any) => !g.isOfficial).length;
 
       res.json({
         success: true,
-        data: transformedGames,
+        data: transformedGames, // Format attendu par le frontend
         metadata: {
           query: query.trim(),
           resultsCount: transformedGames.length,
@@ -183,7 +184,8 @@ export class SpeedrunController {
       res.status(500).json({
         success: false,
         message: 'Erreur lors de la recherche exhaustive de jeux',
-        error: errorMessage
+        error: errorMessage,
+        data: [] // Retourner un tableau vide en cas d'erreur
       });
     }
   }
@@ -241,7 +243,8 @@ export class SpeedrunController {
       console.error(`Erreur lors de la récupération des catégories pour ${req.params.gameId}:`, error);
       res.status(500).json({
         success: false,
-        message: 'Erreur lors de la récupération des catégories'
+        message: 'Erreur lors de la récupération des catégories',
+        categories: []
       });
     }
   }

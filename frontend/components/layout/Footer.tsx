@@ -38,11 +38,6 @@ export default function Footer() {
             </h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/games" className="text-gray-300 hover:text-white">
-                  Tous les jeux
-                </Link>
-              </li>
-              <li>
                 <Link href="/leaderboards" className="text-gray-300 hover:text-white">
                   Classements
                 </Link>
