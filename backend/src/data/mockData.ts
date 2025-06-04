@@ -198,51 +198,9 @@ export const mockRuns: MockRun[] = [
   }
 ];
 
-// Données événements de test
-export const mockEvents: MockEvent[] = [
-  {
-    id: "1",
-    name: "Speed Games Done Quick 2024",
-    description: "Marathon de speedruns caritatif de 7 jours avec les meilleurs runners du monde.",
-    startDate: "2024-07-15T10:00:00Z",
-    endDate: "2024-07-22T20:00:00Z",
-    location: "Minneapolis, Minnesota",
-    isOnline: false,
-    participants: 150,
-    createdAt: "2024-05-01T12:00:00Z"
-  },
-  {
-    id: "2",
-    name: "Retro Speedrun Weekend",
-    description: "Événement en ligne dédié aux speedruns de jeux rétro des années 80-90.",
-    startDate: "2024-08-10T18:00:00Z",
-    endDate: "2024-08-12T22:00:00Z",
-    isOnline: true,
-    participants: 75,
-    createdAt: "2024-06-15T14:30:00Z"
-  },
-  {
-    id: "3",
-    name: "Indie Games Speedrun Festival",
-    description: "Célébration des jeux indépendants avec des courses en direct et des développeurs invités.",
-    startDate: "2024-09-05T16:00:00Z",
-    endDate: "2024-09-08T20:00:00Z",
-    location: "Berlin, Allemagne",
-    isOnline: false,
-    participants: 80,
-    createdAt: "2024-07-01T10:00:00Z"
-  },
-  {
-    id: "4",
-    name: "Platformer Paradise",
-    description: "Marathon de 48h focalisé exclusivement sur les jeux de plateformes.",
-    startDate: "2024-10-20T12:00:00Z",
-    endDate: "2024-10-22T12:00:00Z",
-    isOnline: true,
-    participants: 45,
-    createdAt: "2024-08-20T09:00:00Z"
-  }
-];
+// Données événements de test - SUPPRIMÉES
+// Les événements sont maintenant créés dynamiquement par les utilisateurs
+export const mockEvents: MockEvent[] = [];
 
 // Données commentaires de test
 export const mockComments: MockComment[] = [

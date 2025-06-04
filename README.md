@@ -1,6 +1,6 @@
 # 🏃‍♂️ Plateforme de Speedruns
 
-Une plateforme complète pour gérer, partager et suivre les speedruns de jeux vidéo, développée dans le cadre de l'examen du Titre Professionnel Développeur Web et Web Mobile.
+Une plateforme complète pour partager et suivre les speedruns de jeux vidéo, développée dans le cadre de l'examen du Titre Professionnel Développeur Web et Web Mobile.
 
 ## 🚀 Architecture du Projet
 

@@ -108,22 +108,16 @@ export default function LoginPage() {
             </div>
 
             {/* Bouton de connexion */}
-            <button
+            <button 
               type="submit"
               disabled={isLoading}
-              className={`w-full font-semibold py-3 px-4 rounded-lg transition-all duration-200 ${
-                isLoading
-                  ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl'
-              }`}
+              className="group w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-600 text-white px-6 py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-violet-500/25 border border-violet-500/20 disabled:transform-none disabled:shadow-none"
             >
-              {isLoading ? (
-                <div className="flex items-center justify-center">
-                  <div className="w-5 h-5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin mr-2"></div>
-                  Connexion en cours...
-                </div>
-              ) : (
-                'Se connecter'
+              <span>
+                {isLoading ? 'Connexion en cours...' : 'Se connecter'}
+              </span>
+              {!isLoading && (
+                <span className="ml-2 opacity-75 group-hover:opacity-100 transition-opacity">→</span>
               )}
             </button>
           </form>
@@ -141,12 +135,8 @@ export default function LoginPage() {
           {/* Connexion sociale */}
           <div className="space-y-3">
             <button className="w-full flex items-center justify-center px-4 py-3 border border-slate-700 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors">
-              <span className="mr-2">📺</span>
-              <span className="text-white">Continuer avec Twitch</span>
-            </button>
-            <button className="w-full flex items-center justify-center px-4 py-3 border border-slate-700 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors">
-              <span className="mr-2">💬</span>
-              <span className="text-white">Continuer avec Discord</span>
+              <span className="mr-2">🔍</span>
+              <span className="text-white">Continuer avec Google</span>
             </button>
           </div>
 
@@ -159,17 +149,6 @@ export default function LoginPage() {
               </Link>
             </p>
           </div>
-        </div>
-
-        {/* Info démo */}
-        <div className="bg-blue-900/30 border border-blue-700/50 rounded-lg p-4 text-center">
-          <div className="flex items-center justify-center mb-2">
-            <span className="text-blue-400 mr-2">ℹ️</span>
-            <span className="text-blue-300 font-medium">Mode Démo</span>
-          </div>
-          <p className="text-blue-200 text-sm">
-            Cette page de connexion est fonctionnelle pour la démonstration du projet TP DWWM.
-          </p>
         </div>
       </div>
     </div>

@@ -1,105 +1,221 @@
 import type { AppProps } from 'next/app'
 import Link from 'next/link'
+import { useState, useEffect, createContext, useContext } from 'react'
 import '../styles/globals.css'
 
+// Types pour l'authentification globale
+interface Utilisateur {
+  id: string;
+  nomUtilisateur: string;
+  email: string;
+  imageProfile?: string;
+}
+
+interface AuthContextType {
+  utilisateurActuel: Utilisateur | null;
+  estAuthentifie: boolean;
+  gererConnexion: (nomUtilisateur: string, email: string) => void;
+  gererDeconnexion: () => void;
+}
+
+// Contexte d'authentification global
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth doit être utilisé dans un AuthProvider');
+  }
+  return context;
+};
+
 export default function App({ Component, pageProps }: AppProps) {
+  const [utilisateurActuel, setUtilisateurActuel] = useState<Utilisateur | null>(null);
+  const [estAuthentifie, setEstAuthentifie] = useState(false);
+
+  // Charger l'utilisateur depuis le localStorage au démarrage
+  useEffect(() => {
+    const utilisateurSauvegarde = localStorage.getItem('utilisateurSpeedrun');
+    if (utilisateurSauvegarde) {
+      const utilisateur = JSON.parse(utilisateurSauvegarde);
+      setUtilisateurActuel(utilisateur);
+      setEstAuthentifie(true);
+    }
+  }, []);
+
+  const gererConnexion = (nomUtilisateur: string, email: string) => {
+    // Préserver l'avatar existant s'il y en a un
+    const avatarExistant = utilisateurActuel?.imageProfile;
+    
+    const nouvelUtilisateur: Utilisateur = {
+      id: utilisateurActuel?.id || Date.now().toString(),
+      nomUtilisateur,
+      email,
+      imageProfile: avatarExistant
+    };
+    setUtilisateurActuel(nouvelUtilisateur);
+    setEstAuthentifie(true);
+    localStorage.setItem('utilisateurSpeedrun', JSON.stringify(nouvelUtilisateur));
+  };
+
+  const gererDeconnexion = () => {
+    setUtilisateurActuel(null);
+    setEstAuthentifie(false);
+    localStorage.removeItem('utilisateurSpeedrun');
+  };
+
+  const authValue: AuthContextType = {
+    utilisateurActuel,
+    estAuthentifie,
+    gererConnexion,
+    gererDeconnexion
+  };
+
   return (
-    <div className="min-h-screen bg-slate-900">
-      {/* Header moderne */}
-      <header className="bg-slate-800/80 backdrop-blur-md border-b border-slate-700 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-              <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-xl font-bold text-white">🚀</span>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
-                  SpeedRun Platform
-                </h1>
-                <p className="text-sm text-slate-400">Plateforme de speedrunning</p>
-              </div>
-            </Link>
-            
-            {/* Navigation */}
-            <nav className="hidden md:flex items-center space-x-8">
-              <Link href="/" className="text-slate-300 hover:text-violet-400 transition-colors font-medium">
-                Accueil
-              </Link>
-              <Link href="/games" className="text-slate-300 hover:text-violet-400 transition-colors font-medium">
-                Jeux
-              </Link>
-              <Link href="/events" className="text-slate-300 hover:text-violet-400 transition-colors font-medium">
-                Événements
-              </Link>
-              <Link href="/leaderboards" className="text-slate-300 hover:text-violet-400 transition-colors font-medium">
-                Classements
-              </Link>
-              <Link href="/support" className="text-slate-300 hover:text-violet-400 transition-colors font-medium">
-                Support
-              </Link>
-              <div className="flex items-center space-x-4 ml-6">
-                <Link href="/login" className="px-4 py-2 text-slate-300 hover:text-violet-400 border border-slate-600 hover:border-violet-500 rounded-lg transition-colors font-medium">
-                  Connexion
-                </Link>
-                <Link href="/register" className="btn-primary">
-                  S'inscrire
-                </Link>
-              </div>
-            </nav>
-          </div>
-        </div>
-      </header>
-      
-      {/* Contenu principal */}
-      <main className="max-w-7xl mx-auto py-8 px-4 fade-in">
-        <Component {...pageProps} />
-      </main>
-      
-      {/* Footer */}
-      <footer className="bg-slate-900 border-t border-slate-800 py-12 mt-20">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div>
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <span className="text-lg font-bold text-white">🚀</span>
+    <AuthContext.Provider value={authValue}>
+      <div className="min-h-screen bg-slate-900">
+        {/* Header moderne */}
+        <header className="bg-slate-800/80 backdrop-blur-md border-b border-slate-700 sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
+                <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-cyan-500 rounded-lg flex items-center justify-center">
+                  <span className="text-xl font-bold bg-gradient-to-r from-violet-300 to-cyan-300 bg-clip-text text-transparent">⚡</span>
                 </div>
-                <h3 className="text-xl font-bold text-white">SpeedRun Platform</h3>
+                <div>
+                  <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
+                    SpeedrunSchedule
+                  </h1>
+                  <p className="text-sm text-slate-400">Explorez les temps et records</p>
+                </div>
+              </Link>
+              
+              {/* Navigation */}
+              <nav className="hidden md:flex items-center space-x-10">
+                <Link href="/" className="text-slate-300 hover:text-violet-400 transition-colors font-medium">
+                  Accueil
+                </Link>
+                <Link href="/leaderboards" className="text-slate-300 hover:text-violet-400 transition-colors font-medium">
+                  Classements
+                </Link>
+                <Link href="/activity" className="text-slate-300 hover:text-violet-400 transition-colors font-medium">
+                  Activité
+                </Link>
+                <Link href="/events" className="text-slate-300 hover:text-violet-400 transition-colors font-medium">
+                  Événements
+                </Link>
+                <Link href="/support" className="text-slate-300 hover:text-violet-400 transition-colors font-medium">
+                  Support
+                </Link>
+                
+                {/* Zone d'authentification */}
+                <div className="flex items-center space-x-4 ml-8">
+                  {estAuthentifie && utilisateurActuel ? (
+                    <>
+                      {/* Bouton Profil */}
+                      <Link 
+                        href="/profile"
+                        className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded font-medium text-sm transition-colors"
+                      >
+                        👤 Profil
+                      </Link>
+                      
+                      {/* Informations utilisateur */}
+                      <div className="flex items-center space-x-2 bg-slate-800 rounded-lg px-3 py-2">
+                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center overflow-hidden">
+                          {utilisateurActuel.imageProfile && utilisateurActuel.imageProfile.startsWith('data:') ? (
+                            <img 
+                              src={utilisateurActuel.imageProfile} 
+                              alt="Avatar" 
+                              className="w-full h-full object-cover" 
+                            />
+                          ) : (
+                            <svg 
+                              className="w-5 h-5 text-white" 
+                              fill="currentColor" 
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                            </svg>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <div className="text-white font-medium text-sm">{utilisateurActuel.nomUtilisateur}</div>
+                          <div className="text-slate-400 text-xs">En ligne</div>
+                        </div>
+                      </div>
+                      
+                      {/* Bouton déconnexion */}
+                      <button
+                        onClick={gererDeconnexion}
+                        className="group bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-red-500/25 border border-red-500/20"
+                      >
+                        <span>Déconnexion</span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link href="/login" className="group bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-violet-500/25 border border-violet-500/20">
+                        <span>Connexion</span>
+                      </Link>
+                      <Link href="/register" className="group bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-green-500/25 border border-green-500/20">
+                        <span>S'inscrire</span>
+                      </Link>
+                    </>
+                  )}
+                </div>
+              </nav>
+            </div>
+          </div>
+        </header>
+        
+        {/* Contenu principal */}
+        <main className="max-w-7xl mx-auto py-8 px-4 fade-in">
+          <Component {...pageProps} />
+        </main>
+        
+        {/* Footer */}
+        <footer className="bg-slate-900 border-t border-slate-800 py-12 mt-20">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div>
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-cyan-500 rounded-lg flex items-center justify-center">
+                    <span className="text-lg font-bold bg-gradient-to-r from-violet-300 to-cyan-300 bg-clip-text text-transparent">⚡</span>
+                  </div>
+                  <h3 className="text-xl font-bold text-white">SpeedrunSchedule</h3>
+                </div>
+                <p className="text-slate-400 mb-6 max-w-lg"> 
+                  Explorez les temps, découvrez les records et plongez dans l'univers du speedrunning !
+                </p>
               </div>
-              <p className="text-slate-400 mb-6 max-w-lg"> 
-                Suivez vos performances, participez aux événements et rejoignez la communauté !
+              
+              <div>
+                <h4 className="text-white font-semibold mb-4">Navigation</h4>
+                <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+                  <div className="space-y-2">
+                    <div><Link href="/" className="text-slate-400 hover:text-violet-400 transition-colors">Accueil</Link></div>
+                    <div><Link href="/leaderboards" className="text-slate-400 hover:text-violet-400 transition-colors">Classements</Link></div>
+                    <div><Link href="/activity" className="text-slate-400 hover:text-violet-400 transition-colors">Activité</Link></div>
+                    <div><Link href="/events" className="text-slate-400 hover:text-violet-400 transition-colors">Événements</Link></div>
+                  </div>
+                  <div className="space-y-2">
+                    <div><Link href="/support" className="text-slate-400 hover:text-violet-400 transition-colors">Support</Link></div>
+                    <div><Link href="/login" className="text-slate-400 hover:text-violet-400 transition-colors">Connexion</Link></div>
+                    <div><Link href="/register" className="text-slate-400 hover:text-violet-400 transition-colors">Inscription</Link></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="border-t border-slate-800 mt-8 pt-8 text-center">
+              <p className="text-slate-400 text-sm">
+                &copy; 2025 SpeedrunSchedule - Projet TP DWWM ⚡
               </p>
             </div>
-            
-            <div>
-              <h4 className="text-white font-semibold mb-4">Navigation</h4>
-              <div className="grid grid-cols-2 gap-x-8 gap-y-2">
-                <div className="space-y-2">
-                  <div><Link href="/" className="text-slate-400 hover:text-violet-400 transition-colors">Accueil</Link></div>
-                  <div><Link href="/games" className="text-slate-400 hover:text-violet-400 transition-colors">Jeux</Link></div>
-                  <div><Link href="/events" className="text-slate-400 hover:text-violet-400 transition-colors">Événements</Link></div>
-                  <div><Link href="/leaderboards" className="text-slate-400 hover:text-violet-400 transition-colors">Classements</Link></div>
-                </div>
-                <div className="space-y-2">
-                  <div><Link href="/support" className="text-slate-400 hover:text-violet-400 transition-colors">Support</Link></div>
-                  <div><Link href="/login" className="text-slate-400 hover:text-violet-400 transition-colors">Connexion</Link></div>
-                  <div><Link href="/register" className="text-slate-400 hover:text-violet-400 transition-colors">Inscription</Link></div>
-                </div>
-              </div>
-            </div>
           </div>
-          
-          <div className="border-t border-slate-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-slate-400 text-sm">
-              &copy; 2025 SpeedRun Platform - Projet TP DWWM 🎯
-            </p>
-            <p className="text-slate-500 text-sm mt-2 md:mt-0">
-              Backend fonctionnel avec données de test
-            </p>
-          </div>
-        </div>
-      </footer>
-    </div>
+        </footer>
+      </div>
+    </AuthContext.Provider>
   )
 } 

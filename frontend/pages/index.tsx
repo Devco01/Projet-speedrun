@@ -1,228 +1,257 @@
 import Link from 'next/link'
+import { useState, useEffect } from 'react'
+
+interface JeuStats {
+  id: string
+  nom: string
+  nombreJoueurs: number
+  recordTemps: string
+  categorie: string
+  coverImage?: string
+}
 
 export default function HomePage() {
+  const [jeuxPopulaires, setJeuxPopulaires] = useState<JeuStats[]>([])
+  const [chargementJeux, setChargementJeux] = useState(true)
+
+  useEffect(() => {
+    const chargerJeuxPopulaires = async () => {
+      try {
+        setChargementJeux(true)
+        
+        // Liste des jeux populaires avec leurs IDs Speedrun.com
+        const jeuxIds = [
+          { 
+            id: 'sm64', 
+            nom: 'Super Mario 64'
+          },
+          { 
+            id: 'oot', 
+            nom: 'Zelda: OOT'
+          },
+          { 
+            id: 'celeste', 
+            nom: 'Celeste'
+          }
+        ]
+
+        const jeuxData = await Promise.all(
+          jeuxIds.map(async (jeu) => {
+            try {
+              // Récupérer les stats du jeu
+              const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+              const response = await fetch(`${apiUrl}/speedrun/game-stats/${jeu.id}`)
+              if (response.ok) {
+                const stats = await response.json()
+                return {
+                  id: jeu.id,
+                  nom: jeu.nom,
+                  nombreJoueurs: stats.players || 0,
+                  recordTemps: stats.worldRecord || 'N/A',
+                  categorie: stats.category || 'Any%'
+                }
+              }
+            } catch (error) {
+              console.error(`Erreur lors du chargement de ${jeu.nom}:`, error)
+            }
+            
+            // Fallback en cas d'erreur
+            return {
+              id: jeu.id,
+              nom: jeu.nom,
+              nombreJoueurs: 0,
+              recordTemps: 'Chargement...',
+              categorie: 'Any%'
+            }
+          })
+        )
+
+        setJeuxPopulaires(jeuxData)
+      } catch (error) {
+        console.error('Erreur lors du chargement des jeux populaires:', error)
+      } finally {
+        setChargementJeux(false)
+      }
+    }
+
+    chargerJeuxPopulaires()
+  }, [])
+
   return (
-    <div className="space-y-12">
+    <div className="space-y-8">
       {/* Hero Section */}
-      <section className="text-center py-20">
+      <section className="text-center py-16">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl mb-6">
-              <span className="text-3xl">🏆</span>
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-violet-500 to-cyan-500 rounded-2xl mb-6">
+              <span className="text-5xl font-bold bg-gradient-to-r from-violet-300 to-cyan-300 bg-clip-text text-transparent">⚡</span>
             </div>
           </div>
           <h1 className="text-5xl md:text-6xl font-bold mb-6">
-            <span className="bg-gradient-to-r from-violet-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Plateforme de Speedruns
+            <span className="bg-gradient-to-r from-violet-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
+              SpeedrunSchedule
             </span>
           </h1>
           <p className="text-xl text-slate-300 mb-8 max-w-2xl mx-auto leading-relaxed">
-            La plateforme dédiée aux speedrunners. Suivez vos performances, 
-            participez aux événements et rejoignez une communauté passionnée.
+            Explorez les temps record, découvrez les performances légendaires et 
+            naviguez dans l'univers fascinant du speedrunning.
           </p>
           <div className="flex justify-center">
-            <Link href="/leaderboards" className="btn-secondary text-lg px-8 py-4 inline-flex items-center">
-              📊 Voir les classements
+            <Link href="/leaderboards" className="group bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white text-lg px-8 py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-violet-500/25 border border-violet-500/20 inline-flex items-center">
+              <span>Voir les Classements</span>
+              <span className="ml-2 opacity-75 group-hover:opacity-100 transition-opacity">→</span>
             </Link>
           </div>
         </div>
       </section>
 
-      {/* API Testing Section */}
+      {/* Fonctionnalités principales */}
       <section>
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-white mb-4">API Backend - Tests en Direct</h2>
+          <h2 className="text-3xl font-bold text-white mb-4">Découvrez l'univers du speedrunning</h2>
           <p className="text-slate-400 text-lg">
-            Backend fonctionnel avec données de test complètes 🎯
+            Explorez les meilleurs temps mondiaux et plongez dans la passion du speedrun
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          {/* Card Exploration */}
+          <div className="card hover-scale group h-full flex flex-col">
+            <div className="flex items-center mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center mr-3">
+                <span className="text-xl">🔍</span>
+              </div>
+              <h3 className="text-xl font-semibold text-white">Exploration de Jeux</h3>
+            </div>
+            <p className="text-slate-300 mb-6 flex-grow">
+              Découvrez des milliers de jeux speedrunnés avec leurs catégories, règles et records officiels. Naviguez facilement dans notre catalogue complet.
+            </p>
+            <Link 
+              href="/leaderboards"
+              className="group inline-flex items-center justify-center w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-blue-500/25 border border-blue-500/20 mt-auto"
+            >
+              <span>Explorer les Jeux</span>
+              <span className="ml-2 opacity-75 group-hover:opacity-100 transition-opacity">→</span>
+            </Link>
+          </div>
+          
+          {/* Card Classements */}
+          <div className="card hover-scale group h-full flex flex-col">
+            <div className="flex items-center mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center mr-3">
+                <span className="text-xl">🏅</span>
+              </div>
+              <h3 className="text-xl font-semibold text-white">Records Mondiaux</h3>
+            </div>
+            <p className="text-slate-300 mb-6 flex-grow">
+              Consultez les classements officiels et découvrez les performances légendaires des meilleurs speedrunners de chaque jeu et catégorie.
+            </p>
+            <Link 
+              href="/leaderboards"
+              className="group bg-transparent border-2 border-white hover:border-white/80 text-white hover:text-white font-semibold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:bg-white/10 inline-flex items-center"
+            >
+              <span>Voir les Classements</span>
+              <span className="ml-2 opacity-75 group-hover:opacity-100 transition-opacity">→</span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Jeux populaires */}
+      <section>
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold text-white mb-4">Jeux Populaires</h2>
+          <p className="text-slate-400 text-lg">
+            Découvrez les jeux les plus speedrunnés
           </p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Card API Jeux */}
-          <div className="card hover-scale group">
-            <div className="flex items-center mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-xl">🎮</span>
+          {chargementJeux ? (
+            // Skeletons de chargement
+            Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="card text-center">
+                <div className="w-16 h-16 bg-slate-700 rounded-xl mx-auto mb-4 animate-pulse"></div>
+                <div className="h-6 bg-slate-700 rounded mx-auto mb-2 w-32 animate-pulse"></div>
+                <div className="h-4 bg-slate-700 rounded mx-auto mb-3 w-24 animate-pulse"></div>
+                <div className="h-4 bg-slate-700 rounded mx-auto w-28 animate-pulse"></div>
               </div>
-              <h3 className="text-xl font-semibold text-white">API Jeux</h3>
-            </div>
-            <p className="text-slate-300 mb-6">
-              Accédez à la liste complète des jeux disponibles avec leurs catégories et statistiques.
-            </p>
-            <a 
-              href="http://localhost:5000/api/games" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              <span className="mr-2">🔗</span>
-              Tester l'API Jeux
-            </a>
-          </div>
-          
-          {/* Card API Événements */}
-          <div className="card hover-scale group">
-            <div className="flex items-center mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-xl">🏆</span>
+            ))
+          ) : (
+            jeuxPopulaires.map((jeu, index) => (
+              <div key={jeu.id} className="card text-center hover-scale group">
+                <div className="w-16 h-16 rounded-full mx-auto mb-4 overflow-hidden relative shadow-lg">
+                  <div className={`w-full h-full bg-gradient-to-br ${
+                    index === 0 ? 'from-red-400 via-red-500 to-red-600' :
+                    index === 1 ? 'from-green-400 via-green-500 to-green-600' :
+                    'from-purple-400 via-purple-500 to-purple-600'
+                  } flex items-center justify-center`}>
+                  </div>
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-2">{jeu.nom}</h3>
+                <p className="text-slate-400 text-sm mb-3">
+                  {jeu.nombreJoueurs > 0 ? `${jeu.nombreJoueurs.toLocaleString()} joueurs` : 'Chargement...'}
+                </p>
+                <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
+                  <p className="text-green-400 text-xs font-mono">
+                    {jeu.categorie} - Record: {jeu.recordTemps}
+                  </p>
+                </div>
               </div>
-              <h3 className="text-xl font-semibold text-white">API Événements</h3>
-            </div>
-            <p className="text-slate-300 mb-6">
-              Découvrez les événements de speedrun en cours et à venir avec tous leurs détails.
-            </p>
-            <a 
-              href="http://localhost:5000/api/events" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              <span className="mr-2">📅</span>
-              Tester l'API Événements
-            </a>
-          </div>
-          
-          {/* Card API Jeu Spécifique */}
-          <div className="card hover-scale group">
-            <div className="flex items-center mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-500 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-xl">⚡</span>
-              </div>
-              <h3 className="text-xl font-semibold text-white">Jeu Détaillé</h3>
-            </div>
-            <p className="text-slate-300 mb-6">
-              Explorez les détails complets d'un jeu spécifique avec ses catégories et records.
-            </p>
-            <a 
-              href="http://localhost:5000/api/games/1" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center w-full bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              <span className="mr-2">🍄</span>
-              Voir Super Mario Bros
-            </a>
-          </div>
+            ))
+          )}
         </div>
       </section>
 
-      {/* Status Section */}
+      {/* Statistiques */}
       <section>
-        <div className="bg-gradient-to-r from-green-900/50 to-emerald-900/50 border border-green-700/50 rounded-2xl p-8">
-          <div className="flex items-start">
-            <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mr-6 flex-shrink-0">
-              <span className="text-2xl">✅</span>
+        <div className="bg-gradient-to-r from-violet-900/50 to-purple-900/50 border border-violet-700/50 rounded-2xl p-8">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-white mb-4">Rejoignez des milliers de speedrunners</h2>
+            <p className="text-violet-200 text-lg">
+              Une communauté grandissante passionnée par la performance
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            <div className="space-y-2">
+              <div className="text-3xl font-bold text-white">45,000+</div>
+              <div className="text-violet-300 text-sm">Runs soumis</div>
             </div>
-            <div>
-              <h3 className="text-2xl font-bold text-white mb-2">Backend 100% Opérationnel !</h3>
-              <p className="text-green-200 text-lg mb-4">
-                Le serveur backend fonctionne parfaitement avec un système complet de données de test.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div className="space-y-2">
-                  <div className="flex items-center text-green-300">
-                    <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
-                    API RESTful complète
-                  </div>
-                  <div className="flex items-center text-green-300">
-                    <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
-                    4 jeux avec catégories multiples
-                  </div>
-                  <div className="flex items-center text-green-300">
-                    <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
-                    Système d'événements actif
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center text-green-300">
-                    <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
-                    Données de test complètes
-                  </div>
-                  <div className="flex items-center text-green-300">
-                    <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
-                    Contrôleurs TypeScript
-                  </div>
-                  <div className="flex items-center text-green-300">
-                    <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
-                    Prêt pour la soutenance
-                  </div>
-                </div>
-              </div>
+            <div className="space-y-2">
+              <div className="text-3xl font-bold text-white">8,500+</div>
+              <div className="text-violet-300 text-sm">Joueurs actifs</div>
+            </div>
+            <div className="space-y-2">
+              <div className="text-3xl font-bold text-white">2,000+</div>
+              <div className="text-violet-300 text-sm">Jeux disponibles</div>
+            </div>
+            <div className="space-y-2">
+              <div className="text-3xl font-bold text-white">150+</div>
+              <div className="text-violet-300 text-sm">Courses cette semaine</div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Project Progress */}
+      {/* Call to action */}
       <section>
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-white mb-4">État d'Avancement du Projet TP DWWM</h2>
-          <p className="text-slate-400">Progression complète pour l'examen</p>
-        </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Terminé */}
-          <div className="card bg-gradient-to-br from-green-900/20 to-emerald-900/20 border-green-700/30">
-            <div className="flex items-center mb-6">
-              <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-xl">✅</span>
-              </div>
-              <h3 className="text-2xl font-bold text-white">Fonctionnalités Terminées</h3>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center text-green-300">
-                <span className="w-2 h-2 bg-green-400 rounded-full mr-3"></span>
-                Backend Express + TypeScript complet
-              </div>
-              <div className="flex items-center text-green-300">
-                <span className="w-2 h-2 bg-green-400 rounded-full mr-3"></span>
-                API RESTful avec tous les endpoints
-              </div>
-              <div className="flex items-center text-green-300">
-                <span className="w-2 h-2 bg-green-400 rounded-full mr-3"></span>
-                Système de données de test robuste
-              </div>
-              <div className="flex items-center text-green-300">
-                <span className="w-2 h-2 bg-green-400 rounded-full mr-3"></span>
-                Interface avec Next.js
-              </div>
-              <div className="flex items-center text-green-300">
-                <span className="w-2 h-2 bg-green-400 rounded-full mr-3"></span>
-                Design responsive et accessible
-              </div>
-            </div>
-          </div>
-          
-          {/* En cours */}
-          <div className="card bg-gradient-to-br from-blue-900/20 to-violet-900/20 border-blue-700/30">
-            <div className="flex items-center mb-6">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-xl">🔧</span>
-              </div>
-              <h3 className="text-2xl font-bold text-white">Prochaines Étapes</h3>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center text-blue-300">
-                <span className="w-2 h-2 bg-blue-400 rounded-full mr-3"></span>
-                Pages de détail des jeux
-              </div>
-              <div className="flex items-center text-blue-300">
-                <span className="w-2 h-2 bg-blue-400 rounded-full mr-3"></span>
-                Interface d'administration
-              </div>
-              <div className="flex items-center text-blue-300">
-                <span className="w-2 h-2 bg-blue-400 rounded-full mr-3"></span>
-                Système de gestion des runs
-              </div>
-              <div className="flex items-center text-blue-300">
-                <span className="w-2 h-2 bg-blue-400 rounded-full mr-3"></span>
-                Tableaux de classements
-              </div>
-              <div className="flex items-center text-blue-300">
-                <span className="w-2 h-2 bg-blue-400 rounded-full mr-3"></span>
-                Documentation finale
-              </div>
-            </div>
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 md:p-12 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            Prêt à battre des records ?
+          </h2>
+          <p className="text-blue-100 text-lg mb-8 max-w-2xl mx-auto">
+            Rejoignez notre plateforme dès maintenant et commencez à participer aux courses speedrun les plus excitantes.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/register" className="group bg-gradient-to-r from-white to-gray-100 hover:from-gray-100 hover:to-gray-200 text-blue-600 hover:text-blue-700 font-semibold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg border border-blue-200/30 inline-flex items-center">
+              <span>S'inscrire</span>
+              <span className="ml-2 opacity-75 group-hover:opacity-100 transition-opacity">→</span>
+            </Link>
+            <Link href="/leaderboards" className="group bg-transparent border-2 border-white hover:border-white/80 text-white hover:text-white font-semibold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:bg-white/10 inline-flex items-center">
+              <span>Voir les Classements</span>
+              <span className="ml-2 opacity-75 group-hover:opacity-100 transition-opacity">→</span>
+            </Link>
           </div>
         </div>
       </section>
