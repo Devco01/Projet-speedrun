@@ -208,10 +208,18 @@ export default function App({ Component, pageProps }: AppProps) {
               </div>
             </div>
             
-            <div className="border-t border-slate-800 mt-8 pt-8 text-center">
+            <div className="border-t border-slate-800 mt-8 pt-8 text-center relative">
               <p className="text-slate-400 text-sm">
-                &copy; 2025 SpeedrunSchedule - Projet TP DWWM ⚡
+                &copy; 2025 SpeedrunSchedule - Projet TP DWWM 
               </p>
+              <Link 
+                href="/admin/login" 
+                className="absolute bottom-0 left-0 text-slate-800 hover:text-slate-600 transition-colors opacity-30 hover:opacity-60"
+                title="Administration"
+                style={{ fontSize: '8px' }}
+              >
+                •
+              </Link>
             </div>
           </div>
         </footer>
