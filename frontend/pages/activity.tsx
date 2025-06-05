@@ -299,28 +299,7 @@ export default function ActivityPage() {
         )}
       </div>
 
-      {/* Statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="card text-center">
-          <div className="text-3xl mb-2">🎮</div>
-          <div className="text-2xl font-bold text-green-400">{recentActiveGames.length}</div>
-          <div className="text-slate-400">Jeux actifs</div>
-        </div>
-        
-        <div className="card text-center">
-          <div className="text-3xl mb-2">⚡</div>
-          <div className="text-2xl font-bold text-blue-400">{recentRuns.length}</div>
-          <div className="text-slate-400">Runs récents</div>
-        </div>
-        
-        <div className="card text-center">
-          <div className="text-3xl mb-2">✅</div>
-          <div className="text-2xl font-bold text-purple-400">
-            {recentRuns.filter(run => run.isVerified).length}
-          </div>
-          <div className="text-slate-400">Runs vérifiés</div>
-        </div>
-      </div>
+
     </div>
   );
 } 

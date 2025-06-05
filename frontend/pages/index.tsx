@@ -80,82 +80,44 @@ export default function HomePage() {
   return (
     <div className="space-y-8">
       {/* Hero Section */}
-      <section className="text-center py-16">
-        <div className="max-w-4xl mx-auto">
+      <section className="text-center py-16 relative overflow-hidden">
+        {/* Particules d'arrière-plan dynamiques - centrées autour du titre */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {/* Particules orbitant autour du titre - zone centrale uniquement */}
+          <div className="absolute top-1/3 left-1/2 transform -translate-x-16 w-1.5 h-1.5 bg-violet-400/30 rounded-full animate-ping" style={{animationDelay: '0s', animationDuration: '2s'}}></div>
+          <div className="absolute top-1/3 left-1/2 transform translate-x-16 w-2 h-2 bg-cyan-400/40 rounded-full animate-ping" style={{animationDelay: '0.5s', animationDuration: '2.5s'}}></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-20 w-1 h-1 bg-purple-400/35 rounded-full animate-ping" style={{animationDelay: '1s', animationDuration: '3s'}}></div>
+          <div className="absolute top-1/2 left-1/2 transform translate-x-20 w-1.5 h-1.5 bg-violet-300/35 rounded-full animate-ping" style={{animationDelay: '1.5s', animationDuration: '2.2s'}}></div>
+          <div className="absolute top-2/3 left-1/2 transform -translate-x-12 w-1 h-1 bg-cyan-300/40 rounded-full animate-ping" style={{animationDelay: '0.3s', animationDuration: '2.8s'}}></div>
+          <div className="absolute top-2/3 left-1/2 transform translate-x-12 w-1 h-1 bg-purple-300/30 rounded-full animate-ping" style={{animationDelay: '1.2s', animationDuration: '2.7s'}}></div>
+        </div>
+        
+        <div className="max-w-4xl mx-auto relative z-10">
           <div className="mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-violet-500 to-cyan-500 rounded-2xl mb-6">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-violet-500 to-cyan-500 rounded-2xl mb-6 animate-pulse hover:animate-none transition-all duration-300 hover:scale-110 hover:rotate-3">
               <span className="text-5xl font-bold bg-gradient-to-r from-violet-300 to-cyan-300 bg-clip-text text-transparent">⚡</span>
             </div>
           </div>
-          <h1 className="text-5xl md:text-6xl font-bold mb-6">
-            <span className="bg-gradient-to-r from-violet-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
+          <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">
+            <span className="bg-gradient-to-r from-violet-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent bg-[length:200%_200%] animate-gradient">
               SpeedrunSchedule
             </span>
           </h1>
-          <p className="text-xl text-slate-300 mb-8 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-xl text-slate-300 mb-8 max-w-2xl mx-auto leading-relaxed animate-fade-in-delay">
             Explorez les temps record, découvrez les performances légendaires et 
             naviguez dans l'univers fascinant du speedrunning.
           </p>
-          <div className="flex justify-center">
-            <Link href="/leaderboards" className="group bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white text-lg px-8 py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-violet-500/25 border border-violet-500/20 inline-flex items-center">
-              <span>Voir les Classements</span>
-              <span className="ml-2 opacity-75 group-hover:opacity-100 transition-opacity">→</span>
+          <div className="flex justify-center animate-fade-in-delay-2">
+            <Link href="/leaderboards" className="group bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white text-lg px-8 py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-violet-500/25 border border-violet-500/20 inline-flex items-center relative overflow-hidden">
+              <span className="relative z-10">Voir les Classements</span>
+              <span className="ml-2 opacity-75 group-hover:opacity-100 transition-all duration-300 group-hover:translate-x-1">→</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-violet-700 to-purple-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Fonctionnalités principales */}
-      <section>
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-white mb-4">Découvrez l'univers du speedrunning</h2>
-          <p className="text-slate-400 text-lg">
-            Explorez les meilleurs temps mondiaux et plongez dans la passion du speedrun
-          </p>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          {/* Card Exploration */}
-          <div className="card hover-scale group h-full flex flex-col">
-            <div className="flex items-center mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-xl">🔍</span>
-              </div>
-              <h3 className="text-xl font-semibold text-white">Exploration de Jeux</h3>
-            </div>
-            <p className="text-slate-300 mb-6 flex-grow">
-              Découvrez des milliers de jeux speedrunnés avec leurs catégories, règles et records officiels. Naviguez facilement dans notre catalogue complet.
-            </p>
-            <Link 
-              href="/leaderboards"
-              className="group inline-flex items-center justify-center w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-blue-500/25 border border-blue-500/20 mt-auto"
-            >
-              <span>Explorer les Jeux</span>
-              <span className="ml-2 opacity-75 group-hover:opacity-100 transition-opacity">→</span>
-            </Link>
-          </div>
-          
-          {/* Card Classements */}
-          <div className="card hover-scale group h-full flex flex-col">
-            <div className="flex items-center mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-xl">🏅</span>
-              </div>
-              <h3 className="text-xl font-semibold text-white">Records Mondiaux</h3>
-            </div>
-            <p className="text-slate-300 mb-6 flex-grow">
-              Consultez les classements officiels et découvrez les performances légendaires des meilleurs speedrunners de chaque jeu et catégorie.
-            </p>
-            <Link 
-              href="/leaderboards"
-              className="group bg-transparent border-2 border-white hover:border-white/80 text-white hover:text-white font-semibold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:bg-white/10 inline-flex items-center"
-            >
-              <span>Voir les Classements</span>
-              <span className="ml-2 opacity-75 group-hover:opacity-100 transition-opacity">→</span>
-            </Link>
-          </div>
-        </div>
-      </section>
+
 
       {/* Jeux populaires */}
       <section>
@@ -179,21 +141,26 @@ export default function HomePage() {
             ))
           ) : (
             jeuxPopulaires.map((jeu, index) => (
-              <div key={jeu.id} className="card text-center hover-scale group">
-                <div className="w-16 h-16 rounded-full mx-auto mb-4 overflow-hidden relative shadow-lg">
+              <div 
+                key={jeu.id} 
+                className="card text-center hover-scale group animate-fade-in-delay"
+                style={{animationDelay: `${0.6 + index * 0.1}s`}}
+              >
+                <div className="w-16 h-16 rounded-full mx-auto mb-4 overflow-hidden relative shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
                   <div className={`w-full h-full bg-gradient-to-br ${
                     index === 0 ? 'from-red-400 via-red-500 to-red-600' :
                     index === 1 ? 'from-green-400 via-green-500 to-green-600' :
                     'from-purple-400 via-purple-500 to-purple-600'
-                  } flex items-center justify-center`}>
+                  } flex items-center justify-center relative overflow-hidden`}>
+                    <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </div>
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2">{jeu.nom}</h3>
-                <p className="text-slate-400 text-sm mb-3">
+                <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-violet-300 transition-colors duration-300">{jeu.nom}</h3>
+                <p className="text-slate-400 text-sm mb-3 group-hover:text-slate-300 transition-colors duration-300">
                   {jeu.nombreJoueurs > 0 ? `${jeu.nombreJoueurs.toLocaleString()} joueurs` : 'Chargement...'}
                 </p>
-                <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
-                  <p className="text-green-400 text-xs font-mono">
+                <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50 group-hover:border-violet-500/30 group-hover:bg-slate-700/50 transition-all duration-300">
+                  <p className="text-green-400 text-xs font-mono group-hover:text-green-300 transition-colors duration-300">
                     {jeu.categorie} - Record: {jeu.recordTemps}
                   </p>
                 </div>
@@ -203,54 +170,24 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Statistiques */}
-      <section>
-        <div className="bg-gradient-to-r from-violet-900/50 to-purple-900/50 border border-violet-700/50 rounded-2xl p-8">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-white mb-4">Rejoignez des milliers de speedrunners</h2>
-            <p className="text-violet-200 text-lg">
-              Une communauté grandissante passionnée par la performance
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-            <div className="space-y-2">
-              <div className="text-3xl font-bold text-white">45,000+</div>
-              <div className="text-violet-300 text-sm">Runs soumis</div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-3xl font-bold text-white">8,500+</div>
-              <div className="text-violet-300 text-sm">Joueurs actifs</div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-3xl font-bold text-white">2,000+</div>
-              <div className="text-violet-300 text-sm">Jeux disponibles</div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-3xl font-bold text-white">150+</div>
-              <div className="text-violet-300 text-sm">Courses cette semaine</div>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* Call to action */}
+
+      {/* Call to action - Style harmonisé */}
       <section>
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 md:p-12 text-center">
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-8 md:p-12 text-center backdrop-blur-sm">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
             Prêt à battre des records ?
           </h2>
-          <p className="text-blue-100 text-lg mb-8 max-w-2xl mx-auto">
+          <p className="text-slate-300 text-lg mb-8 max-w-2xl mx-auto">
             Rejoignez notre plateforme dès maintenant et commencez à participer aux courses speedrun les plus excitantes.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/register" className="group bg-gradient-to-r from-white to-gray-100 hover:from-gray-100 hover:to-gray-200 text-blue-600 hover:text-blue-700 font-semibold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg border border-blue-200/30 inline-flex items-center">
-              <span>S'inscrire</span>
-              <span className="ml-2 opacity-75 group-hover:opacity-100 transition-opacity">→</span>
-            </Link>
-            <Link href="/leaderboards" className="group bg-transparent border-2 border-white hover:border-white/80 text-white hover:text-white font-semibold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:bg-white/10 inline-flex items-center">
-              <span>Voir les Classements</span>
-              <span className="ml-2 opacity-75 group-hover:opacity-100 transition-opacity">→</span>
+          <div className="flex justify-center">
+            <Link href="/register" className="group bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-700 hover:to-cyan-700 text-white font-semibold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg inline-flex items-center">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <span>S'inscrire maintenant</span>
+              <span className="ml-2 opacity-75 group-hover:opacity-100 transition-all duration-300 group-hover:translate-x-1">→</span>
             </Link>
           </div>
         </div>
