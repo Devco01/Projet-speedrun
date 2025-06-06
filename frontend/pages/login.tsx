@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useAuth } from './_app';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -7,6 +9,9 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const { gererConnexion } = useAuth();
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,8 +22,14 @@ export default function LoginPage() {
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     if (email && password) {
-      // Redirection après connexion réussie
-      alert('Connexion réussie ! (Démo)');
+      // Extraire le nom d'utilisateur de l'email (partie avant @)
+      const nomUtilisateur = email.split('@')[0];
+      
+      // Se connecter via le contexte global
+      gererConnexion(nomUtilisateur, email);
+      
+      // Redirection vers la page d'événements
+      router.push('/events');
     } else {
       setError('Veuillez remplir tous les champs');
     }

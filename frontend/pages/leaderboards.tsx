@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/router';
 import { speedrunApiClient, SpeedrunGame, LeaderboardEntry, Leaderboard } from '../services/speedrunApiClient';
 
 export default function LeaderboardsPage() {
+  const router = useRouter();
   const [popularGames, setPopularGames] = useState<SpeedrunGame[]>([]);
   const [selectedGame, setSelectedGame] = useState<SpeedrunGame | null>(null);
   const [gameCategories, setGameCategories] = useState<any[]>([]);
@@ -23,24 +25,43 @@ export default function LeaderboardsPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchResultsRef = useRef<HTMLDivElement>(null);
 
-  // Rechercher et charger Super Mario 64 par défaut (OPTIMISÉ)
+  // Charger le jeu depuis l'URL ou par défaut (OPTIMISÉ)
   useEffect(() => {
-    // Ne charger Mario 64 par défaut que si l'utilisateur n'a pas encore fait de sélection
+    // Attendre que router.query soit prêt
+    if (!router.isReady) return;
+    
+    // Ne charger le jeu par défaut que si l'utilisateur n'a pas encore fait de sélection
     if (hasUserSelected) return;
     
-    const loadDefaultGame = async () => {
+    const loadGameFromUrl = async () => {
       try {
         setLoadingGames(true);
         setError(null);
         
-        // OPTIMISATION : Mario 64 hardcodé avec son ID connu + récupération des jeux populaires en parallèle
+        // Récupérer les jeux populaires en parallèle
         const [popularGamesData] = await Promise.all([
           speedrunApiClient.getPopularGames(12)
         ]);
         
         setPopularGames(popularGamesData);
         
-        // Mario 64 hardcodé (ID connu : o1y9wo6q)
+        // Vérifier si un jeu est spécifié dans l'URL
+        const gameIdFromUrl = router.query.game as string;
+        
+        if (gameIdFromUrl) {
+          // Charger le jeu spécifié depuis l'URL
+          try {
+            const gameFromUrl = await speedrunApiClient.getGameById(gameIdFromUrl);
+            setSelectedGame(gameFromUrl);
+            setHasUserSelected(true); // Marquer comme sélection utilisateur
+            return;
+          } catch (error) {
+            console.error('Erreur lors du chargement du jeu depuis l\'URL:', error);
+            // Continuer vers le fallback Mario 64
+          }
+        }
+        
+        // Mario 64 hardcodé par défaut (ID connu : o1y9wo6q)
         const mario64: SpeedrunGame = {
           id: 'o1y9wo6q',
           name: 'Super Mario 64',
@@ -85,8 +106,8 @@ export default function LeaderboardsPage() {
       }
     };
 
-    loadDefaultGame();
-  }, [hasUserSelected]);
+    loadGameFromUrl();
+  }, [router.isReady, router.query.game, hasUserSelected]);
 
   // Récupérer les catégories quand un jeu est sélectionné (OPTIMISÉ)
   useEffect(() => {
