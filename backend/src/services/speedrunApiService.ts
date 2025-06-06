@@ -263,60 +263,631 @@ export class SpeedrunApiService {
   }
 
   /**
-   * Recherche des jeux par nom (VERSION ULTRA RAPIDE)
+   * Recherche des jeux par nom avec priorité pour les jeux principaux
    */
   async searchGames(query: string, limit: number = 20): Promise<SpeedrunGame[]> {
     try {
-      console.log(`🔍 Recherche RAPIDE pour: "${query}" (limite: ${limit})`);
+      console.log(`🔍 Recherche INTELLIGENTE pour: "${query}" (limite: ${limit})`);
       
-      // UNE SEULE REQUÊTE SIMPLE ET RAPIDE
-      const response = await this.api.get('/games', {
-        params: {
-          name: query,
-          max: limit * 2, // Un peu plus pour avoir du choix
-          embed: 'platforms,regions,genres'
-          // PAS de orderby pour éviter les erreurs et être plus rapide
-        }
-      });
-
-      const games = response.data.data || [];
-      console.log(`✅ ${games.length} jeux trouvés rapidement`);
-
-      // Filtrage simple côté client
-      const filteredGames = games.filter((game: any) => {
-        const gameName = game.names.international.toLowerCase();
-        const queryLower = query.toLowerCase();
+      // Jeux prioritaires pour les grosses licences (mapping par nom ET abréviation)
+      const priorityGames: { [key: string]: { names: string[]; abbreviations: string[]; score: number }[] } = {
+        'mario': [
+          { names: ['super mario 64'], abbreviations: ['sm64'], score: 100 },
+          { names: ['super mario world'], abbreviations: ['smw'], score: 95 },
+          { names: ['super mario bros.'], abbreviations: ['smb'], score: 90 },
+          { names: ['super mario odyssey'], abbreviations: ['smo'], score: 85 },
+          { names: ['super mario bros. 3'], abbreviations: ['smb3'], score: 80 },
+          { names: ['super mario galaxy'], abbreviations: ['smg'], score: 75 },
+          { names: ['new super mario bros.'], abbreviations: ['nsmb'], score: 70 },
+          { names: ['super mario sunshine'], abbreviations: ['sms'], score: 65 },
+          { names: ['mario kart 64'], abbreviations: ['mk64'], score: 60 },
+          { names: ['mario party'], abbreviations: ['mp'], score: 55 }
+        ],
+        'zelda': [
+          { names: ['the legend of zelda: ocarina of time'], abbreviations: ['oot'], score: 100 },
+          { names: ['the legend of zelda: breath of the wild'], abbreviations: ['botw'], score: 95 },
+          { names: ['the legend of zelda: a link to the past'], abbreviations: ['alttp'], score: 90 },
+          { names: ['the legend of zelda: majora\'s mask'], abbreviations: ['mm'], score: 85 },
+          { names: ['the legend of zelda: twilight princess'], abbreviations: ['tp'], score: 80 },
+          { names: ['the legend of zelda: the wind waker'], abbreviations: ['ww'], score: 75 },
+          { names: ['the legend of zelda: skyward sword'], abbreviations: ['ss'], score: 70 },
+          { names: ['the legend of zelda: link\'s awakening'], abbreviations: ['la'], score: 65 },
+          { names: ['the legend of zelda: oracle'], abbreviations: ['oracle'], score: 60 },
+          { names: ['the legend of zelda: minish cap'], abbreviations: ['mc'], score: 55 }
+        ],
+        'sonic': [
+          { names: ['sonic the hedgehog'], abbreviations: ['sonic1', 's1'], score: 100 },
+          { names: ['sonic the hedgehog 2'], abbreviations: ['sonic2', 's2'], score: 95 },
+          { names: ['sonic 3 & knuckles'], abbreviations: ['sonic3k', 's3k'], score: 90 },
+          { names: ['sonic cd'], abbreviations: ['soniccd', 'scd'], score: 85 },
+          { names: ['sonic mania'], abbreviations: ['sonicmania'], score: 80 },
+          { names: ['sonic generations'], abbreviations: ['sonicgen'], score: 75 },
+          { names: ['sonic adventure'], abbreviations: ['sa1'], score: 70 },
+          { names: ['sonic adventure 2'], abbreviations: ['sa2'], score: 65 }
+        ],
+        'metroid': [
+          { names: ['super metroid'], abbreviations: ['sm'], score: 100 },
+          { names: ['metroid'], abbreviations: ['metroid'], score: 95 },
+          { names: ['metroid dread'], abbreviations: ['metroiddread'], score: 90 },
+          { names: ['metroid prime'], abbreviations: ['metroidprime', 'mp1'], score: 85 },
+          { names: ['metroid: zero mission'], abbreviations: ['mzm'], score: 80 },
+          { names: ['metroid: samus returns'], abbreviations: ['msr'], score: 75 },
+          { names: ['metroid prime 2'], abbreviations: ['mp2'], score: 70 },
+          { names: ['metroid prime 3'], abbreviations: ['mp3'], score: 65 }
+        ],
+        'pokemon': [
+          { names: ['pokemon red/blue', 'pokemon red', 'pokemon blue'], abbreviations: ['pokemonred', 'pkmnrb'], score: 100 },
+          { names: ['pokemon gold/silver', 'pokemon gold', 'pokemon silver'], abbreviations: ['pokemongold', 'pkmngs'], score: 95 },
+          { names: ['pokemon ruby/sapphire/emerald', 'pokemon emerald'], abbreviations: ['pokemonrse', 'pkmnrse'], score: 90 },
+          { names: ['pokemon diamond/pearl', 'pokemon platinum'], abbreviations: ['pkmndp'], score: 85 },
+          { names: ['pokemon black/white'], abbreviations: ['pkmnbw'], score: 80 },
+          { names: ['pokemon x/y'], abbreviations: ['pkmnxy'], score: 75 },
+          { names: ['pokemon sun/moon'], abbreviations: ['pkmnsm'], score: 70 }
+        ],
+        'final': [
+          { names: ['final fantasy vii', 'final fantasy 7'], abbreviations: ['ff7', 'ffvii'], score: 100 },
+          { names: ['final fantasy x', 'final fantasy 10'], abbreviations: ['ff10', 'ffx'], score: 95 },
+          { names: ['final fantasy vi', 'final fantasy 6'], abbreviations: ['ff6', 'ffvi'], score: 90 },
+          { names: ['final fantasy ix', 'final fantasy 9'], abbreviations: ['ff9', 'ffix'], score: 85 },
+          { names: ['final fantasy viii', 'final fantasy 8'], abbreviations: ['ff8', 'ffviii'], score: 80 }
+        ],
+        'castlevania': [
+          { names: ['castlevania: symphony of the night'], abbreviations: ['sotn'], score: 100 },
+          { names: ['super castlevania iv'], abbreviations: ['cv4'], score: 95 },
+          { names: ['castlevania'], abbreviations: ['cv1'], score: 90 },
+          { names: ['castlevania iii'], abbreviations: ['cv3'], score: 85 }
+        ],
+        'mega': [
+          { names: ['mega man 2'], abbreviations: ['mm2'], score: 100 },
+          { names: ['mega man x'], abbreviations: ['mmx'], score: 95 },
+          { names: ['mega man 3'], abbreviations: ['mm3'], score: 90 },
+          { names: ['mega man'], abbreviations: ['mm1'], score: 85 }
+        ],
+        'donkey': [
+          { names: ['donkey kong country'], abbreviations: ['dkc'], score: 100 },
+          { names: ['donkey kong country 2'], abbreviations: ['dkc2'], score: 95 },
+          { names: ['donkey kong 64'], abbreviations: ['dk64'], score: 90 },
+          { names: ['donkey kong country 3'], abbreviations: ['dkc3'], score: 85 }
+        ],
+        'crash': [
+          { names: ['crash bandicoot'], abbreviations: ['crash1'], score: 100 },
+          { names: ['crash bandicoot 2'], abbreviations: ['crash2'], score: 95 },
+          { names: ['crash bandicoot 3'], abbreviations: ['crash3'], score: 90 },
+          { names: ['crash team racing'], abbreviations: ['ctr'], score: 85 }
+        ],
+        'spyro': [
+          { names: ['spyro the dragon'], abbreviations: ['spyro1'], score: 100 },
+          { names: ['spyro 2'], abbreviations: ['spyro2'], score: 95 },
+          { names: ['spyro 3'], abbreviations: ['spyro3'], score: 90 }
+        ],
+        'celeste': [
+          { names: ['celeste'], abbreviations: ['celeste'], score: 100 }
+        ],
+        'hollow': [
+          { names: ['hollow knight'], abbreviations: ['hk'], score: 100 }
+        ],
+        'cuphead': [
+          { names: ['cuphead'], abbreviations: ['cuphead'], score: 100 }
+        ],
+        'ori': [
+          { names: ['ori and the blind forest'], abbreviations: ['ori1'], score: 100 },
+          { names: ['ori and the will of the wisps'], abbreviations: ['ori2'], score: 95 }
+        ],
+        'shovel': [
+          { names: ['shovel knight'], abbreviations: ['sk'], score: 100 }
+        ],
+        'undertale': [
+          { names: ['undertale'], abbreviations: ['undertale'], score: 100 }
+        ],
+        'portal': [
+          { names: ['portal'], abbreviations: ['portal'], score: 100 },
+          { names: ['portal 2'], abbreviations: ['portal2'], score: 95 }
+        ],
+        'half': [
+          { names: ['half-life'], abbreviations: ['hl1'], score: 100 },
+          { names: ['half-life 2'], abbreviations: ['hl2'], score: 95 }
+        ]
+      };
+      
+      // Filtrage et scoring intelligent
+      const queryLower = query.toLowerCase().trim();
+      
+      // Conversion chiffres arabes → chiffres romains
+      const arabicToRoman: { [key: string]: string } = {
+        '1': 'I', '2': 'II', '3': 'III', '4': 'IV', '5': 'V',
+        '6': 'VI', '7': 'VII', '8': 'VIII', '9': 'IX', '10': 'X',
+        '11': 'XI', '12': 'XII', '13': 'XIII', '14': 'XIV', '15': 'XV'
+      };
+      
+      // Fonction pour convertir une requête avec chiffres arabes en romains
+      const convertToRoman = (text: string): string[] => {
+        const variants = [text];
         
-        // Vérification simple que le jeu correspond
-        return gameName.includes(queryLower) || 
-               game.abbreviation.toLowerCase().includes(queryLower);
-      });
-
-      // Tri simple par pertinence
-      filteredGames.sort((a: any, b: any) => {
-        const aName = a.names.international.toLowerCase();
-        const bName = b.names.international.toLowerCase();
-        const queryLower = query.toLowerCase();
-
-        // Priorité 1: Match exact
-        if (aName === queryLower && bName !== queryLower) return -1;
-        if (bName === queryLower && aName !== queryLower) return 1;
-
-        // Priorité 2: Commence par le terme
-        if (aName.startsWith(queryLower) && !bName.startsWith(queryLower)) return -1;
-        if (bName.startsWith(queryLower) && !aName.startsWith(queryLower)) return 1;
-
-        // Priorité 3: Tri alphabétique
-        return aName.localeCompare(bName);
-      });
-
-      const finalResults = filteredGames.slice(0, limit);
-      console.log(`🎯 ${finalResults.length} jeux retournés rapidement`);
+        // Chercher les chiffres dans le texte et créer des variantes romaines
+        for (const [arabic, roman] of Object.entries(arabicToRoman)) {
+          if (text.includes(' ' + arabic) || text.endsWith(' ' + arabic) || text.endsWith(arabic)) {
+            const romanVariant = text.replace(new RegExp(arabic + '(?=\\s|$)', 'g'), roman);
+            if (romanVariant !== text) {
+              variants.push(romanVariant);
+            }
+          }
+        }
+        
+        return variants;
+      };
       
-      return finalResults;
+      // NOUVELLE APPROCHE : UNE SEULE RECHERCHE RAPIDE + SCORING INTELLIGENT
+      const allGames = new Map<string, any>();
+      
+      // Une seule recherche avec le terme principal + variantes de chiffres
+      let searchTerms = [query];
+      const romanVariants = convertToRoman(query);
+      searchTerms.push(...romanVariants);
+      
+      // Ajouter UN SEUL terme de recherche large selon la franchise détectée
+      if (queryLower.includes('mario')) {
+        if (queryLower.includes('kart')) {
+          searchTerms.push('Mario Kart'); // Recherche ciblée pour Mario Kart
+        } else {
+          searchTerms.push('Mario'); // Recherche générale Mario
+        }
+                          } else if (queryLower.includes('zelda')) {
+         searchTerms.push('Zelda'); // Recherche générale Zelda
+             } else if (queryLower.includes('sonic')) {
+         searchTerms.push('Sonic');
+              } else if (queryLower.includes('metroid')) {
+        searchTerms.push('Metroid');
+             } else if (queryLower.includes('ys')) {
+         searchTerms.push('Ys'); // Recherche générale Ys
+       } else if (queryLower.includes('dragon') && queryLower.includes('quest')) {
+         searchTerms.push('Dragon Quest'); // Recherche générale Dragon Quest
+       } else if (queryLower.includes('pokemon') || queryLower.includes('pokémon')) {
+         searchTerms.push('Pokemon'); // Recherche générale Pokemon
+       } else if (queryLower.includes('final fantasy')) {
+         searchTerms.push('Final Fantasy'); // Recherche générale Final Fantasy
+       }
+       
+       // Ajout de termes génériques français pour d'autres recherches populaires
+       if (queryLower.includes('final') || queryLower.includes('fantasy')) {
+         searchTerms.push('Final Fantasy VII', 'Final Fantasy X', 'Final Fantasy VI');
+       }
+       
+       if (queryLower.includes('castlevania')) {
+         searchTerms.push('Castlevania: Symphony of the Night', 'Super Castlevania IV');
+       }
+       
+       if (queryLower.includes('metroid')) {
+         searchTerms.push('Super Metroid', 'Metroid Prime', 'Metroid Dread');
+       }
+       
+       // Détections spécifiques pour termes français
+       if (queryLower.includes('perle')) {
+         searchTerms.push('Pokemon Diamond/Pearl', 'Pokémon Perle', 'Pokemon Pearl Version');
+       }
+       
+       if (queryLower.includes('diamant')) {
+         searchTerms.push('Pokemon Diamond/Pearl', 'Pokémon Diamant', 'Pokemon Diamond Version');
+       }
+       
+       if (queryLower.includes('platine')) {
+         searchTerms.push('Pokemon Platinum', 'Pokémon Platine');
+       }
+       
+       if (queryLower.includes('émeraude') || queryLower.includes('emeraude')) {
+         searchTerms.push('Pokemon Emerald Version', 'Pokémon Émeraude', 'Pokemon Ruby/Sapphire');
+       }
+       
+       if (queryLower.includes('rubis')) {
+         searchTerms.push('Pokemon Ruby/Sapphire', 'Pokémon Rubis', 'Pokemon Ruby Version');
+       }
+       
+       if (queryLower.includes('saphir')) {
+         searchTerms.push('Pokemon Ruby/Sapphire', 'Pokémon Saphir', 'Pokemon Sapphire Version');
+       }
+       
+       if (queryLower.includes('soleil')) {
+         searchTerms.push('Pokemon Sun/Moon', 'Pokémon Soleil', 'Pokemon Sun Version', 'Pokemon Ultra Sun');
+       }
+       
+       if (queryLower.includes('lune')) {
+         searchTerms.push('Pokemon Sun/Moon', 'Pokémon Lune', 'Pokemon Moon Version', 'Pokemon Ultra Moon');
+       }
+       
+       if (queryLower.includes('ultra')) {
+         searchTerms.push('Pokemon Ultra Sun', 'Pokemon Ultra Moon', 'Pokémon Ultra-Soleil', 'Pokémon Ultra-Lune');
+       }
+       
+       if (queryLower.includes('violet')) {
+         searchTerms.push('Pokemon Violet', 'Pokémon Violet', 'Pokemon Scarlet/Violet');
+       }
+       
+       if (queryLower.includes('écarlate') || queryLower.includes('ecarlate')) {
+         searchTerms.push('Pokemon Scarlet', 'Pokémon Écarlate', 'Pokemon Scarlet/Violet');
+       }
+       
+       if (queryLower.includes('épée') || queryLower.includes('epee')) {
+         searchTerms.push('Pokemon Sword', 'Pokémon Épée', 'Pokemon Sword/Shield');
+       }
+       
+       if (queryLower.includes('bouclier')) {
+         searchTerms.push('Pokemon Shield', 'Pokémon Bouclier', 'Pokemon Sword/Shield');
+       }
+       
+       if (queryLower.includes('arceus') || queryLower.includes('legends')) {
+         searchTerms.push('Pokemon Legends: Arceus', 'Pokémon Legends Arceus');
+       }
+       
+       // Autres séries populaires
+       if (queryLower.includes('kingdom') && queryLower.includes('hearts')) {
+         searchTerms.push('Kingdom Hearts', 'Kingdom Hearts II', 'Kingdom Hearts III');
+       }
+       
+       if (queryLower.includes('chrono')) {
+         searchTerms.push('Chrono Trigger', 'Chrono Cross');
+       }
+       
+       if (queryLower.includes('secret') && queryLower.includes('mana')) {
+         searchTerms.push('Secret of Mana', 'Trials of Mana');
+       }
+       
+       if (queryLower.includes('tales')) {
+         searchTerms.push('Tales of Symphonia', 'Tales of Vesperia', 'Tales of the Abyss');
+       }
+       
+       if (queryLower.includes('persona')) {
+         searchTerms.push('Persona 3', 'Persona 4', 'Persona 5');
+       }
+       
+       if (queryLower.includes('nier')) {
+         searchTerms.push('NieR', 'NieR: Automata');
+       }
+       
+       // Détections spécifiques pour Dragon Quest par numéro
+       if (queryLower.includes('dragon quest 8') || queryLower.includes('dq8')) {
+         searchTerms.push('Dragon Quest VIII', 'Dragon Quest VIII: Journey of the Cursed King');
+       }
+       
+       if (queryLower.includes('dragon quest 11') || queryLower.includes('dq11')) {
+         searchTerms.push('Dragon Quest XI', 'Dragon Quest XI: Echoes of an Elusive Age');
+       }
+       
+       if (queryLower.includes('dragon quest 3') || queryLower.includes('dq3')) {
+         searchTerms.push('Dragon Quest III', 'Dragon Warrior III');
+       }
+       
+       if (queryLower.includes('dragon quest 7') || queryLower.includes('dq7')) {
+         searchTerms.push('Dragon Quest VII', 'Dragon Quest VII: Fragments of the Forgotten Past');
+       }
+       
+       // Détections spécifiques pour Ys avec conversion automatique
+       if (queryLower.includes('ys ')) {
+         // Extraire le numéro et ajouter les variantes
+         const ysMatch = queryLower.match(/ys\s*(\d+)/);
+         if (ysMatch) {
+           const number = ysMatch[1];
+           const roman = arabicToRoman[number];
+           if (roman) {
+             searchTerms.push(`Ys ${roman}`, `Ys: ${roman}`);
+           }
+         }
+         
+         // Ajouter aussi les noms spéciaux de Ys
+         searchTerms.push('Ys: The Oath in Felghana', 'Ys: Origin', 'Ys: Memories of Celceta', 'Ys: Lacrimosa of Dana');
+       }
+       
+       // Application universelle des chiffres romains pour Final Fantasy
+       if (queryLower.includes('final fantasy ')) {
+         const ffMatch = queryLower.match(/final fantasy\s*(\d+)/);
+         if (ffMatch) {
+           const number = ffMatch[1];
+           const roman = arabicToRoman[number];
+           if (roman) {
+             searchTerms.push(`Final Fantasy ${roman}`, `FF${roman}`);
+           }
+         }
+       }
+
+             // Équivalences français/anglais pour un filtrage plus intelligent
+       const frenchToEnglish: { [key: string]: string[] } = {
+         'perle': ['pearl', 'diamond/pearl'],
+         'diamant': ['diamond', 'diamond/pearl'],
+         'platine': ['platinum'],
+         'émeraude': ['emerald'],
+         'emeraude': ['emerald'],
+         'rubis': ['ruby'],
+         'saphir': ['sapphire'],
+         'or': ['gold'],
+         'argent': ['silver'],
+         'rouge': ['red'],
+         'bleu': ['blue'],
+         'jaune': ['yellow'],
+         'noir': ['black'],
+         'blanc': ['white'],
+         'cristal': ['crystal'],
+         'soleil': ['sun', 'sun/moon'],
+         'lune': ['moon', 'sun/moon'],
+         'ultra-soleil': ['ultra sun'],
+         'ultra-lune': ['ultra moon'],
+         'épée': ['sword'],
+         'bouclier': ['shield'],
+         'écarlate': ['scarlet'],
+         'violet': ['violet'],
+         'legends': ['legends', 'arceus']
+       };
+
+       // OPTIMISATION : limiter à maximum 3 recherches pour éviter la lenteur
+       const limitedSearchTerms = searchTerms.slice(0, 3);
+       console.log(`⚡ Recherche RAPIDE avec ${limitedSearchTerms.length} termes: ${limitedSearchTerms.join(', ')}`);
+       
+       for (const term of limitedSearchTerms) {
+         try {
+           console.log(`🔍 Recherche du terme: "${term}"`);
+           
+           const searchParams = {
+             name: term,
+             max: 15, // Réduire pour plus de rapidité
+             embed: 'platforms,regions,genres'
+           };
+           
+           const response = await this.api.get('/games', { params: searchParams });
+           const games = response.data.data || [];
+           
+           console.log(`📝 ${games.length} jeux trouvés pour "${term}"`);
+           
+           // Ajouter tous les jeux trouvés (avec filtrage intelligent)
+           games.forEach((game: any) => {
+             const gameName = game.names.international.toLowerCase();
+             const gameAbbrev = game.abbreviation.toLowerCase();
+             
+             // Vérifier correspondance directe avec la requête originale
+             let matches = gameName.includes(queryLower) || 
+                          gameAbbrev.includes(queryLower);
+             
+             // Vérifier correspondance par mots avec équivalences
+             if (!matches) {
+               const queryWords = queryLower.split(' ').filter(word => word.length > 1); // Ignorer mots trop courts
+               matches = queryWords.some((word: string) => {
+                 // Vérifier le mot directement
+                 if (gameName.includes(word) || gameAbbrev.includes(word)) {
+                   return true;
+                 }
+                 // Vérifier les équivalences français/anglais
+                 if (frenchToEnglish[word]) {
+                   return frenchToEnglish[word].some(englishWord => 
+                     gameName.includes(englishWord) || gameAbbrev.includes(englishWord)
+                   );
+                 }
+                 return false;
+               });
+             }
+             
+             if (matches) {
+               allGames.set(game.id, game);
+               console.log(`✅ Jeu ajouté: "${game.names.international}" car correspond à "${queryLower}"`);
+             }
+           });
+           
+           // Suppression du délai pour plus de rapidité
+         } catch (error) {
+           console.log(`❌ Erreur recherche pour "${term}":`, error);
+         }
+       }
+
+             const games = Array.from(allGames.values()) as SpeedrunGame[];
+      console.log(`✅ ${games.length} jeux trouvés rapidement`);
+      
+      // DEBUG: Afficher les premiers noms de jeux pour diagnostic (pour tous les termes)
+      console.log(`🔍 DEBUG - Premiers jeux trouvés pour "${query}":`);
+      games.slice(0, 10).forEach((game: any, index: number) => {
+        console.log(`  ${index + 1}. "${game.names.international}" (${game.abbreviation})`);
+      });
+      
+      // Chercher spécifiquement les jeux iconiques selon le terme de recherche
+      let iconicGames: any[] = [];
+      
+      if (queryLower.includes('mario')) {
+        iconicGames = games.filter((game: any) => {
+          const name = game.names.international.toLowerCase();
+          return name.includes('super mario 64') || 
+                 name.includes('super mario world') || 
+                 name.includes('super mario bros') ||
+                 name.includes('super mario odyssey') ||
+                 name.includes('mario kart') ||
+                 name.includes('super mario galaxy');
+        });
+      } else if (queryLower.includes('zelda')) {
+        iconicGames = games.filter((game: any) => {
+          const name = game.names.international.toLowerCase();
+          return name.includes('ocarina of time') || 
+                 name.includes('breath of the wild') || 
+                 name.includes('link to the past') ||
+                 name.includes('majora') ||
+                 name.includes('twilight princess') ||
+                 name.includes('wind waker');
+        });
+      } else if (queryLower.includes('sonic')) {
+        iconicGames = games.filter((game: any) => {
+          const name = game.names.international.toLowerCase();
+          return name.includes('sonic the hedgehog') || 
+                 name.includes('sonic 2') || 
+                 name.includes('sonic 3') ||
+                 name.includes('sonic cd') ||
+                 name.includes('sonic mania') ||
+                 name.includes('sonic generations');
+        });
+      }
+      
+      if (iconicGames.length > 0) {
+        console.log(`🎯 Jeux iconiques trouvés pour "${query}":`);
+        iconicGames.forEach((game: any, index: number) => {
+          console.log(`  ⭐ "${game.names.international}" (${game.abbreviation})`);
+        });
+      } else {
+        console.log(`❌ Aucun jeu iconique reconnu trouvé pour "${query}"`);
+      }
+      const scoredGames = games.map((game: any) => {
+        const gameName = game.names.international.toLowerCase();
+        const gameAbbrev = game.abbreviation.toLowerCase();
+        let priorityScore = 0;
+        
+        // Bonus de score spécifique pour correspondances exactes avec des termes spécifiques
+        
+        // MARIO - Scoring spécifique selon le type de jeu recherché
+        if (queryLower.includes('mario')) {
+          if (queryLower.includes('kart') && gameName.includes('mario kart')) {
+            priorityScore += 300; // Priorité MAXIMALE pour Mario Kart quand on cherche "mario kart"
+            if (gameName.includes('mario kart 64')) priorityScore += 50; // Mario Kart 64 en premier
+          } else if (queryLower.includes('64') && gameName.includes('super mario 64')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('world') && gameName.includes('super mario world')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('odyssey') && gameName.includes('odyssey')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('galaxy') && gameName.includes('galaxy')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('party') && gameName.includes('mario party')) {
+            priorityScore += 300;
+          }
+        }
+        
+        // ZELDA - Scoring spécifique
+        if (queryLower.includes('zelda')) {
+          if (queryLower.includes('twilight') && gameName.includes('twilight princess')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('ocarina') && gameName.includes('ocarina of time')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('breath') && gameName.includes('breath of the wild')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('majora') && gameName.includes('majora')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('wind') && gameName.includes('wind waker')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('skyward') && gameName.includes('skyward sword')) {
+            priorityScore += 300;
+          }
+        }
+        
+        // YS - Scoring spécifique avec conversion chiffres arabes → romains
+        if (queryLower.includes('ys')) {
+          if (queryLower.includes('8') && (gameName.includes('ys viii') || gameName.includes('lacrimosa of dana'))) {
+            priorityScore += 300; // Ys VIII: Lacrimosa of Dana pour "ys 8"
+          } else if (queryLower.includes('7') && gameName.includes('ys vii')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('6') && gameName.includes('ys vi')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('9') && gameName.includes('ys ix')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('origin') && gameName.includes('ys: origin')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('felghana') && gameName.includes('oath in felghana')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('celceta') && gameName.includes('memories of celceta')) {
+            priorityScore += 300;
+          }
+        }
+        
+        // DRAGON QUEST - Scoring spécifique
+        if (queryLower.includes('dragon quest')) {
+          if (queryLower.includes('8') && gameName.includes('dragon quest viii')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('11') && gameName.includes('dragon quest xi')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('3') && (gameName.includes('dragon quest iii') || gameName.includes('dragon warrior iii'))) {
+            priorityScore += 300;
+          } else if (queryLower.includes('7') && gameName.includes('dragon quest vii')) {
+            priorityScore += 300;
+          }
+        }
+        
+        // POKEMON - Scoring spécifique
+        if (queryLower.includes('pokemon') || queryLower.includes('pokémon')) {
+          if ((queryLower.includes('red') || queryLower.includes('rouge')) && gameName.includes('red')) {
+            priorityScore += 300;
+          } else if ((queryLower.includes('blue') || queryLower.includes('bleu')) && gameName.includes('blue')) {
+            priorityScore += 300;
+          } else if ((queryLower.includes('gold') || queryLower.includes('or')) && gameName.includes('gold')) {
+            priorityScore += 300;
+          } else if ((queryLower.includes('silver') || queryLower.includes('argent')) && gameName.includes('silver')) {
+            priorityScore += 300;
+          } else if ((queryLower.includes('emerald') || queryLower.includes('émeraude')) && gameName.includes('emerald')) {
+            priorityScore += 300;
+          }
+        }
+        
+        // FINAL FANTASY - Scoring spécifique avec conversion chiffres arabes → romains
+        if (queryLower.includes('final fantasy')) {
+          if (queryLower.includes('6') && gameName.includes('final fantasy vi')) {
+            priorityScore += 300; // Final Fantasy VI pour "final fantasy 6"
+          } else if (queryLower.includes('7') && gameName.includes('final fantasy vii')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('8') && gameName.includes('final fantasy viii')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('9') && gameName.includes('final fantasy ix')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('10') && gameName.includes('final fantasy x')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('4') && gameName.includes('final fantasy iv')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('5') && gameName.includes('final fantasy v')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('12') && gameName.includes('final fantasy xii')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('13') && gameName.includes('final fantasy xiii')) {
+            priorityScore += 300;
+          } else if (queryLower.includes('15') && gameName.includes('final fantasy xv')) {
+            priorityScore += 300;
+          }
+        }
+        
+        // Vérifier si le terme de recherche correspond à une licence connue
+        for (const [franchise, priorityGamesList] of Object.entries(priorityGames)) {
+          if (queryLower.includes(franchise) || franchise.includes(queryLower)) {
+            const priorityGame = priorityGamesList.find(pg => 
+              pg.names.some(name => gameName.includes(name.toLowerCase())) ||
+              pg.abbreviations.some(abbrev => gameAbbrev === abbrev.toLowerCase())
+            );
+            if (priorityGame) {
+              priorityScore += priorityGame.score;
+              break;
+            }
+          }
+        }
+        
+        // Score basé sur la correspondance exacte du nom
+        if (gameName === queryLower) {
+          priorityScore += 50;
+        } else if (gameName.startsWith(queryLower)) {
+          priorityScore += 25;
+        } else if (gameName.includes(queryLower)) {
+          priorityScore += 10;
+        }
+        
+        // Score basé sur la correspondance de l'abréviation
+        if (gameAbbrev === queryLower) {
+          priorityScore += 30;
+        }
+        
+        return {
+          ...game,
+          _priorityScore: priorityScore
+        };
+      });
+
+      // Tri intelligent par score de priorité puis par nom
+      scoredGames.sort((a: any, b: any) => {
+        if (b._priorityScore !== a._priorityScore) {
+          return b._priorityScore - a._priorityScore;
+        }
+        return a.names.international.localeCompare(b.names.international);
+      });
+
+      const finalResults = scoredGames.slice(0, limit).map(({_priorityScore, ...game}: {_priorityScore: number; [key: string]: any}) => game);
+      console.log(`🎯 ${finalResults.length} jeux retournés avec priorité intelligente`);
+      
+      return finalResults as SpeedrunGame[];
 
     } catch (error) {
-      console.error('❌ Erreur lors de la recherche rapide:', error);
+      console.error('❌ Erreur lors de la recherche intelligente:', error);
       return [];
     }
   }

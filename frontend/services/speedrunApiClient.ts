@@ -206,15 +206,16 @@ class SpeedrunApiClient {
   }
 
   /**
-   * Recherche des jeux par nom
+   * Recherche intelligente des jeux par nom via le backend
    */
   async searchGames(query: string, limit = 30): Promise<SpeedrunGame[]> {
+    // Utiliser la nouvelle recherche intelligente du backend
     const params = new URLSearchParams({
       q: query,
       limit: limit.toString()
     });
     
-    return this.request(`/games/search?${params.toString()}`);
+    return this.request<SpeedrunGame[]>(`/games/search?${params.toString()}`);
   }
 
   /**
