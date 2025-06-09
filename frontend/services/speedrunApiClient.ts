@@ -1,4 +1,5 @@
 // Service frontend pour consommer l'API speedrun.com via notre backend
+// Force deploy fix - v2.1
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 export interface SpeedrunGame {
