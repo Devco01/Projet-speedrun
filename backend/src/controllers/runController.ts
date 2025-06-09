@@ -69,7 +69,7 @@ export default {
 
       const runData = {
         ...req.body,
-        userId: req.user.userId
+        userId: req.userId!
       };
 
       const run = await runService.createRun(runData);
@@ -125,7 +125,7 @@ export default {
 
       const commentData = {
         content,
-        userId: req.user.userId,
+        userId: req.userId!,
         runId: id
       };
 
@@ -157,7 +157,7 @@ export default {
       }
 
       const { id } = req.params;
-      await runService.deleteRun(id, req.user.userId);
+      await runService.deleteRun(id, req.userId!);
 
       res.json({
         success: true,
