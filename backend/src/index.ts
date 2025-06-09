@@ -3,6 +3,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import passport from './config/passport';
 
+// Database
+import { connectWithRetry, testDatabaseConnection } from './config/database';
+
 // Routes
 import authRoutes from './routes/authRoutes';
 import runRoutes from './routes/runRoutes';
@@ -80,12 +83,24 @@ app.get('/', (req, res) => {
 });
 
 // Route de santé
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
+  let dbStatus = 'unknown';
+  try {
+    const isConnected = await testDatabaseConnection();
+    dbStatus = isConnected ? 'connected' : 'disconnected';
+  } catch (error) {
+    dbStatus = 'error';
+  }
+
   res.json({
     status: 'healthy',
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
     memory: process.memoryUsage(),
+    database: {
+      status: dbStatus,
+      type: 'postgresql'
+    },
     apis: {
       auth: 'operational',
       runs: 'operational',
@@ -205,6 +220,21 @@ async function initializeServices() {
 
 // Start server
 app.listen(PORT, async () => {
+  // Test et initialisation de la base de données
+  try {
+    console.log('🔌 Connexion à la base de données...');
+    await connectWithRetry();
+    const isConnected = await testDatabaseConnection();
+    if (isConnected) {
+      console.log('✅ PostgreSQL connecté avec succès');
+    } else {
+      console.log('⚠️ PostgreSQL en mode dégradé');
+    }
+  } catch (error) {
+    console.error('❌ Erreur base de données:', error);
+    console.log('⚠️ Serveur démarré sans base de données');
+  }
+
   await initializeServices();
   console.log('🚀 ======================================');
   console.log(`🚀 SpeedRun Platform API Server`);

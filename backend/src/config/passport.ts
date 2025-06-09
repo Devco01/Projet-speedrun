@@ -2,8 +2,7 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
-
-const prisma = new PrismaClient();
+import prisma from './database';
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
 
 interface AuthResult {
