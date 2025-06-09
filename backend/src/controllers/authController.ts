@@ -311,6 +311,136 @@ class AuthController {
       });
     }
   }
+
+  /**
+   * Mettre à jour l'avatar de l'utilisateur
+   */
+  updateAvatar = async (req: Request, res: Response) => {
+    try {
+      const userId = req.userId; // Vient du middleware d'authentification
+      const { avatar } = req.body;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentification requise'
+        });
+      }
+
+      if (!avatar) {
+        return res.status(400).json({
+          success: false,
+          message: 'Avatar requis'
+        });
+      }
+
+      // Mettre à jour l'avatar dans la base de données
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: { profileImage: avatar },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          profileImage: true,
+          bio: true,
+          createdAt: true
+        }
+      });
+
+      res.json({
+        success: true,
+        message: 'Avatar mis à jour avec succès',
+        data: {
+          user: updatedUser
+        }
+      });
+
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de l\'avatar:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur interne du serveur'
+      });
+    }
+  };
+
+  /**
+   * Mettre à jour le profil de l'utilisateur
+   */
+  updateProfile = async (req: Request, res: Response) => {
+    try {
+      const userId = req.userId;
+      const { username, email, bio, profileImage } = req.body;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentification requise'
+        });
+      }
+
+      // Vérifier si le nom d'utilisateur ou l'email sont déjà pris (par un autre utilisateur)
+      if (username || email) {
+        const existingUser = await prisma.user.findFirst({
+          where: {
+            AND: [
+              { id: { not: userId } }, // Pas l'utilisateur actuel
+              {
+                OR: [
+                  username ? { username } : {},
+                  email ? { email } : {}
+                ].filter(condition => Object.keys(condition).length > 0)
+              }
+            ]
+          }
+        });
+
+        if (existingUser) {
+          return res.status(400).json({
+            success: false,
+            message: 'Ce nom d\'utilisateur ou cet email est déjà utilisé'
+          });
+        }
+      }
+
+      // Préparer les données à mettre à jour
+      const updateData: any = {};
+      if (username) updateData.username = username;
+      if (email) updateData.email = email;
+      if (bio !== undefined) updateData.bio = bio;
+      if (profileImage !== undefined) updateData.profileImage = profileImage;
+
+      // Mettre à jour le profil
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: updateData,
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          profileImage: true,
+          bio: true,
+          createdAt: true
+        }
+      });
+
+      res.json({
+        success: true,
+        message: 'Profil mis à jour avec succès',
+        data: {
+          user: updatedUser
+        }
+      });
+
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du profil:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur interne du serveur'
+      });
+    }
+  };
 }
 
 export default new AuthController(); 

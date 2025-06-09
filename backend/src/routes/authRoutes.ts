@@ -1,6 +1,6 @@
 import express from 'express';
 import authController from '../controllers/authController';
-import { authenticate } from '../middleware/authMiddleware';
+import { authenticate, authenticateToken } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
@@ -27,5 +27,9 @@ router.get('/google/callback', authController.googleCallback);
 
 // Routes protégées
 router.get('/profile', authenticate, authController.getProfile);
+
+// Routes protégées (nécessitent une authentification)
+router.put('/avatar', authenticateToken, authController.updateAvatar);
+router.put('/profile', authenticateToken, authController.updateProfile);
 
 export default router; 
