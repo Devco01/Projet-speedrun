@@ -319,16 +319,7 @@ class AuthController {
       const userId = req.userId; // Vient du middleware d'authentification
       const { avatar } = req.body;
 
-      console.log('🔍 Avatar update - Début:', {
-        userId: userId,
-        hasAvatar: !!avatar,
-        avatarLength: avatar?.length || 0,
-        contentType: req.headers['content-type'],
-        timestamp: new Date().toISOString()
-      });
-
       if (!userId) {
-        console.log('❌ Avatar update - Pas d\'userId');
         return res.status(401).json({
           success: false,
           message: 'Authentification requise'
@@ -336,91 +327,11 @@ class AuthController {
       }
 
       if (!avatar) {
-        console.log('❌ Avatar update - Pas d\'avatar dans body');
         return res.status(400).json({
           success: false,
           message: 'Avatar requis'
         });
       }
-
-      // Test de connexion à la base de données d'abord
-      try {
-        await prisma.$connect();
-        console.log('✅ Avatar update - Connexion PostgreSQL réussie');
-      } catch (dbError) {
-        console.error('❌ Avatar update - Erreur connexion PostgreSQL:', dbError);
-        // Retourner succès pour permettre au frontend de fonctionner avec localStorage
-        return res.json({
-          success: true,
-          message: 'Avatar mis à jour (mode dégradé - base de données indisponible)',
-          data: {
-            user: {
-              id: userId,
-              profileImage: avatar,
-              username: 'Utilisateur',
-              email: 'user@example.com',
-              bio: null,
-              createdAt: new Date()
-            }
-          },
-          warning: 'Base de données temporairement indisponible'
-        });
-      }
-
-      // Vérifier que l'utilisateur existe avant de mettre à jour
-      const existingUser = await prisma.user.findUnique({
-        where: { id: userId }
-      });
-
-      if (!existingUser) {
-        console.log('❌ Avatar update - Utilisateur non trouvé en base:', userId);
-        // Créer l'utilisateur s'il n'existe pas (cas OAuth)
-        try {
-          const newUser = await prisma.user.create({
-            data: {
-              id: userId,
-              username: 'Utilisateur OAuth',
-              email: 'oauth@example.com',
-              password: '', // OAuth users don't have password
-              profileImage: avatar
-            },
-            select: {
-              id: true,
-              username: true,
-              email: true,
-              profileImage: true,
-              bio: true,
-              createdAt: true
-            }
-          });
-          console.log('✅ Avatar update - Utilisateur OAuth créé:', newUser.id);
-          return res.json({
-            success: true,
-            message: 'Avatar mis à jour et utilisateur créé',
-            data: { user: newUser }
-          });
-        } catch (createError) {
-          console.error('❌ Avatar update - Erreur création utilisateur:', createError);
-          // Mode fallback
-          return res.json({
-            success: true,
-            message: 'Avatar mis à jour (mode dégradé - utilisateur non créé)',
-            data: {
-              user: {
-                id: userId,
-                profileImage: avatar,
-                username: 'Utilisateur',
-                email: 'user@example.com',
-                bio: null,
-                createdAt: new Date()
-              }
-            },
-            warning: 'Utilisateur non trouvé et création échouée'
-          });
-        }
-      }
-
-      console.log('🔍 Avatar update - Utilisateur existant trouvé:', existingUser.username);
 
       // Mettre à jour l'avatar dans la base de données
       const updatedUser = await prisma.user.update({
@@ -436,7 +347,6 @@ class AuthController {
         }
       });
 
-      console.log('✅ Avatar mis à jour en base pour utilisateur:', userId);
       res.json({
         success: true,
         message: 'Avatar mis à jour avec succès',
@@ -446,23 +356,10 @@ class AuthController {
       });
 
     } catch (error) {
-      console.error('❌ Erreur lors de la mise à jour de l\'avatar:', error);
-      
-      // Mode fallback - retourner succès pour que le frontend fonctionne
-      res.json({
-        success: true,
-        message: 'Avatar mis à jour (mode dégradé)',
-        data: {
-          user: {
-            id: req.userId,
-            profileImage: req.body.avatar,
-            username: 'Utilisateur',
-            email: 'user@example.com',
-            bio: null,
-            createdAt: new Date()
-          }
-        },
-        warning: 'Sauvegarde en base échouée, avatar mis à jour localement'
+      console.error('Erreur lors de la mise à jour de l\'avatar:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur interne du serveur'
       });
     }
   };
