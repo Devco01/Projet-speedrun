@@ -56,7 +56,7 @@ export default function AdminDashboard() {
   const loadRealData = async () => {
     setLoading(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '');
       console.log('DEBUG: API URL utilisée:', apiUrl);
       
       // Récupérer les statistiques
