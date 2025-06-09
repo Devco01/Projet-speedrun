@@ -1,16 +1,22 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../_app';
 
 export default function GoogleAuthSuccess() {
   const router = useRouter();
   const { gererConnexion } = useAuth();
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
+    // Éviter le double traitement
+    if (isProcessing) return;
+
     // Récupérer le token et les données utilisateur depuis l'URL
     const { token, user } = router.query;
 
-    if (token && user) {
+    if (token && user && !isProcessing) {
+      setIsProcessing(true);
+      
       try {
         // Décoder les données utilisateur
         const userData = JSON.parse(decodeURIComponent(user as string));
@@ -22,16 +28,19 @@ export default function GoogleAuthSuccess() {
         gererConnexion(userData.username, userData.email);
         
         // Rediriger vers le profil
-        router.push('/profile?welcome=true&source=google');
+        router.replace('/profile?welcome=true&source=google');
       } catch (error) {
         console.error('Erreur lors du traitement de l\'authentification Google:', error);
-        router.push('/login?error=google_auth_error');
+        router.replace('/login?error=google_auth_error');
       }
-    } else {
-      // Rediriger vers la page de connexion si pas de données
-      router.push('/login?error=missing_auth_data');
+    } else if (!token || !user) {
+      // Rediriger vers la page de connexion si pas de données (seulement si les query params sont chargés)
+      if (router.isReady && !isProcessing) {
+        setIsProcessing(true);
+        router.replace('/login?error=missing_auth_data');
+      }
     }
-  }, [router.query, gererConnexion, router]);
+  }, [router.isReady, router.query.token, router.query.user]); // Dépendances spécifiques
 
   return (
     <div className="min-h-screen flex items-center justify-center">
