@@ -3,13 +3,10 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import passport from '../config/passport';
+import '../types/express'; // Import des types Express étendus
 
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
-
-export interface AuthenticatedRequest extends Request {
-  userId?: string;
-}
 
 class AuthController {
   /**
@@ -196,7 +193,7 @@ class AuthController {
   /**
    * Récupérer le profil de l'utilisateur connecté
    */
-  async getProfile(req: AuthenticatedRequest, res: Response) {
+  async getProfile(req: Request, res: Response) {
     try {
       const userId = req.userId;
 

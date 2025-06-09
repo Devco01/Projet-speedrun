@@ -1,6 +1,7 @@
 import express from 'express';
 import mongoService from '../services/mongoService';
 import { authenticate } from '../middleware/authMiddleware';
+import '../types/express'; // Import des types Express étendus
 
 const router = express.Router();
 
@@ -9,7 +10,7 @@ const router = express.Router();
  */
 router.get('/me', authenticate, async (req, res) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.userId;
     if (!userId) {
       return res.status(401).json({ error: 'Utilisateur non authentifié' });
     }
@@ -27,7 +28,7 @@ router.get('/me', authenticate, async (req, res) => {
  */
 router.put('/me', authenticate, async (req, res) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.userId;
     if (!userId) {
       return res.status(401).json({ error: 'Utilisateur non authentifié' });
     }
@@ -63,7 +64,7 @@ router.put('/me', authenticate, async (req, res) => {
  */
 router.delete('/me', authenticate, async (req, res) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.userId;
     if (!userId) {
       return res.status(401).json({ error: 'Utilisateur non authentifié' });
     }
@@ -86,7 +87,7 @@ router.delete('/me', authenticate, async (req, res) => {
  */
 router.post('/presets/:presetId', authenticate, async (req, res) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.userId;
     const { presetId } = req.params;
 
     if (!userId) {
@@ -115,7 +116,7 @@ router.post('/presets/:presetId', authenticate, async (req, res) => {
  */
 router.delete('/presets/:presetId', authenticate, async (req, res) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.userId;
     const { presetId } = req.params;
 
     if (!userId) {

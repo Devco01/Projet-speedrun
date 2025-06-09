@@ -1,20 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
+import '../types/express'; // Import des types Express étendus
 
 const prisma = new PrismaClient();
-
-// Extension de l'interface Request pour y ajouter l'utilisateur
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        userId: string;
-        email: string;
-      };
-    }
-  }
-}
 
 /**
  * Middleware d'authentification JWT
@@ -36,6 +25,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
       userId: decoded.userId,
       email: decoded.email
     };
+    req.userId = decoded.userId; // Pour la compatibilité
     next();
   } catch (error) {
     return res.status(403).json({
@@ -93,6 +83,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
     // Ajouter l'utilisateur à la requête
     req.user = decoded;
+    req.userId = decoded.userId; // Pour la compatibilité
     next();
   } catch (error) {
     return res.status(401).json({ message: 'Token invalide' });
@@ -119,6 +110,7 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
     const decoded = jwt.verify(token, jwtSecret) as { userId: string; email: string };
 
     req.user = decoded;
+    req.userId = decoded.userId; // Pour la compatibilité
     next();
   } catch (error) {
     // Continuer même si le token est invalide
