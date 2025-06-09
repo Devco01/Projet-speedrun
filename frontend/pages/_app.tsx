@@ -117,7 +117,7 @@ export default function App({ Component, pageProps }: AppProps) {
                         href="/profile"
                         className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded font-medium text-sm transition-colors"
                       >
-                        👤 Profil
+                        Profil
                       </Link>
                       
                       {/* Informations utilisateur */}

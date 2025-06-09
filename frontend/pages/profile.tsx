@@ -37,15 +37,51 @@ export default function ProfilePage() {
     setTimeout(() => setMessage(null), 5000);
   };
 
-  const sauvegarderGeneral = (e: React.FormEvent) => {
+  const sauvegarderGeneral = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!utilisateurActuel) return;
     
-    // Mettre à jour dans le contexte avec tous les changements
-    gererConnexion(nomUtilisateur, email, avatar || undefined);
-    
-    afficherMessage('success', 'Profil mis à jour avec succès !');
+    try {
+      // Sauvegarder le profil dans la base de données
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        afficherMessage('error', 'Authentification requise pour sauvegarder le profil.');
+        return;
+      }
+
+      const response = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '')}/api/auth/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          username: nomUtilisateur,
+          email: email,
+          profileImage: avatar || undefined
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Erreur lors de la sauvegarde du profil');
+      }
+
+      // Mettre à jour l'utilisateur dans le contexte global avec les données de la base
+      if (data.data.user) {
+        gererConnexion(data.data.user.username, data.data.user.email, data.data.user.profileImage);
+      }
+      
+      afficherMessage('success', 'Profil mis à jour avec succès !');
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde du profil:', error);
+      afficherMessage('error', 'Erreur lors de la sauvegarde. Le profil a été mis à jour localement uniquement.');
+      
+      // Fallback : mettre à jour localement uniquement si l'API échoue
+      gererConnexion(nomUtilisateur, email, avatar || undefined);
+    }
   };
 
   const changerMotDePasse = (e: React.FormEvent) => {
@@ -68,7 +104,7 @@ export default function ProfilePage() {
     setConfirmerMotDePasse('');
   };
 
-  const gererUploadAvatar = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const gererUploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) { // 2MB max
@@ -77,16 +113,49 @@ export default function ProfilePage() {
       }
       
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const newAvatar = e.target?.result as string;
         setAvatar(newAvatar);
         
-        // Mettre à jour l'utilisateur immédiatement dans le contexte global
-        if (utilisateurActuel) {
-          // Mettre à jour dans le contexte global avec le nouvel avatar
-          gererConnexion(utilisateurActuel.nomUtilisateur, utilisateurActuel.email, newAvatar);
+        try {
+          // Sauvegarder l'avatar dans la base de données
+          const token = localStorage.getItem('authToken');
+          if (!token) {
+            afficherMessage('error', 'Authentification requise pour sauvegarder l\'avatar.');
+            return;
+          }
+
+          const response = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '')}/api/auth/avatar`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              avatar: newAvatar
+            })
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.message || 'Erreur lors de la sauvegarde de l\'avatar');
+          }
+
+          // Mettre à jour l'utilisateur dans le contexte global avec les données de la base
+          if (utilisateurActuel && data.data.user) {
+            gererConnexion(data.data.user.username, data.data.user.email, data.data.user.profileImage);
+          }
           
           afficherMessage('success', 'Avatar mis à jour avec succès !');
+        } catch (error) {
+          console.error('Erreur lors de la sauvegarde de l\'avatar:', error);
+          afficherMessage('error', 'Erreur lors de la sauvegarde. L\'avatar a été mis à jour localement uniquement.');
+          
+          // Fallback : mettre à jour localement uniquement si l'API échoue
+          if (utilisateurActuel) {
+            gererConnexion(utilisateurActuel.nomUtilisateur, utilisateurActuel.email, newAvatar);
+          }
         }
       };
       reader.readAsDataURL(file);

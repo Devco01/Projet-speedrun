@@ -13,6 +13,7 @@ interface User {
   id: string;
   username: string;
   email: string;
+  profileImage?: string;
   createdAt: string;
   runsCount: number;
   isActive: boolean;
@@ -209,6 +210,9 @@ export default function AdminDashboard() {
                       <thead className="bg-gray-700">
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                            Avatar
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                             Utilisateur
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
@@ -228,6 +232,25 @@ export default function AdminDashboard() {
                       <tbody className="divide-y divide-gray-700">
                         {users.map((user) => (
                           <tr key={user.id} className="hover:bg-gray-750">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center overflow-hidden">
+                                {user.profileImage && user.profileImage.startsWith('data:') ? (
+                                  <img 
+                                    src={user.profileImage} 
+                                    alt="Avatar" 
+                                    className="w-full h-full object-cover" 
+                                  />
+                                ) : (
+                                  <svg 
+                                    className="w-6 h-6 text-white" 
+                                    fill="currentColor" 
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                  </svg>
+                                )}
+                              </div>
+                            </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm font-medium text-white">
                                 {user.username}
