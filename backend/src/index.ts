@@ -10,6 +10,10 @@ import userRoutes from './routes/userRoutes';
 import categoryRoutes from './routes/categoryRoutes';
 import leaderboardRoutes from './routes/leaderboardRoutes';
 import speedrunRoutes from './routes/speedrunRoutes';
+import avatarRoutes from './routes/avatarRoutes';
+
+// Services
+import mongoService from './services/mongoService';
 
 // Configuration
 dotenv.config();
@@ -62,6 +66,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/leaderboards', leaderboardRoutes);
 app.use('/api/speedrun', speedrunRoutes);
+app.use('/api/avatars', avatarRoutes);
 
 // Route de test
 app.get('/', (req, res) => {
@@ -77,7 +82,8 @@ app.get('/', (req, res) => {
       users: '/api/users',
       categories: '/api/categories',
       leaderboards: '/api/leaderboards',
-      speedrun: '/api/speedrun'
+      speedrun: '/api/speedrun',
+      avatars: '/api/avatars'
     }
   });
 });
@@ -196,8 +202,19 @@ app.use('*', (req, res) => {
   });
 });
 
+// Initialisation MongoDB (optionnel)
+async function initializeServices() {
+  try {
+    await mongoService.connect();
+    console.log('📦 Services MongoDB initialisés');
+  } catch (error) {
+    console.log('⚠️ MongoDB non disponible - mode dégradé');
+  }
+}
+
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+  await initializeServices();
   console.log('🚀 ======================================');
   console.log(`🚀 SpeedRun Platform API Server`);
   console.log(`🚀 Port: ${PORT}`);
