@@ -1,7 +1,6 @@
 import express from 'express';
 import mongoService from '../services/mongoService';
 import { authenticate } from '../middleware/authMiddleware';
-import '../types/express'; // Import des types Express étendus
 
 const router = express.Router();
 
