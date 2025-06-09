@@ -16,9 +16,35 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
+// Middleware CORS - Configuration pour Vercel
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://projet-speedrun.vercel.app',
+  'https://projet-speedrun.vercel.app/',
+  process.env.CORS_ORIGIN
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || "http://localhost:3000"
+  origin: (origin, callback) => {
+    // Permettre les requêtes sans origin (comme Postman) en développement
+    if (!origin && process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    
+    // Vérifier si l'origin est dans la liste autorisée
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Permettre toutes les URLs Vercel (preview URLs)
+    if (origin && origin.includes('vercel.app')) {
+      return callback(null, true);
+    }
+    
+    // Bloquer les autres origins
+    callback(new Error('Non autorisé par CORS'));
+  },
+  credentials: true
 }));
 app.use(express.json());
 
