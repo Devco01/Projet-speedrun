@@ -1,6 +1,7 @@
 import express from 'express';
 import authController from '../controllers/authController';
 import { authenticate, authenticateToken } from '../middleware/authMiddleware';
+import prisma, { testDatabaseConnection } from '../config/database';
 
 const router = express.Router();
 
@@ -35,7 +36,6 @@ router.put('/profile', authenticateToken, authController.updateProfile);
 // Route de diagnostic base de données
 router.get('/db-status', async (req, res) => {
   try {
-    const { testDatabaseConnection } = await import('../config/database');
     const isConnected = await testDatabaseConnection();
     
     res.json({
@@ -81,7 +81,6 @@ router.get('/user-debug', authenticateToken, async (req, res) => {
     }
 
     // Vérifier si l'utilisateur existe en base
-    const prisma = (await import('../config/database')).default;
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
