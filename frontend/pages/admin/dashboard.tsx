@@ -57,31 +57,47 @@ export default function AdminDashboard() {
     setLoading(true);
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      console.log('DEBUG: API URL utilisée:', apiUrl);
       
       // Récupérer les statistiques
       const statsResponse = await fetch(`${apiUrl}/api/admin/stats`);
+      console.log('DEBUG: Stats response status:', statsResponse.status);
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();
+        console.log('DEBUG: Stats data:', statsData);
         setStats({
           totalUsers: statsData.data.totalUsers,
           totalEvents: statsData.data.totalEvents,
           pastEvents: statsData.data.pastEvents
         });
+      } else {
+        console.error('DEBUG: Stats response error:', await statsResponse.text());
       }
 
       // Récupérer les utilisateurs
-      const usersResponse = await fetch(`${apiUrl}/api/admin/users?limit=50`);
+      const usersUrl = `${apiUrl}/api/admin/users?limit=50`;
+      console.log('DEBUG: Tentative de récupération des utilisateurs:', usersUrl);
+      const usersResponse = await fetch(usersUrl);
+      console.log('DEBUG: Users response status:', usersResponse.status);
       if (usersResponse.ok) {
         const usersData = await usersResponse.json();
+        console.log('DEBUG: Users data:', usersData);
         setUsers(usersData.data);
+      } else {
+        console.error('DEBUG: Users response error:', await usersResponse.text());
+        setUsers([]); // S'assurer que c'est vide en cas d'erreur
       }
 
       // Récupérer les événements
       const eventsResponse = await fetch(`${apiUrl}/api/admin/events`);
+      console.log('DEBUG: Events response status:', eventsResponse.status);
       if (eventsResponse.ok) {
         const eventsData = await eventsResponse.json();
+        console.log('DEBUG: Events data:', eventsData);
         setUpcomingEvents(eventsData.data.upcoming);
         setPastEvents(eventsData.data.past);
+      } else {
+        console.error('DEBUG: Events response error:', await eventsResponse.text());
       }
 
     } catch (error) {
@@ -204,6 +220,9 @@ export default function AdminDashboard() {
                     <div className="px-6 py-8 text-center">
                       <p className="text-gray-400 text-lg">Aucun utilisateur enregistré</p>
                       <p className="text-gray-500 text-sm mt-2">Les utilisateurs apparaîtront ici une fois inscrits</p>
+                      <p className="text-blue-400 text-xs mt-4">
+                        Debug: {stats.totalUsers > 0 ? `${stats.totalUsers} utilisateur(s) détecté(s) dans les stats mais liste vide` : 'Aucun utilisateur dans les stats'}
+                      </p>
                     </div>
                   ) : (
                     <table className="min-w-full">
