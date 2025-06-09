@@ -14,7 +14,7 @@ interface Utilisateur {
 interface AuthContextType {
   utilisateurActuel: Utilisateur | null;
   estAuthentifie: boolean;
-  gererConnexion: (nomUtilisateur: string, email: string) => void;
+  gererConnexion: (nomUtilisateur: string, email: string, avatar?: string) => void;
   gererDeconnexion: () => void;
 }
 
@@ -43,15 +43,15 @@ export default function App({ Component, pageProps }: AppProps) {
     }
   }, []);
 
-  const gererConnexion = (nomUtilisateur: string, email: string) => {
-    // Préserver l'avatar existant s'il y en a un
-    const avatarExistant = utilisateurActuel?.imageProfile;
+  const gererConnexion = (nomUtilisateur: string, email: string, avatar?: string) => {
+    // Utiliser l'avatar fourni, ou préserver l'avatar existant, ou utiliser undefined
+    const imageProfile = avatar !== undefined ? avatar : utilisateurActuel?.imageProfile;
     
     const nouvelUtilisateur: Utilisateur = {
       id: utilisateurActuel?.id || Date.now().toString(),
       nomUtilisateur,
       email,
-      imageProfile: avatarExistant
+      imageProfile
     };
     setUtilisateurActuel(nouvelUtilisateur);
     setEstAuthentifie(true);
