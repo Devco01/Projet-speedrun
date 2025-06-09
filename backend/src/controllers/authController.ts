@@ -164,6 +164,7 @@ class AuthController {
 
   /**
    * Test des variables d'environnement Google
+   * Mis à jour : forcer redéploiement avec GOOGLE_CALLBACK_URL
    */
   testGoogleConfig = (req: Request, res: Response) => {
     const callbackUrl = process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/api/auth/google/callback';
