@@ -3,8 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import passport from '../config/passport';
-
-const prisma = new PrismaClient();
+import prisma from '../config/database';
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
 
 class AuthController {
