@@ -32,6 +32,7 @@ export const useAuth = () => {
 export default function App({ Component, pageProps }: AppProps) {
   const [utilisateurActuel, setUtilisateurActuel] = useState<Utilisateur | null>(null);
   const [estAuthentifie, setEstAuthentifie] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Charger l'utilisateur depuis le localStorage au démarrage
   useEffect(() => {
@@ -64,6 +65,14 @@ export default function App({ Component, pageProps }: AppProps) {
     localStorage.removeItem('utilisateurSpeedrun');
   };
 
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+  };
+
   const authValue: AuthContextType = {
     utilisateurActuel,
     estAuthentifie,
@@ -74,23 +83,29 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <AuthContext.Provider value={authValue}>
       <div className="min-h-screen bg-slate-900">
-        {/* Header moderne */}
+        {/* Header moderne avec menu burger */}
         <header className="bg-slate-800/80 backdrop-blur-md border-b border-slate-700 sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
-              <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
+              {/* Logo */}
+              <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity" onClick={closeMobileMenu}>
                 <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-cyan-500 rounded-lg flex items-center justify-center">
                   <span className="text-xl font-bold bg-gradient-to-r from-violet-300 to-cyan-300 bg-clip-text text-transparent">⚡</span>
                 </div>
-                <div>
+                <div className="hidden sm:block">
                   <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
                     SpeedrunSchedule
                   </h1>
                   <p className="text-sm text-slate-400">Explorez les temps et records</p>
                 </div>
+                <div className="block sm:hidden">
+                  <h1 className="text-lg font-bold bg-gradient-to-r from-violet-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
+                    Speedrun
+                  </h1>
+                </div>
               </Link>
               
-              {/* Navigation */}
+              {/* Navigation desktop - cachée sur mobile */}
               <nav className="hidden md:flex items-center space-x-10">
                 <Link href="/" className="text-slate-300 hover:text-violet-400 transition-colors font-medium">
                   Accueil
@@ -108,7 +123,7 @@ export default function App({ Component, pageProps }: AppProps) {
                   Support
                 </Link>
                 
-                {/* Zone d'authentification */}
+                {/* Zone d'authentification desktop */}
                 <div className="flex items-center space-x-4 ml-8">
                   {estAuthentifie && utilisateurActuel ? (
                     <>
@@ -165,6 +180,125 @@ export default function App({ Component, pageProps }: AppProps) {
                   )}
                 </div>
               </nav>
+
+              {/* Menu burger - visible sur mobile uniquement */}
+              <div className="md:hidden flex items-center">
+                <button
+                  onClick={toggleMobileMenu}
+                  className="inline-flex items-center justify-center p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-700/50 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all duration-200"
+                  aria-expanded={isMobileMenuOpen}
+                  aria-label="Menu principal"
+                >
+                  <span className="sr-only">Ouvrir le menu principal</span>
+                  {/* Icône hamburger */}
+                  <svg 
+                    className={`${isMobileMenuOpen ? 'hidden' : 'block'} h-6 w-6 transition-transform duration-200`} 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                  {/* Icône X */}
+                  <svg 
+                    className={`${isMobileMenuOpen ? 'block' : 'hidden'} h-6 w-6 transition-transform duration-200`} 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Menu mobile - slide down propre */}
+          <div className={`md:hidden transition-all duration-300 ease-in-out ${
+            isMobileMenuOpen 
+              ? 'max-h-[500px] opacity-100 visible' 
+              : 'max-h-0 opacity-0 invisible'
+          } overflow-hidden`}>
+            <div className="px-4 pt-3 pb-6 space-y-1 bg-slate-800/95 backdrop-blur-md border-t border-slate-700 shadow-lg">
+              {/* Navigation mobile */}
+              <Link 
+                href="/" 
+                className="text-slate-300 hover:text-white hover:bg-slate-700/80 block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 hover:scale-[1.02]"
+                onClick={closeMobileMenu}
+              >
+                Accueil
+              </Link>
+              <Link 
+                href="/leaderboards" 
+                className="text-slate-300 hover:text-white hover:bg-slate-700/80 block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 hover:scale-[1.02]"
+                onClick={closeMobileMenu}
+              >
+                Classements
+              </Link>
+              <Link 
+                href="/activity" 
+                className="text-slate-300 hover:text-white hover:bg-slate-700/80 block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 hover:scale-[1.02]"
+                onClick={closeMobileMenu}
+              >
+                Activité
+              </Link>
+              <Link 
+                href="/events" 
+                className="text-slate-300 hover:text-white hover:bg-slate-700/80 block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 hover:scale-[1.02]"
+                onClick={closeMobileMenu}
+              >
+                Événements
+              </Link>
+              <Link 
+                href="/support" 
+                className="text-slate-300 hover:text-white hover:bg-slate-700/80 block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 hover:scale-[1.02]"
+                onClick={closeMobileMenu}
+              >
+                Support
+              </Link>
+              
+              {/* Authentification mobile */}
+              <div className="pt-4 border-t border-slate-600 space-y-3">
+                {estAuthentifie && utilisateurActuel ? (
+                  <>
+                    <Link 
+                      href="/profile" 
+                      className="bg-slate-700 hover:bg-slate-600 text-white block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 text-center hover:scale-[1.02]"
+                      onClick={closeMobileMenu}
+                    >
+                      Profil
+                    </Link>
+                    <button
+                      onClick={() => {
+                        gererDeconnexion();
+                        closeMobileMenu();
+                      }}
+                      className="bg-red-600 hover:bg-red-700 text-white block w-full px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 hover:scale-[1.02]"
+                    >
+                      Déconnexion
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link 
+                      href="/login" 
+                      className="bg-violet-600 hover:bg-violet-700 text-white block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 text-center hover:scale-[1.02]"
+                      onClick={closeMobileMenu}
+                    >
+                      Connexion
+                    </Link>
+                    <Link 
+                      href="/register" 
+                      className="bg-green-600 hover:bg-green-700 text-white block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 text-center hover:scale-[1.02]"
+                      onClick={closeMobileMenu}
+                    >
+                      S'inscrire
+                    </Link>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </header>
@@ -200,7 +334,6 @@ export default function App({ Component, pageProps }: AppProps) {
                     <div><Link href="/events" className="text-slate-400 hover:text-violet-400 transition-colors">Événements</Link></div>
                   </div>
                   <div className="space-y-2">
-                    <div><Link href="/support" className="text-slate-400 hover:text-violet-400 transition-colors">Support</Link></div>
                     <div><Link href="/login" className="text-slate-400 hover:text-violet-400 transition-colors">Connexion</Link></div>
                     <div><Link href="/register" className="text-slate-400 hover:text-violet-400 transition-colors">Inscription</Link></div>
                   </div>
