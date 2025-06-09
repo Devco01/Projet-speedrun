@@ -180,6 +180,15 @@ class AuthController {
         nodeEnv: process.env.NODE_ENV,
         clientIdPrefix: process.env.GOOGLE_CLIENT_ID?.substring(0, 10) + '...'
       },
+      debug: {
+        callbackUrlRaw: process.env.GOOGLE_CALLBACK_URL,
+        callbackUrlIsDefined: process.env.GOOGLE_CALLBACK_URL !== undefined,
+        callbackUrlLength: process.env.GOOGLE_CALLBACK_URL?.length || 0,
+        allGoogleEnvKeys: Object.keys(process.env).filter(key => key.includes('GOOGLE')),
+        renderHostname: process.env.RENDER_EXTERNAL_HOSTNAME,
+        renderUrl: process.env.RENDER_EXTERNAL_URL,
+        port: process.env.PORT || '5000'
+      },
       instructions: {
         step1: 'Copiez exactement cette URL dans Google Cloud Console:',
         exactCallbackUrl: callbackUrl,
