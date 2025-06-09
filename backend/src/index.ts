@@ -30,27 +30,12 @@ const allowedOrigins = [
   process.env.CORS_ORIGIN
 ].filter(Boolean);
 
+// Configuration CORS permissive pour OAuth et API
 app.use(cors({
-  origin: (origin, callback) => {
-    // Permettre les requêtes sans origin (comme Postman) en développement
-    if (!origin && process.env.NODE_ENV === 'development') {
-      return callback(null, true);
-    }
-    
-    // Vérifier si l'origin est dans la liste autorisée
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    
-    // Permettre toutes les URLs Vercel (preview URLs)
-    if (origin && origin.includes('vercel.app')) {
-      return callback(null, true);
-    }
-    
-    // Bloquer les autres origins
-    callback(new Error('Non autorisé par CORS'));
-  },
-  credentials: true
+  origin: true, // Autorise toutes les origines temporairement
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 
