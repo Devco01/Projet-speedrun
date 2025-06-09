@@ -2,84 +2,54 @@
 
 ## 📋 Présentation du Projet
 
-**Application web complète** pour la communauté speedrun permettant de :
-- Cataloguer et rechercher des jeux vidéo
-- Soumettre et valider des records de vitesse
-- Organiser des événements et marathons
+**Application web complète** développée pour l'épreuve du Titre Professionnel Développeur Web et Web Mobile (DWWM). Cette plateforme dédiée à la communauté speedrun démontre la maîtrise des compétences requises par le référentiel REAC.
+
+### 🎯 Objectifs Pédagogiques
+- **Front-end sécurisé** : Interfaces utilisateur dynamiques et responsives
+- **Back-end robuste** : API REST complète avec authentification 
+- **Base de données** : Modélisation relationnelle complexe
+- **Sécurité** : Authentification JWT, validation des données, protection CORS
 
 ---
 
-## 🏗️ Architecture Technique
+## 🏗️ Architecture Technique Complète
 
-### **Stack Frontend**
-- **Framework** : Next.js 14 (React 18)
-- **Langage** : TypeScript
-- **Styles** : TailwindCSS
-- **Routage** : App Router Next.js
+### **Stack Frontend (Next.js 14)**
+- **Framework** : Next.js 14 avec App Router
+- **Langage** : TypeScript pour la robustesse
+- **Styles** : TailwindCSS pour un design moderne
+- **State Management** : Context API React
+- **Authentification** : JWT avec localStorage sécurisé
+- **Validation** : Validation côté client et serveur
 
-### **Stack Backend**
-- **Runtime** : Node.js
-- **Framework** : Express.js
-- **Langage** : TypeScript
-- **ORM** : Prisma (PostgreSQL)
-- **ODM** : Mongoose (MongoDB)
-- **Auth** : JWT + bcrypt
+### **Stack Backend (Node.js/Express)**
+- **Runtime** : Node.js 18+
+- **Framework** : Express.js avec TypeScript
+- **ORM/Database** : Prisma (PostgreSQL) + Mongoose (MongoDB)
+- **Authentification** : JWT + bcrypt (salt 12)
+- **Middleware** : Authentification, CORS, validation
+- **API** : Architecture REST avec endpoints structurés
 
 ### **Bases de Données**
-- **PostgreSQL** : Données relationnelles (users, games, runs, events)
-- **MongoDB** : Analytics et cache API
+- **PostgreSQL** : Données relationnelles principales
+  - Users, Games, Runs, Events, Categories
+  - Contraintes relationnelles complexes
+  - Index optimisés pour les performances
+- **MongoDB** : Analytics et cache API externe
+  - Données non-relationnelles
+  - Stockage des analytics temps réel
 
----
-
-### **Accès à l'application**
-- **Frontend** : http://localhost:3000
-- **Backend API** : http://localhost:5000
-- **Administration** : http://localhost:3000/admin/login
-
----
-
-
-## 🎮 Fonctionnalités Développées
-
-### **Frontend (Utilisateurs)**
-- ✅ **Page d'accueil** : Derniers records et événements
-- ✅ **Catalogue de jeux** : Filtres avancés (genre, plateforme)
-- ✅ **Pages détail** : Informations complètes des jeux
-- ✅ **Événements** : Calendrier des marathons
-- ✅ **Classements** : Leaderboards par jeu/catégorie
-- ✅ **Profils utilisateurs** : Gestion des comptes
-- ✅ **Authentification** : Login/Register sécurisé
-
-### **Backend (API)**
-- ✅ **Authentification JWT** : Sécurisation des routes
-- ✅ **CRUD Complet** : Users, Games, Runs, Events
-- ✅ **Validation** : Middleware de sécurisation
-- ✅ **Base de données** : Modèles relationnels complexes
-- ✅ **API REST** : Endpoints structurés
-
-### **Administration**
-- ✅ **Dashboard** : Statistiques temps réel
-- ✅ **Gestion utilisateurs** : CRUD complet
-- ✅ **Modération runs** : Validation/rejet
-- ✅ **Gestion événements** : Interface complète
-- ✅ **Analytics** : Rapports d'utilisation
+### **Sécurité Implémentée**
+- **Authentification JWT** avec expiration
+- **Hashage bcrypt** des mots de passe (salt: 12)
+- **CORS configuré** pour origines autorisées
+- **Validation stricte** des entrées utilisateur
+- **Protection contre** les injections SQL via Prisma
+- **Gestion d'erreurs** sécurisée sans exposition
 
 
----
-
-## 📈 Métriques du Projet
-
-### **Code Produit**
-- **15+ Pages** : Frontend complet et responsive
-- **20+ Composants** : Architecture modulaire
-- **25+ Endpoints** : API REST complète
-- **6 Modèles** : Base de données relationnelle
-
-### **Technologies Maîtrisées**
-- **Frontend** : Next.js, React, TypeScript, TailwindCSS
-- **Backend** : Node.js, Express, Prisma, MongoDB
-- **Sécurité** : JWT, bcrypt, validation middleware
-- **DevOps** : npm, Git, scripts automation
-
+**Développeur** : Devco01
+**Formation** : Titre Professionnel DWWM  
+**Année** : 2024
 
 ---
