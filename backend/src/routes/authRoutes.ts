@@ -8,6 +8,9 @@ const router = express.Router();
 router.post('/register', authController.register);
 router.post('/login', authController.login);
 
+// Route de test Google config
+router.get('/google/test', authController.testGoogleConfig);
+
 // Routes Google OAuth
 router.get('/google', authController.googleAuth);
 router.get('/google/callback', authController.googleCallback);
