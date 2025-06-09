@@ -179,8 +179,7 @@ export default function ActivityPage() {
 
       {/* Jeux actifs récemment */}
       <div className="card">
-        <h2 className="text-2xl font-semibold text-white mb-6 flex items-center">
-          <span className="mr-3">🎮</span>
+        <h2 className="text-2xl font-semibold text-white mb-6">
           Jeux Actifs Récemment
         </h2>
         <p className="text-slate-400 mb-6">
@@ -229,8 +228,7 @@ export default function ActivityPage() {
 
       {/* Runs récents */}
       <div className="card">
-        <h2 className="text-2xl font-semibold text-white mb-6 flex items-center">
-          <span className="mr-3">⚡</span>
+        <h2 className="text-2xl font-semibold text-white mb-6">
           Derniers Runs Soumis
         </h2>
         <p className="text-slate-400 mb-6">
