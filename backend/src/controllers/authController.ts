@@ -166,14 +166,25 @@ class AuthController {
    * Test des variables d'environnement Google
    */
   testGoogleConfig = (req: Request, res: Response) => {
+    const callbackUrl = process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/api/auth/google/callback';
+    
     res.json({
       success: true,
+      message: 'Configuration Google OAuth',
       config: {
         hasClientId: !!process.env.GOOGLE_CLIENT_ID,
         hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
-        callbackUrl: process.env.GOOGLE_CALLBACK_URL,
+        callbackUrl: callbackUrl,
         frontendUrl: process.env.FRONTEND_URL,
+        nodeEnv: process.env.NODE_ENV,
         clientIdPrefix: process.env.GOOGLE_CLIENT_ID?.substring(0, 10) + '...'
+      },
+      instructions: {
+        step1: 'Copiez exactement cette URL dans Google Cloud Console:',
+        exactCallbackUrl: callbackUrl,
+        step2: 'Dans Google Cloud Console > APIs & Services > Credentials',
+        step3: 'Cliquez sur votre Client OAuth 2.0',
+        step4: 'Dans "URIs de redirection autorisées", ajoutez cette URL exacte'
       }
     });
   };
