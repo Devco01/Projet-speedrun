@@ -1,232 +1,160 @@
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Début du seeding...');
+  console.log('🌱 Démarrage du seeding...');
 
-  // Nettoyage des données existantes
-  await prisma.comment.deleteMany();
-  await prisma.run.deleteMany();
-  await prisma.category.deleteMany();
-  await prisma.game.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.event.deleteMany();
-
-  // Création des utilisateurs de test
-  const hashedPassword = await bcrypt.hash('password123', 10);
-  
-  const admin = await prisma.user.create({
-    data: {
-      username: 'admin',
-      email: 'admin@speedrun.com',
-      password: hashedPassword,
-      bio: 'Administrateur de la plateforme',
-      profileImage: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop'
-    }
+  // Créer des utilisateurs de test
+  const user1 = await prisma.user.upsert({
+    where: { email: 'speedrunner@example.com' },
+    update: {},
+    create: {
+      username: 'SpeedRunner123',
+      email: 'speedrunner@example.com',
+      password: '$2b$12$abc123', // Hash fictif
+      bio: 'Passionné de speedrun depuis 5 ans, spécialisé dans les plateformers.',
+    },
   });
 
-  const speedrunner1 = await prisma.user.create({
-    data: {
-      username: 'FastRunner',
-      email: 'fast@speedrun.com',
-      password: hashedPassword,
-      bio: 'Speedrunner passionné depuis 5 ans',
-      profileImage: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop'
-    }
+  const user2 = await prisma.user.upsert({
+    where: { email: 'fastgamer@example.com' },
+    update: {},
+    create: {
+      username: 'FastGamer',
+      email: 'fastgamer@example.com',
+      password: '$2b$12$def456', // Hash fictif
+      bio: 'Records holder en Any% sur plusieurs jeux rétro.',
+    },
   });
 
-  const speedrunner2 = await prisma.user.create({
-    data: {
-      username: 'UltraSpeed',
-      email: 'ultra@speedrun.com',
-      password: hashedPassword,
-      bio: 'Champion du monde Mario Kart',
-      profileImage: 'https://images.unsplash.com/photo-1494790108755-2616b612b070?w=100&h=100&fit=crop'
-    }
-  });
-
-  // Création des jeux
-  const mario64 = await prisma.game.create({
-    data: {
-      title: 'Super Mario 64',
-      cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co1m7o.webp',
-      description: 'Le classique de Nintendo 64 qui a révolutionné le speedrunning',
-      releaseDate: new Date('1996-06-23'),
-      platform: ['Nintendo 64', 'Nintendo DS'],
-      genre: ['Platformer', '3D'],
+  // Créer des jeux
+  const game1 = await prisma.game.upsert({
+    where: { id: 'game-1' },
+    update: {},
+    create: {
+      id: 'game-1',
+      title: 'Super Mario Bros.',
+      description: 'Le classique platformer de Nintendo qui a révolutionné l\'industrie du jeu vidéo.',
+      platform: ['NES', 'Switch'],
+      genre: ['Platformer', 'Action'],
       developer: 'Nintendo',
-      publisher: 'Nintendo'
-    }
+      publisher: 'Nintendo',
+      releaseDate: new Date('1985-09-13'),
+    },
   });
 
-  const zelda = await prisma.game.create({
-    data: {
+  const game2 = await prisma.game.upsert({
+    where: { id: 'game-2' },
+    update: {},
+    create: {
+      id: 'game-2',
       title: 'The Legend of Zelda: Ocarina of Time',
-      cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co23l6.webp',
-      description: 'L\'aventure épique de Link dans Hyrule',
+      description: 'Un RPG d\'action épique qui a défini les standards des jeux 3D.',
+      platform: ['N64', '3DS', 'Switch'],
+      genre: ['RPG', 'Action', 'Adventure'],
+      developer: 'Nintendo EAD',
+      publisher: 'Nintendo',
       releaseDate: new Date('1998-11-21'),
-      platform: ['Nintendo 64', 'Nintendo 3DS'],
-      genre: ['Action', 'Adventure'],
-      developer: 'Nintendo',
-      publisher: 'Nintendo'
-    }
+    },
   });
 
-  const minecraft = await prisma.game.create({
-    data: {
-      title: 'Minecraft',
-      cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co49x5.webp',
-      description: 'Le jeu de construction et de survie le plus populaire au monde',
-      releaseDate: new Date('2011-11-18'),
-      platform: ['PC', 'Console', 'Mobile'],
-      genre: ['Sandbox', 'Survival'],
-      developer: 'Mojang Studios',
-      publisher: 'Microsoft'
-    }
-  });
-
-  // Création des catégories
-  const mario64AnyPercent = await prisma.category.create({
-    data: {
+  // Créer des catégories
+  const category1 = await prisma.category.upsert({
+    where: { id: 'cat-1' },
+    update: {},
+    create: {
+      id: 'cat-1',
       name: 'Any%',
-      rules: 'Terminer le jeu le plus rapidement possible sans restrictions particulières',
-      gameId: mario64.id
-    }
+      rules: 'Finir le jeu le plus rapidement possible, glitches autorisés.',
+      gameId: game1.id,
+    },
   });
 
-  const mario64Stars70 = await prisma.category.create({
-    data: {
-      name: '70 Stars',
-      rules: 'Collecter exactement 70 étoiles avant de battre Bowser',
-      gameId: mario64.id
-    }
-  });
-
-  const zeldaAnyPercent = await prisma.category.create({
-    data: {
+  const category2 = await prisma.category.upsert({
+    where: { id: 'cat-2' },
+    update: {},
+    create: {
+      id: 'cat-2',
       name: 'Any%',
-      rules: 'Terminer le jeu le plus rapidement possible',
-      gameId: zelda.id
-    }
+      rules: 'Finir le jeu principal le plus vite possible.',
+      gameId: game2.id,
+    },
   });
 
-  const minecraftAnyPercent = await prisma.category.create({
-    data: {
-      name: 'Any% Glitchless',
-      rules: 'Battre l\'Ender Dragon sans utiliser de glitches majeurs',
-      gameId: minecraft.id
-    }
-  });
-
-  // Création des speedruns
-  await prisma.run.create({
-    data: {
-      time: 936, // 15min 36s
-      videoUrl: 'https://www.youtube.com/watch?v=example1',
+  // Créer des runs
+  await prisma.run.upsert({
+    where: { id: 'run-1' },
+    update: {},
+    create: {
+      id: 'run-1',
+      time: 294, // 4:54 en secondes
+      videoUrl: 'https://www.youtube.com/watch?v=example',
       isVerified: true,
       verifiedAt: new Date(),
-      userId: speedrunner1.id,
-      gameId: mario64.id,
-      categoryId: mario64AnyPercent.id
-    }
+      userId: user1.id,
+      gameId: game1.id,
+      categoryId: category1.id,
+    },
   });
 
-  await prisma.run.create({
-    data: {
-      time: 2847, // 47min 27s
+  await prisma.run.upsert({
+    where: { id: 'run-2' },
+    update: {},
+    create: {
+      id: 'run-2',
+      time: 1020, // 17:00 en secondes
       videoUrl: 'https://www.youtube.com/watch?v=example2',
-      isVerified: true,
-      verifiedAt: new Date(),
-      userId: speedrunner2.id,
-      gameId: mario64.id,
-      categoryId: mario64Stars70.id
-    }
-  });
-
-  await prisma.run.create({
-    data: {
-      time: 1021, // 17min 01s
-      videoUrl: 'https://www.youtube.com/watch?v=example3',
       isVerified: false,
-      userId: speedrunner1.id,
-      gameId: zelda.id,
-      categoryId: zeldaAnyPercent.id
-    }
+      userId: user2.id,
+      gameId: game2.id,
+      categoryId: category2.id,
+    },
   });
 
-  await prisma.run.create({
-    data: {
-      time: 1456, // 24min 16s
-      videoUrl: 'https://www.youtube.com/watch?v=example4',
-      isVerified: true,
-      verifiedAt: new Date(),
-      userId: speedrunner2.id,
-      gameId: minecraft.id,
-      categoryId: minecraftAnyPercent.id
-    }
-  });
-
-  // Création des événements
-  await prisma.event.create({
-    data: {
+  // Créer des événements
+  await prisma.event.upsert({
+    where: { id: 'event-1' },
+    update: {},
+    create: {
+      id: 'event-1',
       name: 'Summer Games Done Quick 2024',
-      description: 'Le plus grand marathon de speedrun caritatif au monde',
-      startDate: new Date('2024-07-15'),
-      endDate: new Date('2024-07-22'),
-      website: 'https://gamesdonequick.com/',
-      location: 'Bloomington, Minnesota',
-      isOnline: false
-    }
+      description: 'Le marathon de speedrun le plus populaire de l\'été !',
+      startDate: new Date('2024-07-15T12:00:00Z'),
+      endDate: new Date('2024-07-22T06:00:00Z'),
+      location: 'Minneapolis, MN',
+      isOnline: false,
+    },
   });
 
-  await prisma.event.create({
-    data: {
+  await prisma.event.upsert({
+    where: { id: 'event-2' },
+    update: {},
+    create: {
+      id: 'event-2',
       name: 'ESA Winter 2024',
-      description: 'European Speedrunner Assembly - Marathon européen',
-      startDate: new Date('2024-02-17'),
-      endDate: new Date('2024-02-25'),
-      website: 'https://esamarathon.com/',
-      location: 'Malmö, Suède',
-      isOnline: false
-    }
-  });
-
-  await prisma.event.create({
-    data: {
-      name: 'Online Speedrun Marathon',
-      description: 'Marathon en ligne organisé par la communauté',
-      startDate: new Date('2024-06-01'),
-      endDate: new Date('2024-06-07'),
-      website: 'https://example.com/marathon',
-      isOnline: true
-    }
-  });
-
-  // Création des commentaires
-  await prisma.comment.create({
-    data: {
-      content: 'Run incroyable ! Les tricks dans Bob-omb Battlefield étaient parfaits.',
-      userId: speedrunner2.id,
-      runId: (await prisma.run.findFirst({ where: { time: 936 } }))!.id
-    }
+      description: 'European Speedrunner Assembly - Le plus grand événement speedrun européen.',
+      startDate: new Date('2024-12-20T18:00:00Z'),
+      endDate: new Date('2024-12-27T22:00:00Z'),
+      isOnline: true,
+    },
   });
 
   console.log('✅ Seeding terminé avec succès !');
-  console.log(`👤 Utilisateurs créés: 3`);
-  console.log(`🎮 Jeux créés: 3`);
-  console.log(`📂 Catégories créées: 4`);
-  console.log(`🏃 Speedruns créés: 4`);
-  console.log(`📅 Événements créés: 3`);
-  console.log(`💬 Commentaires créés: 1`);
+  console.log('📊 Données créées :');
+  console.log('   - 2 utilisateurs');
+  console.log('   - 2 jeux');
+  console.log('   - 2 catégories');
+  console.log('   - 2 runs');
+  console.log('   - 2 événements');
 }
 
 main()
-  .catch((e) => {
-    console.error('❌ Erreur lors du seeding:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
+  .then(async () => {
     await prisma.$disconnect();
+  })
+  .catch(async (e) => {
+    console.error('❌ Erreur lors du seeding:', e);
+    await prisma.$disconnect();
+    process.exit(1);
   }); 
