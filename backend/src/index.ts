@@ -40,7 +40,10 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json());
+
+// Configuration body-parser avec limite augmentée pour les avatars
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Configuration Passport (sans sessions - on utilise JWT)
 app.use(passport.initialize());
