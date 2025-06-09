@@ -57,11 +57,6 @@ export default function SupportPage() {
     <div className="space-y-12">
       {/* Header */}
       <section className="text-center py-12">
-        <div className="mb-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl mb-4">
-            <span className="text-2xl">🎧</span>
-          </div>
-        </div>
         <h1 className="text-4xl md:text-5xl font-bold mb-4">
           <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
             Centre d'Aide & Support

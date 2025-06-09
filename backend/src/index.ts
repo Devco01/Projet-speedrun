@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import passport from './config/passport';
 
 // Routes
 import authRoutes from './routes/authRoutes';
@@ -11,6 +12,7 @@ import categoryRoutes from './routes/categoryRoutes';
 import leaderboardRoutes from './routes/leaderboardRoutes';
 import speedrunRoutes from './routes/speedrunRoutes';
 import avatarRoutes from './routes/avatarRoutes';
+import adminRoutes from './routes/adminRoutes';
 
 // Services
 import mongoService from './services/mongoService';
@@ -52,6 +54,9 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Configuration Passport
+app.use(passport.initialize());
+
 // Logging middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
@@ -67,6 +72,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/leaderboards', leaderboardRoutes);
 app.use('/api/speedrun', speedrunRoutes);
 app.use('/api/avatars', avatarRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Route de test
 app.get('/', (req, res) => {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from './_app';
 import { useRouter } from 'next/router';
+import avatarService, { AvatarData, AvatarPreset } from '../services/avatarService';
 
 export default function ProfilePage() {
   const { utilisateurActuel, estAuthentifie, gererConnexion } = useAuth();
@@ -15,10 +16,12 @@ export default function ProfilePage() {
   const [confirmerMotDePasse, setConfirmerMotDePasse] = useState('');
   const [avatar, setAvatar] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [avatarPresets, setAvatarPresets] = useState<AvatarPreset[]>([]);
+  const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Redirection si pas connecté
+  // Redirection si pas connecté et chargement des presets
   useEffect(() => {
     if (!estAuthentifie) {
       router.push('/login');
@@ -30,7 +33,19 @@ export default function ProfilePage() {
       setEmail(utilisateurActuel.email);
       setAvatar(utilisateurActuel.imageProfile || null);
     }
+
+    // Charger les presets d'avatars
+    loadAvatarPresets();
   }, [estAuthentifie, utilisateurActuel, router]);
+
+  const loadAvatarPresets = async () => {
+    try {
+      const presets = await avatarService.getAvatarPresets();
+      setAvatarPresets(presets);
+    } catch (error) {
+      console.error('Erreur chargement presets:', error);
+    }
+  };
 
   const afficherMessage = (type: 'success' | 'error', text: string) => {
     setMessage({ type, text });
@@ -89,10 +104,40 @@ export default function ProfilePage() {
       
       const reader = new FileReader();
       reader.onload = (e) => {
-        setAvatar(e.target?.result as string);
+        const newAvatar = e.target?.result as string;
+        setAvatar(newAvatar);
+        
+        // Mettre à jour l'utilisateur immédiatement pour l'affichage
+        if (utilisateurActuel) {
+          const utilisateurMisAJour = {
+            ...utilisateurActuel,
+            imageProfile: newAvatar
+          };
+          localStorage.setItem('utilisateurSpeedrun', JSON.stringify(utilisateurMisAJour));
+          gererConnexion(utilisateurActuel.nomUtilisateur, utilisateurActuel.email);
+        }
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const appliquerPreset = (preset: AvatarPreset) => {
+    // Générer l'avatar SVG à partir du preset
+    const avatarSVG = avatarService.avatarToDataURL(preset.avatarData);
+    setAvatar(avatarSVG);
+    setSelectedPreset(preset.id);
+    
+    // Mettre à jour l'utilisateur immédiatement
+    if (utilisateurActuel) {
+      const utilisateurMisAJour = {
+        ...utilisateurActuel,
+        imageProfile: avatarSVG
+      };
+      localStorage.setItem('utilisateurSpeedrun', JSON.stringify(utilisateurMisAJour));
+      gererConnexion(utilisateurActuel.nomUtilisateur, utilisateurActuel.email);
+    }
+    
+    afficherMessage('success', `Preset "${preset.name}" appliqué !`);
   };
 
   if (!estAuthentifie || !utilisateurActuel) {
@@ -223,6 +268,40 @@ export default function ProfilePage() {
                   )}
                 </div>
                 <p className="text-slate-400">Avatar actuel</p>
+              </div>
+
+              {/* Presets d'avatars */}
+              <div className="bg-slate-700 rounded-lg p-4 mb-6">
+                <h3 className="text-lg font-medium text-white mb-4">🎨 Avatars prédéfinis</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {avatarPresets.map((preset) => (
+                    <div 
+                      key={preset.id}
+                      className={`relative cursor-pointer rounded-lg p-3 border-2 transition-all ${
+                        selectedPreset === preset.id 
+                          ? 'border-blue-500 bg-blue-900/30' 
+                          : 'border-slate-600 hover:border-slate-500 bg-slate-800/30 hover:bg-slate-800/50'
+                      }`}
+                      onClick={() => appliquerPreset(preset)}
+                    >
+                      <div className="text-center">
+                        <div 
+                          className="w-16 h-16 mx-auto mb-2 rounded-full overflow-hidden"
+                          dangerouslySetInnerHTML={{ 
+                            __html: avatarService.generateAvatarSVG(preset.avatarData)
+                          }}
+                        />
+                        <h4 className="text-white text-sm font-medium">{preset.name}</h4>
+                        <p className="text-slate-400 text-xs mt-1">{preset.description}</p>
+                      </div>
+                      {selectedPreset === preset.id && (
+                        <div className="absolute top-2 right-2">
+                          <span className="text-blue-400 text-lg">✓</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Upload personnalisé */}

@@ -8,7 +8,11 @@ const router = express.Router();
 router.post('/register', authController.register);
 router.post('/login', authController.login);
 
+// Routes Google OAuth
+router.get('/google', authController.googleAuth);
+router.get('/google/callback', authController.googleCallback);
+
 // Routes protégées
-router.get('/me', authenticate, authController.getProfile);
+router.get('/profile', authenticate, authController.getProfile);
 
 export default router; 

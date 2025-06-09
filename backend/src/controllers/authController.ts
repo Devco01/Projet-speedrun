@@ -1,10 +1,17 @@
 import { Request, Response } from 'express';
-import authService from '../services/authService';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { PrismaClient } from '@prisma/client';
+import passport from '../config/passport';
 
-/**
- * Contrôleur pour la gestion de l'authentification
- */
-export default {
+const prisma = new PrismaClient();
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
+
+export interface AuthenticatedRequest extends Request {
+  userId?: string;
+}
+
+class AuthController {
   /**
    * Inscription d'un nouvel utilisateur
    */
@@ -12,7 +19,7 @@ export default {
     try {
       const { username, email, password } = req.body;
 
-      // Validation des données
+      // Validation des entrées
       if (!username || !email || !password) {
         return res.status(400).json({
           success: false,
@@ -20,73 +27,245 @@ export default {
         });
       }
 
-      const user = await authService.register(username, email, password);
+      if (password.length < 6) {
+        return res.status(400).json({
+          success: false,
+          message: 'Le mot de passe doit contenir au moins 6 caractères'
+        });
+      }
+
+      // Vérifier si l'utilisateur existe déjà
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { email },
+            { username }
+          ]
+        }
+      });
+
+      if (existingUser) {
+        const field = existingUser.email === email ? 'email' : 'nom d\'utilisateur';
+        return res.status(409).json({
+          success: false,
+          message: `Ce ${field} est déjà utilisé`
+        });
+      }
+
+      // Hacher le mot de passe
+      const hashedPassword = await bcrypt.hash(password, 12);
+
+      // Créer l'utilisateur
+      const newUser = await prisma.user.create({
+        data: {
+          username,
+          email,
+          password: hashedPassword
+        },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          profileImage: true,
+          bio: true,
+          createdAt: true
+        }
+      });
+
+      // Générer un token JWT
+      const token = jwt.sign(
+        { userId: newUser.id, username: newUser.username },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
 
       res.status(201).json({
         success: true,
-        message: 'Utilisateur créé avec succès',
-        data: { user }
+        message: 'Inscription réussie !',
+        data: {
+          user: newUser,
+          token
+        }
       });
-    } catch (error: any) {
-      res.status(400).json({
+
+    } catch (error) {
+      console.error('Erreur lors de l\'inscription:', error);
+      res.status(500).json({
         success: false,
-        message: error.message || 'Erreur lors de l\'inscription'
+        message: 'Erreur interne du serveur'
       });
     }
-  },
+  }
 
   /**
    * Connexion d'un utilisateur
    */
   async login(req: Request, res: Response) {
     try {
-      const { emailOrUsername, password } = req.body;
+      const { identifier, password } = req.body; // identifier peut être email ou username
 
-      if (!emailOrUsername || !password) {
+      if (!identifier || !password) {
         return res.status(400).json({
           success: false,
           message: 'Email/nom d\'utilisateur et mot de passe requis'
         });
       }
 
-      const result = await authService.login(emailOrUsername, password);
-
-      res.json({
-        success: true,
-        message: 'Connexion réussie',
-        data: result
+      // Chercher l'utilisateur par email ou nom d'utilisateur
+      const user = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { email: identifier },
+            { username: identifier }
+          ]
+        }
       });
-    } catch (error: any) {
-      res.status(401).json({
-        success: false,
-        message: error.message || 'Erreur lors de la connexion'
-      });
-    }
-  },
 
-  /**
-   * Récupération du profil utilisateur
-   */
-  async getProfile(req: Request, res: Response) {
-    try {
-      if (!req.user) {
+      if (!user) {
         return res.status(401).json({
           success: false,
-          message: 'Utilisateur non authentifié'
+          message: 'Identifiants invalides'
         });
       }
 
-      const user = await authService.getUserById(req.user.userId);
+      // Vérifier le mot de passe
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+
+      if (!isPasswordValid) {
+        return res.status(401).json({
+          success: false,
+          message: 'Identifiants invalides'
+        });
+      }
+
+      // Générer un token JWT
+      const token = jwt.sign(
+        { userId: user.id, username: user.username },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      // Retourner les données utilisateur (sans le mot de passe)
+      const { password: _, ...userWithoutPassword } = user;
 
       res.json({
         success: true,
-        data: { user }
+        message: 'Connexion réussie !',
+        data: {
+          user: userWithoutPassword,
+          token
+        }
       });
-    } catch (error: any) {
-      res.status(404).json({
+
+    } catch (error) {
+      console.error('Erreur lors de la connexion:', error);
+      res.status(500).json({
         success: false,
-        message: error.message || 'Utilisateur non trouvé'
+        message: 'Erreur interne du serveur'
       });
     }
   }
-}; 
+
+  /**
+   * Initialiser l'authentification Google
+   */
+  googleAuth = passport.authenticate('google', {
+    scope: ['profile', 'email']
+  });
+
+  /**
+   * Callback Google OAuth
+   */
+  googleCallback = (req: Request, res: Response, next: any) => {
+    passport.authenticate('google', { session: false }, (err, authResult) => {
+      if (err) {
+        console.error('Erreur Google OAuth:', err);
+        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=google_auth_failed`);
+      }
+
+      if (!authResult) {
+        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=google_auth_cancelled`);
+      }
+
+      // Rediriger vers le frontend avec le token
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      res.redirect(`${frontendUrl}/auth/google/success?token=${authResult.token}&user=${encodeURIComponent(JSON.stringify(authResult.user))}`);
+    })(req, res, next);
+  };
+
+  /**
+   * Récupérer le profil de l'utilisateur connecté
+   */
+  async getProfile(req: AuthenticatedRequest, res: Response) {
+    try {
+      const userId = req.userId;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Non authentifié'
+        });
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          profileImage: true,
+          bio: true,
+          createdAt: true,
+          runs: {
+            select: {
+              id: true,
+              time: true,
+              isVerified: true,
+              submittedAt: true,
+              game: {
+                select: {
+                  title: true
+                }
+              },
+              category: {
+                select: {
+                  name: true
+                }
+              }
+            },
+            orderBy: {
+              submittedAt: 'desc'
+            },
+            take: 5
+          },
+          _count: {
+            select: {
+              runs: true
+            }
+          }
+        }
+      });
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'Utilisateur non trouvé'
+        });
+      }
+
+      res.json({
+        success: true,
+        data: user
+      });
+
+    } catch (error) {
+      console.error('Erreur lors de la récupération du profil:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur interne du serveur'
+      });
+    }
+  }
+}
+
+export default new AuthController(); 
