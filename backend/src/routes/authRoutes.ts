@@ -11,6 +11,16 @@ router.post('/login', authController.login);
 // Route de test Google config
 router.get('/google/test', authController.testGoogleConfig);
 
+// Route de test simple
+router.get('/google/debug', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Route Google debug accessible !',
+    timestamp: new Date().toISOString(),
+    url: req.originalUrl
+  });
+});
+
 // Routes Google OAuth
 router.get('/google', authController.googleAuth);
 router.get('/google/callback', authController.googleCallback);

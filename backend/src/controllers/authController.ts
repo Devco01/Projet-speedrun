@@ -182,6 +182,22 @@ class AuthController {
    * Initialiser l'authentification Google
    */
   googleAuth = (req: Request, res: Response, next: any) => {
+    // Test temporaire - retourner les informations de config
+    return res.json({
+      success: true,
+      message: 'Route Google OAuth accessible !',
+      config: {
+        hasClientId: !!process.env.GOOGLE_CLIENT_ID,
+        hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+        callbackUrl: process.env.GOOGLE_CALLBACK_URL,
+        frontendUrl: process.env.FRONTEND_URL,
+        nodeEnv: process.env.NODE_ENV
+      },
+      next_step: 'Si cette route fonctionne, le problème vient de Passport'
+    });
+
+    // Code d'authentification commenté temporairement
+    /*
     // Vérifier que les variables d'environnement sont définies
     if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
       return res.status(500).json({
@@ -195,6 +211,7 @@ class AuthController {
     passport.authenticate('google', {
       scope: ['profile', 'email']
     })(req, res, next);
+    */
   };
 
   /**
