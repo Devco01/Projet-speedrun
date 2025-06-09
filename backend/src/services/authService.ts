@@ -77,7 +77,40 @@ export default {
    */
   async login(emailOrUsername: string, password: string) {
     try {
-      // Trouver l'utilisateur
+      // Mode développement - authentification simplifiée
+      if (process.env.USE_MOCK_DATA === 'true') {
+        // Pour la démo, accepter n'importe quel email/password
+        if (!emailOrUsername || !password) {
+          throw new Error('Email et mot de passe requis');
+        }
+
+        // Créer un utilisateur fictif basé sur l'email
+        const username = emailOrUsername.includes('@') 
+          ? emailOrUsername.split('@')[0] 
+          : emailOrUsername;
+        
+        const mockUser = {
+          id: '1',
+          username: username,
+          email: emailOrUsername.includes('@') ? emailOrUsername : `${emailOrUsername}@example.com`,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+
+        // Générer un token JWT
+        const token = jwt.sign(
+          { userId: mockUser.id, email: mockUser.email },
+          process.env.JWT_SECRET || 'default_secret',
+          { expiresIn: '24h' }
+        );
+
+        return {
+          user: mockUser,
+          token
+        };
+      }
+
+      // Mode production - utiliser Prisma
       const user = await prisma.user.findFirst({
         where: {
           OR: [
