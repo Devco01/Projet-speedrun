@@ -54,7 +54,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Configuration Passport
+// Configuration Passport (sans sessions - on utilise JWT)
 app.use(passport.initialize());
 
 // Logging middleware
