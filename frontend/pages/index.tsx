@@ -39,8 +39,8 @@ export default function HomePage() {
           jeuxIds.map(async (jeu) => {
             try {
               // Récupérer les stats du jeu
-              const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
-              const response = await fetch(`${apiUrl}/speedrun/game-stats/${jeu.id}`)
+              const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '')
+              const response = await fetch(`${apiUrl}/api/speedrun/game-stats/${jeu.id}`)
               if (response.ok) {
                 const stats = await response.json()
                 return {

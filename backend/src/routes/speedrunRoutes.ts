@@ -9,6 +9,13 @@ const router = Router();
 
 // Test de connexion à l'API
 router.get('/test', speedrunController.testApiConnection);
+router.get('/health', (req, res) => {
+  res.json({
+    status: 'OK',
+    message: 'Route speedrun accessible',
+    timestamp: new Date().toISOString()
+  });
+});
 router.get('/debug/connection', speedrunController.debugConnection);
 router.get('/debug/search', speedrunController.debugSearch);
 router.get('/debug/mario', speedrunController.debugMarioSearch);
