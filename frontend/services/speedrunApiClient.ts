@@ -1,5 +1,5 @@
 // Service frontend pour consommer l'API speedrun.com via notre backend
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 export interface SpeedrunGame {
   id: string;
@@ -122,7 +122,7 @@ export interface EnrichedRecentRun extends RecentRun {
 
 class SpeedrunApiClient {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const url = `${BASE_URL}/speedrun${endpoint}`;
+    const url = `${BASE_URL}/api/speedrun${endpoint}`;
     
     try {
       const response = await fetch(url, {
@@ -151,7 +151,7 @@ class SpeedrunApiClient {
   }
 
   private async requestDirect<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const url = `${BASE_URL}${endpoint}`;
+    const url = `${BASE_URL}/api${endpoint}`;
     
     try {
       const response = await fetch(url, {

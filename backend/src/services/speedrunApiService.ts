@@ -217,50 +217,48 @@ export class SpeedrunApiService {
   /**
    * Récupère la liste des jeux populaires (VERSION RAPIDE OPTIMISÉE)
    */
-  async getPopularGames(limit: number = 30, offset: number = 0, officialOnly: boolean = false): Promise<SpeedrunGame[]> {
-    try {
-      console.log(`🔥 Récupération rapide de ${limit} jeux populaires (offset: ${offset})`);
-      
-      // VERSION ULTRA SIMPLIFIÉE : une seule requête simple et rapide
-      const response = await this.api.get('/games', {
-        params: {
-          max: limit,
-          offset: offset,
-          orderby: 'similarity',
-          direction: 'desc',
-          embed: 'platforms,regions,genres'
-        }
-      });
-      
-      const games = response.data.data || [];
-      console.log(`✅ ${games.length} jeux récupérés rapidement`);
-      
-      // Tri simple par popularité
-      games.sort((a: any, b: any) => {
-        const aLinks = (a.links ? a.links.length : 0);
-        const bLinks = (b.links ? b.links.length : 0);
-        return bLinks - aLinks;
-      });
-      
-      return games.slice(0, limit);
-      
-    } catch (error) {
-      console.error('❌ Erreur lors de la récupération rapide des jeux populaires:', error);
-      
-      // Fallback ultra simple
+      async getPopularGames(limit: number = 30, offset: number = 0, officialOnly: boolean = false): Promise<SpeedrunGame[]> {
       try {
-        console.log('🆘 Fallback ultra simple...');
-        const lastResponse = await this.api.get('/games', {
-          params: { max: limit }
-        });
+        console.log(`🌐 Récupération jeux populaires depuis speedrun.com (${limit} jeux, offset: ${offset})`);
         
-        return lastResponse.data.data || [];
-      } catch (lastError) {
-        console.error('❌ Fallback échoué:', lastError);
-        return [];
+        // Utiliser des paramètres simples et sûrs pour l'API speedrun.com
+        const response = await this.api.get('/games', {
+          params: {
+            max: limit,
+            offset: offset,
+            // Retirer les paramètres problématiques orderby et direction
+            // Utiliser seulement les paramètres de base supportés
+            embed: 'platforms,regions,genres'
+          }
+        });
+
+        const games = response.data.data || [];
+        console.log(`✅ ${games.length} jeux récupérés depuis speedrun.com`);
+        
+        return games;
+        
+      } catch (error) {
+        console.error('❌ Erreur lors de la récupération des jeux populaires depuis speedrun.com:', error);
+        
+        // Fallback simple si échec
+        try {
+          console.log('🔄 Tentative de fallback avec paramètres minimaux...');
+          const fallbackResponse = await this.api.get('/games', {
+            params: { 
+              max: Math.min(limit, 20) // Limiter pour éviter timeout
+            }
+          });
+          
+          const fallbackGames = fallbackResponse.data.data || [];
+          console.log(`✅ Fallback réussi: ${fallbackGames.length} jeux récupérés`);
+          
+          return fallbackGames;
+        } catch (fallbackError) {
+          console.error('❌ Fallback aussi échoué:', fallbackError);
+          return [];
+        }
       }
     }
-  }
 
   /**
    * Recherche des jeux par nom avec priorité pour les jeux principaux
