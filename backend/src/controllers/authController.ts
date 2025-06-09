@@ -163,11 +163,39 @@ class AuthController {
   }
 
   /**
+   * Test des variables d'environnement Google
+   */
+  testGoogleConfig = (req: Request, res: Response) => {
+    res.json({
+      success: true,
+      config: {
+        hasClientId: !!process.env.GOOGLE_CLIENT_ID,
+        hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+        callbackUrl: process.env.GOOGLE_CALLBACK_URL,
+        frontendUrl: process.env.FRONTEND_URL,
+        clientIdPrefix: process.env.GOOGLE_CLIENT_ID?.substring(0, 10) + '...'
+      }
+    });
+  };
+
+  /**
    * Initialiser l'authentification Google
    */
-  googleAuth = passport.authenticate('google', {
-    scope: ['profile', 'email']
-  });
+  googleAuth = (req: Request, res: Response, next: any) => {
+    // Vérifier que les variables d'environnement sont définies
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+      return res.status(500).json({
+        success: false,
+        message: 'Configuration Google OAuth manquante',
+        details: 'Variables GOOGLE_CLIENT_ID ou GOOGLE_CLIENT_SECRET non définies'
+      });
+    }
+
+    // Si tout est OK, procéder à l'authentification
+    passport.authenticate('google', {
+      scope: ['profile', 'email']
+    })(req, res, next);
+  };
 
   /**
    * Callback Google OAuth
