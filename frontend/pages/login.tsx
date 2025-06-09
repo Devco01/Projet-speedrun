@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from './_app';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -18,23 +18,43 @@ export default function LoginPage() {
     setIsLoading(true);
     setError(null);
 
-    // Simulation d'authentification
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    if (email && password) {
-      // Extraire le nom d'utilisateur de l'email (partie avant @)
-      const nomUtilisateur = email.split('@')[0];
-      
+    try {
+      // Appel à l'API backend pour la connexion
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          identifier: identifier, // email ou nom d'utilisateur
+          password: password
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Erreur lors de la connexion');
+      }
+
+      // Stocker le token d'authentification
+      if (data.data.token) {
+        localStorage.setItem('authToken', data.data.token);
+      }
+
       // Se connecter via le contexte global
-      gererConnexion(nomUtilisateur, email);
+      const user = data.data.user;
+      gererConnexion(user.username, user.email);
       
       // Redirection vers la page d'événements
       router.push('/events');
-    } else {
-      setError('Veuillez remplir tous les champs');
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de la connexion';
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   return (
@@ -42,9 +62,6 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl mb-6">
-            <span className="text-2xl">🔐</span>
-          </div>
           <h1 className="text-3xl font-bold text-white mb-2">Connexion</h1>
           <p className="text-slate-400">
             Accédez à votre compte speedrunner
@@ -63,19 +80,19 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Email */}
+            {/* Email ou nom d'utilisateur */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
-                Adresse email
+              <label htmlFor="identifier" className="block text-sm font-medium text-slate-300 mb-2">
+                Email ou nom d'utilisateur
               </label>
               <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="identifier"
+                type="text"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 required
                 className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
-                placeholder="votre@email.com"
+                placeholder="votre email ou votre pseudo"
               />
             </div>
 
@@ -145,10 +162,13 @@ export default function LoginPage() {
 
           {/* Connexion sociale */}
           <div className="space-y-3">
-            <button className="w-full flex items-center justify-center px-4 py-3 border border-slate-700 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors">
+            <a 
+              href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/google`}
+              className="w-full flex items-center justify-center px-4 py-3 border border-slate-700 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors"
+            >
               <span className="mr-2">🔍</span>
               <span className="text-white">Continuer avec Google</span>
-            </button>
+            </a>
           </div>
 
           {/* Lien vers inscription */}

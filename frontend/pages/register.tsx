@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useAuth } from './_app';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -13,6 +15,9 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+  
+  const router = useRouter();
+  const { gererConnexion } = useAuth();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -76,11 +81,43 @@ export default function RegisterPage() {
     setIsLoading(true);
     setErrors({});
 
-    // Simulation d'inscription
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    alert('Inscription réussie ! Bienvenue dans la communauté speedrun ! (Démo)');
-    setIsLoading(false);
+    try {
+      // Appel à l'API backend pour l'inscription
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Erreur lors de l\'inscription');
+      }
+
+      // Stocker le token d'authentification
+      if (data.data.token) {
+        localStorage.setItem('authToken', data.data.token);
+      }
+      
+      // Connecter automatiquement l'utilisateur
+      gererConnexion(formData.username, formData.email);
+      
+      // Rediriger vers le profil avec message de bienvenue
+      router.push('/profile?welcome=true');
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de l\'inscription';
+      setErrors({ general: errorMessage });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -88,9 +125,6 @@ export default function RegisterPage() {
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl mb-6">
-            <span className="text-2xl">🚀</span>
-          </div>
           <h1 className="text-3xl font-bold text-white mb-2">Créer un compte</h1>
           <p className="text-slate-400">
             Rejoignez la communauté speedrun !
@@ -100,6 +134,15 @@ export default function RegisterPage() {
         {/* Formulaire */}
         <div className="card">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {errors.general && (
+              <div className="bg-red-900/50 border border-red-700 rounded-lg p-4">
+                <div className="flex items-center">
+                  <span className="text-red-400 mr-2">⚠️</span>
+                  <span className="text-red-300 text-sm">{errors.general}</span>
+                </div>
+              </div>
+            )}
+
             {/* Nom d'utilisateur */}
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-slate-300 mb-2">
@@ -116,7 +159,7 @@ export default function RegisterPage() {
                     ? 'border-red-500 focus:ring-red-500' 
                     : 'border-slate-700 focus:ring-violet-500 focus:border-transparent'
                 }`}
-                placeholder="SpeedRunner123"
+                placeholder="votre pseudo"
               />
               {errors.username && (
                 <p className="mt-1 text-sm text-red-400">{errors.username}</p>
@@ -139,7 +182,7 @@ export default function RegisterPage() {
                     ? 'border-red-500 focus:ring-red-500' 
                     : 'border-slate-700 focus:ring-violet-500 focus:border-transparent'
                 }`}
-                placeholder="votre@email.com"
+                placeholder="votre email"
               />
               {errors.email && (
                 <p className="mt-1 text-sm text-red-400">{errors.email}</p>
@@ -265,10 +308,13 @@ export default function RegisterPage() {
 
           {/* Inscription sociale */}
           <div className="space-y-3">
-            <button className="w-full flex items-center justify-center px-4 py-3 border border-slate-700 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors">
+            <a 
+              href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/google`}
+              className="w-full flex items-center justify-center px-4 py-3 border border-slate-700 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors"
+            >
               <span className="mr-2">🔍</span>
               <span className="text-white">S'inscrire avec Google</span>
-            </button>
+            </a>
           </div>
 
           {/* Lien vers connexion */}

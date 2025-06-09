@@ -55,27 +55,45 @@ export default function AdminDashboard() {
   const loadRealData = async () => {
     setLoading(true);
     try {
-      // Données vides pour les utilisateurs (pas de données fictives)
-      setUsers([]);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      
+      // Récupérer les statistiques
+      const statsResponse = await fetch(`${apiUrl}/api/admin/stats`);
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        setStats({
+          totalUsers: statsData.data.totalUsers,
+          totalEvents: statsData.data.totalEvents,
+          pastEvents: statsData.data.pastEvents
+        });
+      }
 
-      // Événements vides (pas de données fictives) 
-      setUpcomingEvents([]);
-      setPastEvents([]);
+      // Récupérer les utilisateurs
+      const usersResponse = await fetch(`${apiUrl}/api/admin/users?limit=50`);
+      if (usersResponse.ok) {
+        const usersData = await usersResponse.json();
+        setUsers(usersData.data);
+      }
 
-      // Statistiques basées sur les données réelles
-      setStats({
-        totalUsers: 0,
-        totalEvents: 0,
-        pastEvents: 0
-      });
+      // Récupérer les événements
+      const eventsResponse = await fetch(`${apiUrl}/api/admin/events`);
+      if (eventsResponse.ok) {
+        const eventsData = await eventsResponse.json();
+        setUpcomingEvents(eventsData.data.upcoming);
+        setPastEvents(eventsData.data.past);
+      }
+
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
-      // Données de fallback
+      // Garder les données par défaut en cas d'erreur
       setStats({
         totalUsers: 0,
         totalEvents: 0,
         pastEvents: 0
       });
+      setUsers([]);
+      setUpcomingEvents([]);
+      setPastEvents([]);
     } finally {
       setLoading(false);
     }
