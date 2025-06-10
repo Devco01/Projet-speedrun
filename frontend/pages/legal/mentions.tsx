@@ -31,7 +31,7 @@ export default function MentionsLegales() {
                 <div className="bg-slate-700/30 rounded-lg p-4 space-y-2">
                   <h3 className="font-semibold text-white">🌐 Site web</h3>
                   <p className="text-slate-300"><strong>Nom :</strong> SpeedrunSchedule</p>
-                  <p className="text-slate-300"><strong>URL :</strong> speedrunschedule.vercel.app</p>
+                  <p className="text-slate-300"><strong>URL :</strong> https://projet-speedrun.vercel.app/</p>
                   <p className="text-slate-300"><strong>Nature :</strong> Plateforme communautaire de speedrunning</p>
                 </div>
                 <div className="bg-slate-700/30 rounded-lg p-4 space-y-2">

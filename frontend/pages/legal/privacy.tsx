@@ -209,20 +209,27 @@ export default function PolitiqueConfidentialite() {
                 7. Sécurité des données
               </h2>
               <div className="text-slate-300 space-y-4">
-                <p>Nous mettons en œuvre des mesures techniques et organisationnelles robustes :</p>
+                <p>Nous mettons en œuvre des mesures de sécurité adaptées à un projet éducatif :</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <ul className="list-disc list-inside space-y-2 bg-slate-700/30 rounded-lg p-4">
                     <li>🔐 Chiffrement des mots de passe (bcrypt)</li>
                     <li>🔒 Connexions sécurisées (HTTPS)</li>
                     <li>🛡️ Authentification JWT sécurisée</li>
-                    <li>🚪 Accès restreint aux données</li>
+                    <li>🚪 Accès restreint aux données sensibles</li>
                   </ul>
                   <ul className="list-disc list-inside space-y-2 bg-slate-700/30 rounded-lg p-4">
-                    <li>💾 Sauvegardes régulières et chiffrées</li>
-                    <li>👁️ Surveillance de la sécurité 24/7</li>
-                    <li>🔄 Mises à jour de sécurité automatiques</li>
-                    <li>📊 Audit de sécurité régulier</li>
+                    <li>💾 Base de données hébergée en sécurité</li>
+                    <li>🔄 Mises à jour régulières des dépendances</li>
+                    <li>📊 Monitoring basique des erreurs</li>
+                    <li>🎓 Bonnes pratiques de développement</li>
                   </ul>
+                </div>
+                <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4">
+                  <p className="text-blue-200 text-sm">
+                    <strong>ℹ️ Note :</strong> En tant que projet éducatif, les mesures de sécurité 
+                    sont adaptées au contexte d'apprentissage tout en respectant les standards 
+                    de développement web moderne.
+                  </p>
                 </div>
               </div>
             </section>
@@ -262,15 +269,10 @@ export default function PolitiqueConfidentialite() {
                       </a>
                     </p>
                     <p><strong>Objet :</strong> "RGPD - [Votre demande]"</p>
+                    <p className="text-violet-300 text-sm mt-2">
+                      Réponse sous 48-72h ouvrées dans le cadre du projet éducatif
+                    </p>
                   </div>
-                </div>
-                <div className="bg-amber-900/20 border border-amber-700 rounded-lg p-4">
-                  <p className="text-amber-200">
-                    <strong>⚖️ Autorité de contrôle :</strong> En cas de litige, vous pouvez saisir la 
-                    <a href="https://www.cnil.fr" className="text-amber-300 hover:text-amber-200 ml-1 underline" target="_blank" rel="noopener noreferrer">
-                      CNIL (Commission Nationale de l'Informatique et des Libertés)
-                    </a>
-                  </p>
                 </div>
               </div>
             </section>

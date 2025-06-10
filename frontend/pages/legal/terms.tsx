@@ -57,36 +57,37 @@ export default function ConditionsUtilisation() {
                 <div className="bg-slate-700/30 rounded-lg p-4">
                   <h3 className="font-semibold text-white mb-3">🎮 SpeedrunSchedule</h3>
                   <p className="text-slate-300 mb-3">
-                    SpeedrunSchedule est une plateforme communautaire dédiée au speedrunning qui permet aux 
+                    SpeedrunSchedule est une plateforme dédiée au speedrunning qui permet aux 
                     utilisateurs de :
                   </p>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-slate-700/30 rounded-lg p-4">
-                    <h4 className="font-semibold text-white mb-2">🏃 Fonctionnalités speedrun</h4>
+                    <h4 className="font-semibold text-white mb-2">👀 Consulter les performances</h4>
                     <ul className="space-y-1 text-slate-300 text-sm">
-                      <li>• Créer et rejoindre des courses en temps réel</li>
-                      <li>• Participer à des événements communautaires</li>
-                      <li>• Enregistrer et comparer ses temps</li>
-                      <li>• Accéder aux classements et statistiques</li>
+                      <li>• Consulter les classements et records</li>
+                      <li>• Voir les statistiques de speedrunning</li>
+                      <li>• Suivre les performances des coureurs</li>
+                      <li>• Explorer les temps par jeu et catégorie</li>
                     </ul>
                   </div>
                   <div className="bg-slate-700/30 rounded-lg p-4">
-                    <h4 className="font-semibold text-white mb-2">🤝 Fonctionnalités sociales</h4>
+                    <h4 className="font-semibold text-white mb-2">🏃 Organiser des courses</h4>
                     <ul className="space-y-1 text-slate-300 text-sm">
-                      <li>• Échanger avec la communauté speedrun</li>
-                      <li>• Organiser des compétitions</li>
-                      <li>• Partager ses performances</li>
-                      <li>• Suivre les records et actualités</li>
+                      <li>• Créer des races en temps réel</li>
+                      <li>• Participer à des courses organisées</li>
+                      <li>• Échanger avec la communauté</li>
+                      <li>• Suivre les événements speedrun</li>
                     </ul>
                   </div>
                 </div>
                 
                 <div className="bg-violet-900/20 border border-violet-700 rounded-lg p-4">
                   <p className="text-violet-200">
-                    <strong>🎓 Statut éducatif :</strong> Ce service est proposé dans le cadre d'un projet éducatif 
-                    (TP DWWM) développé par Nicolas Baudry et peut présenter des limitations ou interruptions.
+                    <strong>🎓 Statut éducatif :</strong> Ce service est développé dans le cadre d'un projet éducatif 
+                    (TP DWWM) par Nicolas Baudry et se concentre sur l'organisation de courses 
+                    et la consultation de données speedrun.
                   </p>
                 </div>
               </div>
@@ -156,89 +157,82 @@ export default function ConditionsUtilisation() {
               </div>
             </section>
 
-            {/* Speedrun et fair-play */}
+            {/* Règles anti-triche */}
             <section>
               <h2 className="text-2xl font-bold text-white mb-4 border-b border-slate-700 pb-2">
-                5. Règles de speedrun et fair-play
+                5. Règles anti-triche et fair-play
               </h2>
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-slate-700/30 rounded-lg p-4">
-                    <h3 className="font-semibold text-white mb-3">🏆 Intégrité des courses</h3>
-                    <ul className="space-y-2 text-slate-300 text-sm">
-                      <li>• Les temps doivent être réels et non modifiés</li>
-                      <li>• L'utilisation d'outils de triche est strictement interdite</li>
-                      <li>• Les abandons doivent être déclarés honnêtement</li>
-                      <li>• Respecter les règles spécifiques de chaque jeu</li>
-                      <li>• Utiliser les versions légales des jeux</li>
+                <div className="bg-gradient-to-r from-red-900/20 to-orange-900/20 border border-red-700 rounded-lg p-4">
+                  <h3 className="font-semibold text-red-300 mb-3">🚫 Comportements interdits</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ul className="space-y-2 text-red-200 text-sm">
+                      <li>❌ Fausses déclarations de temps ou de performances</li>
+                      <li>❌ Tentatives de manipulation des données affichées</li>
+                      <li>❌ Harcèlement ou comportement toxique</li>
+                      <li>❌ Spam ou contenu inapproprié</li>
                     </ul>
-                  </div>
-                  <div className="bg-slate-700/30 rounded-lg p-4">
-                    <h3 className="font-semibold text-white mb-3">🤝 Esprit sportif</h3>
-                    <ul className="space-y-2 text-slate-300 text-sm">
-                      <li>• Féliciter les performances des autres coureurs</li>
-                      <li>• Accepter les défaites avec élégance</li>
-                      <li>• Partager vos connaissances et astuces</li>
-                      <li>• Aider les nouveaux speedrunners</li>
-                      <li>• Maintenir une ambiance positive</li>
+                    <ul className="space-y-2 text-red-200 text-sm">
+                      <li>❌ Usurpation d'identité d'autres speedrunners</li>
+                      <li>❌ Partage d'informations incorrectes</li>
+                      <li>❌ Perturbation des courses organisées</li>
+                      <li>❌ Exploitation de vulnérabilités techniques</li>
                     </ul>
                   </div>
                 </div>
-                
-                <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4">
-                  <h3 className="font-semibold text-blue-200 mb-2">🎯 Détection de triche</h3>
-                  <p className="text-blue-100 text-sm">
-                    Notre système surveille automatiquement les performances suspectes. 
-                    Tout comportement frauduleux sera sanctionné et pourra entraîner une exclusion définitive.
-                  </p>
+
+                <div className="bg-gradient-to-r from-green-900/20 to-blue-900/20 border border-green-700 rounded-lg p-4">
+                  <h3 className="font-semibold text-green-300 mb-3">✅ Bonnes pratiques encouragées</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ul className="space-y-2 text-green-200 text-sm">
+                      <li>✅ Respect des autres participants</li>
+                      <li>✅ Partage constructif d'informations</li>
+                      <li>✅ Fair-play lors des courses organisées</li>
+                      <li>✅ Signalement de problèmes techniques</li>
+                    </ul>
+                    <ul className="space-y-2 text-green-200 text-sm">
+                      <li>✅ Contribution positive à la communauté</li>
+                      <li>✅ Respect des règles de chaque jeu</li>
+                      <li>✅ Encouragement des nouveaux speedrunners</li>
+                      <li>✅ Utilisation appropriée des fonctionnalités</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             </section>
 
-            {/* Sanctions */}
+            {/* Sanctions et modération */}
             <section>
               <h2 className="text-2xl font-bold text-white mb-4 border-b border-slate-700 pb-2">
-                6. Sanctions et modération
+                6. Respect et bon usage
               </h2>
               <div className="space-y-4">
-                <p className="text-slate-300">
-                  En cas de non-respect des présentes conditions, nous nous réservons le droit d'appliquer 
-                  les sanctions suivantes :
-                </p>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-3">
-                    <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-3">
-                      <h4 className="font-semibold text-yellow-200">⚠️ Avertissement</h4>
-                      <p className="text-yellow-100 text-sm">Notification du comportement inapproprié</p>
-                    </div>
-                    <div className="bg-orange-900/20 border border-orange-700 rounded-lg p-3">
-                      <h4 className="font-semibold text-orange-200">⏸️ Suspension temporaire</h4>
-                      <p className="text-orange-100 text-sm">Interdiction d'accès pour une durée limitée</p>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="bg-red-900/20 border border-red-700 rounded-lg p-3">
-                      <h4 className="font-semibold text-red-200">🚫 Bannissement</h4>
-                      <p className="text-red-100 text-sm">Suppression définitive du compte</p>
-                    </div>
-                    <div className="bg-purple-900/20 border border-purple-700 rounded-lg p-3">
-                      <h4 className="font-semibold text-purple-200">🗑️ Suppression de contenu</h4>
-                      <p className="text-purple-100 text-sm">Retrait de publications inappropriées</p>
-                    </div>
-                  </div>
+                <div className="bg-slate-700/30 rounded-lg p-4">
+                  <h3 className="font-semibold text-white mb-3">🤝 Engagement communautaire</h3>
+                  <p className="text-slate-300 mb-3">
+                    En tant que projet éducatif, nous comptons sur le bon sens et le respect mutuel 
+                    de tous les utilisateurs pour maintenir une ambiance positive.
+                  </p>
                 </div>
 
-                <div className="bg-slate-700/30 rounded-lg p-4">
-                  <h3 className="font-semibold text-white mb-2">📧 Procédure d'appel</h3>
-                  <p className="text-slate-300 text-sm">
-                    Si vous estimez qu'une sanction a été appliquée de manière injustifiée, 
-                    vous pouvez contacter Nicolas Baudry à : 
-                    <a href="mailto:nicolasbaudry37@gmail.com" className="text-violet-400 hover:text-violet-300 ml-1 underline">
-                      nicolasbaudry37@gmail.com
-                    </a>
-                    <br/>
-                    <strong>Objet :</strong> "Appel sanction - [Votre pseudo]"
+                <div className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border border-yellow-700 rounded-lg p-4">
+                  <h4 className="font-semibold text-yellow-300 mb-2">⚠️ En cas de problème</h4>
+                  <p className="text-yellow-200 text-sm mb-2">
+                    Si un comportement inapproprié est constaté, nous nous réservons le droit de :
+                  </p>
+                  <ul className="text-yellow-200 text-sm space-y-1">
+                    <li>• Prendre contact avec l'utilisateur concerné</li>
+                    <li>• Limiter l'accès temporairement si nécessaire</li>
+                    <li>• Supprimer le contenu inapproprié</li>
+                  </ul>
+                </div>
+
+                <div className="bg-gradient-to-r from-cyan-900/20 to-blue-900/20 border border-cyan-700 rounded-lg p-4">
+                  <h4 className="font-semibold text-cyan-300 mb-2">📧 Contact en cas de souci</h4>
+                  <p className="text-cyan-200 text-sm">
+                    Pour tout problème ou question, contactez simplement Nicolas Baudry à 
+                    <span className="text-cyan-400"> nicolasbaudry37@gmail.com</span> avec l'objet 
+                    "Question CGU - [Votre demande]".
                   </p>
                 </div>
               </div>
