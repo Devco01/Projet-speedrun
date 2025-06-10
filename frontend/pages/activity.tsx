@@ -26,6 +26,12 @@ export default function ActivityPage() {
           const gameId = run.game.id;
           const runDate = new Date(run.submittedAt);
           
+          // Validation : ignorer les jeux sans ID valide ou sans nom
+          if (!gameId || !run.game.title || gameId.length < 3) {
+            console.warn('Jeu ignoré - ID ou nom invalide:', { id: gameId, title: run.game.title });
+            continue;
+          }
+          
           if (!gameMap.has(gameId) || runDate > gameMap.get(gameId)!.lastActivity) {
             // Créer un objet SpeedrunGame à partir des données de run
             const gameData: SpeedrunGame = {
@@ -84,8 +90,17 @@ export default function ActivityPage() {
         // Récupérer les runs récents (déjà enrichis par l'API)
         const recentRunsData = await speedrunApiClient.getGlobalRecentRuns(20);
         
+        // Filtrer les runs avec des données de jeu valides
+        const validRuns = recentRunsData.filter(run => {
+          const isValid = run.game && run.game.id && run.game.title && run.game.id.length >= 3;
+          if (!isValid) {
+            console.warn('Run ignoré - données de jeu invalides:', run);
+          }
+          return isValid;
+        });
+        
         // Pas besoin d'enrichir car les données sont déjà complètes
-        const enrichedRuns = recentRunsData.map((run) => ({
+        const enrichedRuns = validRuns.map((run) => ({
           ...run,
           gameDetails: {
             id: run.game.id,
