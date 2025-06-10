@@ -8,15 +8,12 @@ import { connectWithRetry, testDatabaseConnection } from './config/database';
 
 // Routes
 import authRoutes from './routes/authRoutes';
-import runRoutes from './routes/runRoutes';
-import eventRoutes from './routes/eventRoutes';
-import userRoutes from './routes/userRoutes';
-import categoryRoutes from './routes/categoryRoutes';
-import leaderboardRoutes from './routes/leaderboardRoutes';
+// Les routes utilisateurs avec mock data ont été supprimées
 import speedrunRoutes from './routes/speedrunRoutes';
+import raceRoutes from './routes/raceRoutes';
 import avatarRoutes from './routes/avatarRoutes';
 import adminRoutes from './routes/adminRoutes';
-import analyticsRoutes from './routes/analyticsRoutes';
+// Service analytiques supprimé avec les événements
 
 // Services
 import mongoService from './services/mongoService';
@@ -57,15 +54,10 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/runs', runRoutes);
-app.use('/api/events', eventRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/leaderboards', leaderboardRoutes);
 app.use('/api/speedrun', speedrunRoutes);
+app.use('/api/races', raceRoutes);
 app.use('/api/avatars', avatarRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/analytics', analyticsRoutes);
 
 // Route de test
 app.get('/', (req, res) => {
@@ -76,13 +68,10 @@ app.get('/', (req, res) => {
     timestamp: new Date().toISOString(),
     endpoints: {
       auth: '/api/auth',
-      runs: '/api/runs',
-      events: '/api/events',
-      users: '/api/users',
-      categories: '/api/categories',
-      leaderboards: '/api/leaderboards',
       speedrun: '/api/speedrun',
-      avatars: '/api/avatars'
+      races: '/api/races',
+      avatars: '/api/avatars',
+      admin: '/api/admin'
     }
   });
 });
@@ -108,11 +97,8 @@ app.get('/health', async (req, res) => {
     },
     apis: {
       auth: 'operational',
-      runs: 'operational',
       events: 'operational',
       users: 'operational',
-      categories: 'operational',
-      leaderboards: 'operational',
       speedrun: 'operational'
     }
   });

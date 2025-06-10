@@ -132,12 +132,59 @@ export default function PageRaces() {
     }
   ];
 
-  // Aucune donnée fictive - liste vide au départ
+  // Charger les races depuis l'API au démarrage
   useEffect(() => {
-    setRaces([]);
+    chargerRaces();
   }, []);
 
-  // Fonction pour rechercher des jeux
+  // Fonction pour charger les races depuis l'API
+  const chargerRaces = async () => {
+    setChargement(true);
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/races`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Transformer les données de l'API vers le format attendu par le frontend
+        const racesTransformees = data.data.map((race: any) => ({
+          id: race.id,
+          jeu: race.gameName,
+          jeuId: race.gameId,
+          categorie: race.categoryName,
+          categorieId: race.categoryId,
+          objectif: race.objective,
+          statut: race.status,
+          creePar: race.createdBy.username,
+          participants: race.participants.map((p: any) => ({
+            id: p.user.id,
+            nomUtilisateur: p.user.username,
+            statut: p.status,
+            tempsFin: p.finishTime,
+            urlStream: p.streamUrl,
+            place: p.position
+          })),
+          maxParticipants: race.maxParticipants,
+          heureDebut: race.startTime,
+          heureFin: race.endTime,
+          motDePasse: race.password,
+          creeA: race.createdAt
+        }));
+        setRaces(racesTransformees);
+        console.log('📊 Races chargées depuis API:', racesTransformees.length, 'races');
+      } else {
+        console.error('Erreur API:', response.status);
+        setRaces([]);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des races:', error);
+      setRaces([]);
+    } finally {
+      setChargement(false);
+    }
+  };
+
+  // Fonction pour rechercher des jeux (Algorithme avancé inspiré de leaderboards.tsx)
   const rechercherJeux = async (query: string) => {
     if (query.length < 2) {
       setJeuxSuggeres([]);
@@ -146,17 +193,9 @@ export default function PageRaces() {
 
     setChargementJeux(true);
     
-    const queryLower = query.toLowerCase();
-    
-    // D'abord chercher dans les jeux populaires locaux
-    const jeuxPopulairesCorrespondants = jeuxPopulaires.filter(jeu => 
-      (jeu.name || jeu.title || '').toLowerCase().includes(queryLower) ||
-      jeu.abbreviation.toLowerCase().includes(queryLower)
-    );
-
     try {
-      // Ensuite essayer l'API speedrun.com
-      const response = await fetch(`http://localhost:5000/api/speedrun/games/search?q=${encodeURIComponent(query)}&limit=10`);
+      // Utiliser l'API speedrun exhaustive comme dans leaderboards
+      const response = await fetch(`http://localhost:5000/api/speedrun/games/search/exhaustive?q=${encodeURIComponent(query)}&limit=20`);
       let jeuxAPI: JeuSpeedrun[] = [];
       
       if (response.ok) {
@@ -164,22 +203,117 @@ export default function PageRaces() {
         jeuxAPI = data.games || [];
       }
 
-      // Combiner les résultats : jeux populaires en premier, puis API
-      let jeuxTrouves = [...jeuxPopulairesCorrespondants, ...jeuxAPI];
-      
-      // Supprimer les doublons par ID
-      const idsVus = new Set();
-      jeuxTrouves = jeuxTrouves.filter(jeu => {
-        if (idsVus.has(jeu.id)) return false;
-        idsVus.add(jeu.id);
-        return true;
-      });
+      // Algorithme de tri avancé identique à leaderboards.tsx
+      if (Array.isArray(jeuxAPI)) {
+        const sortedResults = jeuxAPI.sort((a, b) => {
+          const queryLower = query.toLowerCase().trim();
+          const aName = (a.name || a.title || '').toLowerCase();
+          const bName = (b.name || b.title || '').toLowerCase();
+          
+          // 1. Jeux iconiques officiels par franchise (priorité absolue)
+          const iconicTitles = {
+            'zelda': [
+              'the legend of zelda: ocarina of time',
+              'the legend of zelda: majora\'s mask', 
+              'the legend of zelda: breath of the wild',
+              'the legend of zelda: tears of the kingdom',
+              'the legend of zelda: twilight princess',
+              'the legend of zelda: wind waker',
+              'the legend of zelda: a link to the past',
+              'the legend of zelda: link\'s awakening',
+              'the legend of zelda',
+              'zelda ii: the adventure of link'
+            ],
+            'mario': [
+              'super mario 64',
+              'super mario odyssey',
+              'super mario world',
+              'super mario bros.',
+              'super mario sunshine',
+              'super mario galaxy',
+              'super mario bros. 3',
+              'mario kart 64',
+              'paper mario'
+            ],
+            'sonic': [
+              'sonic the hedgehog',
+              'sonic the hedgehog 2',
+              'sonic the hedgehog 3',
+              'sonic & knuckles',
+              'sonic adventure',
+              'sonic adventure 2',
+              'sonic mania'
+            ],
+            'metroid': [
+              'super metroid',
+              'metroid prime',
+              'metroid fusion',
+              'metroid dread'
+            ],
+            'pokemon': [
+              'pokemon red',
+              'pokemon blue',
+              'pokemon yellow',
+              'pokemon gold',
+              'pokemon silver',
+              'pokemon ruby',
+              'pokemon sapphire'
+            ]
+          };
+          
+          // Détecter les franchises recherchées
+          let targetFranchise: keyof typeof iconicTitles | null = null;
+          for (const franchise of Object.keys(iconicTitles) as Array<keyof typeof iconicTitles>) {
+            if (queryLower.includes(franchise)) {
+              targetFranchise = franchise;
+              break;
+            }
+          }
+          
+          if (targetFranchise) {
+            const aIsIconic = iconicTitles[targetFranchise].includes(aName);
+            const bIsIconic = iconicTitles[targetFranchise].includes(bName);
+            
+            if (aIsIconic && !bIsIconic) return -1;
+            if (!aIsIconic && bIsIconic) return 1;
+          }
+          
+          // 2. Correspondance exacte du nom
+          if (aName === queryLower && bName !== queryLower) return -1;
+          if (aName !== queryLower && bName === queryLower) return 1;
+          
+          // 3. Commence par la requête
+          const aStartsWith = aName.startsWith(queryLower);
+          const bStartsWith = bName.startsWith(queryLower);
+          if (aStartsWith && !bStartsWith) return -1;
+          if (!aStartsWith && bStartsWith) return 1;
+          
+          // 4. Contient la requête (proche du début prioritaire)
+          const aIndex = aName.indexOf(queryLower);
+          const bIndex = bName.indexOf(queryLower);
+          if (aIndex !== -1 && bIndex === -1) return -1;
+          if (aIndex === -1 && bIndex !== -1) return 1;
+          if (aIndex !== -1 && bIndex !== -1 && aIndex !== bIndex) {
+            return aIndex - bIndex;
+          }
+          
+          // 5. Par longueur (plus court = plus pertinent)
+          return aName.length - bName.length;
+        });
 
-      setJeuxSuggeres(jeuxTrouves);
+        setJeuxSuggeres(sortedResults.slice(0, 10)); // Limiter à 10 résultats
+      } else {
+        setJeuxSuggeres([]);
+      }
     } catch (error) {
       console.error('Erreur lors de la recherche de jeux:', error);
       
-      // En cas d'erreur API, utiliser uniquement les jeux populaires
+      // Fallback : chercher dans les jeux populaires locaux
+      const queryLower = query.toLowerCase();
+      const jeuxPopulairesCorrespondants = jeuxPopulaires.filter(jeu => 
+        (jeu.name || jeu.title || '').toLowerCase().includes(queryLower) ||
+        jeu.abbreviation.toLowerCase().includes(queryLower)
+      );
       setJeuxSuggeres(jeuxPopulairesCorrespondants);
     }
     setChargementJeux(false);
@@ -331,7 +465,7 @@ export default function PageRaces() {
     }
   };
 
-  const creerRace = (e: React.FormEvent) => {
+  const creerRace = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!utilisateurActuel) return;
 
@@ -341,30 +475,60 @@ export default function PageRaces() {
       return;
     }
 
-    const race: Race = {
-      id: Date.now().toString(),
-      ...nouvelleRace,
-      statut: 'en-attente',
-      creePar: utilisateurActuel.nomUtilisateur,
-      participants: [
-        { id: utilisateurActuel.id, nomUtilisateur: utilisateurActuel.nomUtilisateur, statut: 'inscrit' }
-      ],
-      creeA: new Date().toISOString()
-    };
-    
-    setRaces([race, ...races]);
-    setNouvelleRace({
-      jeu: '',
-      jeuId: '',
-      categorie: '',
-      categorieId: '',
-      objectif: 'Meilleur temps',
-      maxParticipants: 4,
-      motDePasse: ''
-    });
-    setRechercheJeu('');
-    setCategories([]);
-    setVueActive('parcourir');
+    setChargement(true);
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const token = localStorage.getItem('authToken');
+      
+      const response = await fetch(`${apiUrl}/api/races`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          gameName: nouvelleRace.jeu,
+          gameId: nouvelleRace.jeuId,
+          categoryName: nouvelleRace.categorie,
+          categoryId: nouvelleRace.categorieId,
+          objective: nouvelleRace.objectif,
+          maxParticipants: nouvelleRace.maxParticipants,
+          password: nouvelleRace.motDePasse || null
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Race créée:', data.data);
+        
+        // Recharger les races depuis l'API
+        await chargerRaces();
+        
+        // Reset le formulaire
+        setNouvelleRace({
+          jeu: '',
+          jeuId: '',
+          categorie: '',
+          categorieId: '',
+          objectif: 'Meilleur temps',
+          maxParticipants: 4,
+          motDePasse: ''
+        });
+        setRechercheJeu('');
+        setCategories([]);
+        setVueActive('parcourir');
+        
+        alert('Race créée avec succès !');
+      } else {
+        const error = await response.json();
+        alert(`Erreur: ${error.message}`);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la création de la race:', error);
+      alert('Erreur lors de la création de la race');
+    } finally {
+      setChargement(false);
+    }
   };
 
   const rejoindreLaRace = (raceId: string) => {
@@ -554,6 +718,8 @@ export default function PageRaces() {
     return Math.floor((Date.now() - new Date(heureDebut).getTime()) / 1000);
   };
 
+
+
   if (!estAuthentifie) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -612,7 +778,7 @@ export default function PageRaces() {
               <span className="ml-2 opacity-75 group-hover:opacity-100 transition-opacity">→</span>
             </button>
             <button
-              onClick={() => window.location.reload()}
+              onClick={chargerRaces}
               className="group bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg border border-slate-500/30"
             >
               <span>Actualiser</span>

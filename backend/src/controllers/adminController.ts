@@ -12,36 +12,27 @@ class AdminController {
       // Récupérer le nombre total d'utilisateurs
       const totalUsers = await prisma.user.count();
       
-      // Récupérer le nombre d'utilisateurs actifs (ceux qui ont des runs)
-      const activeUsers = await prisma.user.count({
+      // Utilisateurs actifs = tous les utilisateurs inscrits  
+      const activeUsers = totalUsers;
+
+      // Les événements sont maintenant remplacés par les races speedrun
+
+      // Récupérer les statistiques des races speedrun
+      const totalRaces = await prisma.race.count();
+      const activeRaces = await prisma.race.count({
         where: {
-          runs: {
-            some: {}
+          status: {
+            in: ['en-attente', 'prete', 'en-cours']
           }
         }
       });
-
-      // Récupérer le nombre d'événements
-      const totalEvents = await prisma.event.count();
-      
-      // Récupérer le nombre d'événements passés
-      const pastEvents = await prisma.event.count({
+      const completedRaces = await prisma.race.count({
         where: {
-          endDate: {
-            lt: new Date()
-          }
+          status: 'terminee'
         }
       });
 
-      // Récupérer le nombre de runs totaux
-      const totalRuns = await prisma.run.count();
-
-      // Récupérer le nombre de runs vérifiés
-      const verifiedRuns = await prisma.run.count({
-        where: {
-          isVerified: true
-        }
-      });
+      // Plus besoin de statistiques sur les runs pour cette plateforme d'événements
 
       // Calcul des utilisateurs de ce mois
       const currentDate = new Date();
@@ -60,10 +51,9 @@ class AdminController {
         data: {
           totalUsers,
           activeUsers,
-          totalEvents,
-          pastEvents,
-          totalRuns,
-          verifiedRuns,
+          totalRaces,
+          activeRaces,
+          completedRaces,
           newUsersThisMonth
         }
       });
@@ -93,12 +83,7 @@ class AdminController {
           email: true,
           profileImage: true,
           bio: true,
-          createdAt: true,
-          _count: {
-            select: {
-              runs: true
-            }
-          }
+          createdAt: true
         },
         orderBy: {
           createdAt: 'desc'
@@ -117,8 +102,7 @@ class AdminController {
         profileImage: user.profileImage,
         bio: user.bio,
         createdAt: user.createdAt.toISOString(),
-        runsCount: user._count.runs,
-        isActive: user._count.runs > 0
+        isActive: true // Tous les utilisateurs inscrits sont considérés actifs
       }));
 
       res.json({
@@ -141,53 +125,7 @@ class AdminController {
     }
   }
 
-  /**
-   * Récupère les événements récents pour l'admin
-   */
-  async getRecentEvents(req: Request, res: Response) {
-    try {
-      const limit = parseInt(req.query.limit as string) || 10;
-
-      const upcomingEvents = await prisma.event.findMany({
-        where: {
-          startDate: {
-            gte: new Date()
-          }
-        },
-        orderBy: {
-          startDate: 'asc'
-        },
-        take: limit
-      });
-
-      const pastEvents = await prisma.event.findMany({
-        where: {
-          endDate: {
-            lt: new Date()
-          }
-        },
-        orderBy: {
-          endDate: 'desc'
-        },
-        take: limit
-      });
-
-      res.json({
-        success: true,
-        data: {
-          upcoming: upcomingEvents,
-          past: pastEvents
-        }
-      });
-
-    } catch (error) {
-      console.error('Erreur lors de la récupération des événements:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erreur interne du serveur'
-      });
-    }
-  }
+  // Les événements généraux ont été remplacés par les races speedrun
 
   /**
    * Supprime un utilisateur (admin seulement)

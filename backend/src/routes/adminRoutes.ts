@@ -8,7 +8,6 @@ const router = express.Router();
 router.get('/dashboard', authenticateToken, requireAdmin, adminController.getDashboardStats); // Alias pour vérification admin
 router.get('/stats', authenticateToken, requireAdmin, adminController.getDashboardStats);
 router.get('/users', authenticateToken, requireAdmin, adminController.getAllUsers);
-router.get('/events', authenticateToken, requireAdmin, adminController.getRecentEvents);
 router.delete('/users/:id', authenticateToken, requireAdmin, adminController.deleteUser);
 
 export default router; 
