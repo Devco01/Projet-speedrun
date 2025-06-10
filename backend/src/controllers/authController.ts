@@ -247,7 +247,7 @@ class AuthController {
     const authCode = req.query.code as string;
     if (!authCode) {
       console.log('❌ Aucun code d\'autorisation Google fourni');
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const frontendUrl = process.env.FRONTEND_URL || 'https://projet-speedrun.vercel.app';
       return res.redirect(`${frontendUrl}/login?error=missing_auth_code`);
     }
     
@@ -265,7 +265,7 @@ class AuthController {
         userExists: !!authResult?.user 
       });
 
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const frontendUrl = process.env.FRONTEND_URL || 'https://projet-speedrun.vercel.app';
 
       if (err) {
         console.error(`❌ Erreur Google OAuth (${callbackId}):`, err);
