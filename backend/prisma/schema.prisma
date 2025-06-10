@@ -12,90 +12,85 @@ datasource db {
 
 // Modèle pour les utilisateurs
 model User {
-  id            String    @id @default(uuid())
-  username      String    @unique
-  email         String    @unique
-  password      String
-  profileImage  String?
-  bio           String?
-  role          String    @default("user") // "user" ou "admin"
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  runs          Run[]
-  favorites     Game[]    @relation("UserFavorites")
-  comments      Comment[]
+  id               String            @id @default(uuid())
+  username         String            @unique
+  email            String            @unique
+  password         String
+  profileImage     String?
+  bio              String?
+  role             String            @default("user") // "user" ou "admin"
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  favorites        Game[]            @relation("UserFavorites")
+  createdRaces     Race[] // Races créées par l'utilisateur
+  raceParticipants RaceParticipant[] // Participations aux races
+  raceMessages     RaceMessage[] // Messages dans les races
 }
 
 // Modèle pour les jeux
 model Game {
-  id            String    @id @default(uuid())
-  title         String
-  cover         String?
-  description   String?
-  releaseDate   DateTime?
-  platform      String[]
-  genre         String[]
-  developer     String?
-  publisher     String?
-  website       String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  categories    Category[]
-  runs          Run[]
-  favoriteBy    User[]    @relation("UserFavorites")
+  id          String    @id @default(uuid())
+  title       String
+  cover       String?
+  description String?
+  releaseDate DateTime?
+  platform    String[]
+  genre       String[]
+  developer   String?
+  publisher   String?
+  website     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  favoriteBy  User[]    @relation("UserFavorites")
 }
 
-// Modèle pour les catégories de speedrun
-model Category {
-  id            String    @id @default(uuid())
-  name          String
-  rules         String?
-  gameId        String
-  game          Game      @relation(fields: [gameId], references: [id])
-  runs          Run[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+// Les événements généraux ont été remplacés par les races speedrun
+
+// Modèle pour les races speedrun
+model Race {
+  id              String            @id @default(uuid())
+  gameName        String // Nom du jeu
+  gameId          String // ID du jeu speedrun.com
+  categoryName    String // Nom de la catégorie
+  categoryId      String // ID de la catégorie
+  objective       String            @default("Meilleur temps")
+  status          String            @default("en-attente") // en-attente, prete, en-cours, terminee
+  maxParticipants Int               @default(4)
+  password        String? // Mot de passe optionnel
+  startTime       DateTime? // Heure de début de la course
+  endTime         DateTime? // Heure de fin de la course
+  createdById     String // ID du créateur
+  createdBy       User              @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  participants    RaceParticipant[]
+  messages        RaceMessage[]
 }
 
-// Modèle pour les speedruns
-model Run {
-  id            String    @id @default(uuid())
-  time          Int       // Temps en secondes
-  videoUrl      String?
-  submittedAt   DateTime  @default(now())
-  verifiedAt    DateTime?
-  isVerified    Boolean   @default(false)
-  userId        String
-  user          User      @relation(fields: [userId], references: [id])
-  gameId        String
-  game          Game      @relation(fields: [gameId], references: [id])
-  categoryId    String
-  category      Category  @relation(fields: [categoryId], references: [id])
-  comments      Comment[]
+// Modèle pour les participants à une race
+model RaceParticipant {
+  id         String   @id @default(uuid())
+  raceId     String
+  race       Race     @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status     String   @default("inscrit") // inscrit, pret, en-course, termine, abandon
+  finishTime Int? // Temps de fin en secondes
+  streamUrl  String? // URL du stream
+  position   Int? // Position finale
+  joinedAt   DateTime @default(now())
+
+  @@unique([raceId, userId]) // Un utilisateur ne peut participer qu'une fois à une race
 }
 
-// Modèle pour les commentaires
-model Comment {
-  id            String    @id @default(uuid())
-  content       String
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  userId        String
-  user          User      @relation(fields: [userId], references: [id])
-  runId         String
-  run           Run       @relation(fields: [runId], references: [id])
+// Modèle pour les messages de chat de race
+model RaceMessage {
+  id        String   @id @default(uuid())
+  raceId    String
+  race      Race     @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  userId    String? // Null pour les messages système
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  type      String   @default("chat") // chat, systeme
+  createdAt DateTime @default(now())
 }
-
-// Modèle pour les événements
-model Event {
-  id            String    @id @default(uuid())
-  name          String
-  description   String?
-  startDate     DateTime
-  endDate       DateTime
-  website       String?
-  location      String?
-  isOnline      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-} 

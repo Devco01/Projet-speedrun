@@ -15,7 +15,6 @@ interface User {
   email: string;
   profileImage?: string;
   createdAt: string;
-  runsCount: number;
   isActive: boolean;
 }
 
@@ -262,9 +261,6 @@ export default function AdminDashboard() {
                             Email
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Speedruns
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                             Date d'inscription
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
@@ -302,11 +298,6 @@ export default function AdminDashboard() {
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm text-gray-300">
                                 {user.email}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-300">
-                                {user.runsCount}
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">

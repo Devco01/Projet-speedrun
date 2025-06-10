@@ -442,34 +442,7 @@ class AuthController {
           email: true,
           profileImage: true,
           bio: true,
-          createdAt: true,
-          runs: {
-            select: {
-              id: true,
-              time: true,
-              isVerified: true,
-              submittedAt: true,
-              game: {
-                select: {
-                  title: true
-                }
-              },
-              category: {
-                select: {
-                  name: true
-                }
-              }
-            },
-            orderBy: {
-              submittedAt: 'desc'
-            },
-            take: 5
-          },
-          _count: {
-            select: {
-              runs: true
-            }
-          }
+          createdAt: true
         }
       });
 
