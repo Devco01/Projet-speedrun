@@ -188,35 +188,39 @@ export default function LeaderboardsPage() {
         setLoadingLeaderboard(true);
         setError(null);
         
-        // Calculer le nombre de runs à récupérer basé sur la page actuelle
-        const runsToFetch = Math.min(currentPage * itemsPerPage, 100); // Maximum 100 runs
+        // Toujours récupérer au moins 100 runs pour pouvoir faire de la pagination
+        const runsToFetch = 100; // Maximum qu'on peut récupérer
         
         // OPTIMISATION : Une seule tentative avec paramètres génériques
         const leaderboardData = await speedrunApiClient.getLeaderboard(
           selectedGame.id, 
           selectedCategory.id,
-          { top: runsToFetch } // Récupérer plus de runs selon la page
+          { top: runsToFetch } // Toujours récupérer 100 runs
         );
         
         if (leaderboardData && leaderboardData.runs && leaderboardData.runs.length > 0) {
           setLeaderboard(leaderboardData);
-          // Calculer le nombre total de pages correctement
-          // Si on a récupéré le maximum possible (100 runs), on peut avoir jusqu'à 5 pages
-          // Sinon, on calcule selon le nombre de runs récupérés
-          const totalRuns = Math.min(leaderboardData.runs.length, 100);
+          
+          // Calculer le nombre total de pages en fonction des runs disponibles
+          const totalRuns = leaderboardData.runs.length;
           const calculatedPages = Math.ceil(totalRuns / itemsPerPage);
           
-          // S'assurer qu'on a au moins 1 page et pas plus de 5
-          const finalPages = Math.max(1, Math.min(calculatedPages, 5));
-          setTotalPages(finalPages);
+          setTotalPages(calculatedPages);
           
           console.log('📊 Pagination calculée:', {
             totalRuns,
             itemsPerPage,
             calculatedPages,
-            finalPages,
-            currentPage
+            currentPage,
+            willShowPagination: calculatedPages > 1,
+            runsOnCurrentPage: Math.min(itemsPerPage, totalRuns - (currentPage - 1) * itemsPerPage)
           });
+          
+          // Vérifier qu'on ne dépasse pas le nombre de pages disponibles
+          if (currentPage > calculatedPages) {
+            console.log('⚠️ Page actuelle trop élevée, reset à 1');
+            setCurrentPage(1);
+          }
         } else {
           setLeaderboard(null);
           setTotalPages(1);
@@ -244,7 +248,7 @@ export default function LeaderboardsPage() {
     };
 
     fetchLeaderboard();
-  }, [selectedGame, selectedCategory, currentPage, itemsPerPage]);
+  }, [selectedGame, selectedCategory]);
 
   // Recherche de jeux avec debounce
   useEffect(() => {
@@ -263,77 +267,119 @@ export default function LeaderboardsPage() {
         if (Array.isArray(results)) {
           // Améliorer l'algorithme de tri pour prioriser les jeux principaux
           const sortedResults = results.sort((a, b) => {
-            const queryLower = searchQuery.toLowerCase();
+            const queryLower = searchQuery.toLowerCase().trim();
             const aName = a.name.toLowerCase();
             const bName = b.name.toLowerCase();
+            
+            // Score de priorité pour chaque jeu
+            let aScore = 0;
+            let bScore = 0;
             
             // Indicateurs de ROM hack ou mods (plus complets)
             const romHackKeywords = [
               'hack', 'mod', 'randomizer', 'kaizo', 'romhack', 'custom', 'fan',
               'homebrew', 'sms', 'smw2', 'sm64', 'oot', 'remix', 'remaster',
               'beta', 'demo', 'prototype', 'challenge', 'difficulty',
-              'level editor', 'maker', 'creator'
+              'level editor', 'maker', 'creator', 'mario 64', 'super mario 64'
             ];
             
-            const isAHack = romHackKeywords.some(keyword => aName.includes(keyword));
-            const isBHack = romHackKeywords.some(keyword => bName.includes(keyword));
+            const isAHack = romHackKeywords.some(keyword => aName.includes(keyword) && keyword !== queryLower);
+            const isBHack = romHackKeywords.some(keyword => bName.includes(keyword) && keyword !== queryLower);
             
-            // Mots-clés des franchises principales pour prioriser
-            const mainFranchiseKeywords = {
-              'zelda': ['ocarina of time', 'majora', 'breath of the wild', 'tears of the kingdom', 'twilight princess', 'wind waker', 'skyward sword', 'link to the past', 'link\'s awakening'],
-              'mario': ['super mario 64', 'super mario odyssey', 'super mario world', 'super mario bros', 'super mario 3d', 'super mario galaxy', 'mario kart'],
-              'sonic': ['sonic the hedgehog', 'sonic 2', 'sonic 3', 'sonic mania', 'sonic forces', 'sonic generations', 'sonic adventure'],
-              'metroid': ['super metroid', 'metroid prime', 'metroid dread', 'metroid fusion'],
-              'castlevania': ['symphony of the night', 'aria of sorrow', 'portrait of ruin']
+            // Jeux officiels reconnus par franchise
+            const officialGames = {
+              'zelda': [
+                'the legend of zelda: ocarina of time',
+                'the legend of zelda: majora\'s mask', 
+                'the legend of zelda: breath of the wild',
+                'the legend of zelda: tears of the kingdom',
+                'the legend of zelda: twilight princess',
+                'the legend of zelda: wind waker',
+                'the legend of zelda: skyward sword',
+                'the legend of zelda: link to the past',
+                'the legend of zelda: link\'s awakening',
+                'zelda ii: the adventure of link',
+                'zelda (game & watch)',
+                'zelda 64: dawn & dusk',
+                'zelda classic'
+              ],
+              'mario': [
+                'super mario 64',
+                'super mario odyssey', 
+                'super mario world',
+                'super mario bros.',
+                'super mario bros. 3',
+                'super mario 3d world',
+                'super mario galaxy',
+                'mario kart 64',
+                'mario kart 8',
+                'paper mario'
+              ],
+              'sonic': [
+                'sonic the hedgehog',
+                'sonic the hedgehog 2', 
+                'sonic the hedgehog 3',
+                'sonic mania',
+                'sonic forces',
+                'sonic generations',
+                'sonic adventure',
+                'sonic adventure 2'
+              ]
             };
             
-            // Vérifier si c'est un jeu principal d'une franchise connue
-            let aIsMainGame = false;
-            let bIsMainGame = false;
+            // Vérifier si c'est un jeu officiel
+            let aIsOfficial = false;
+            let bIsOfficial = false;
             
-            for (const [franchise, games] of Object.entries(mainFranchiseKeywords)) {
+            for (const [franchise, games] of Object.entries(officialGames)) {
               if (queryLower.includes(franchise)) {
-                aIsMainGame = games.some(game => aName.includes(game)) && !isAHack;
-                bIsMainGame = games.some(game => bName.includes(game)) && !isBHack;
+                aIsOfficial = games.some(game => aName.includes(game.toLowerCase())) && !isAHack;
+                bIsOfficial = games.some(game => bName.includes(game.toLowerCase())) && !isBHack;
                 break;
               }
             }
             
-            // Prioriser les jeux principaux de franchise
-            if (aIsMainGame && !bIsMainGame) return -1;
-            if (!aIsMainGame && bIsMainGame) return 1;
+            // Système de score
+            if (aIsOfficial) aScore += 1000;
+            if (bIsOfficial) bScore += 1000;
             
-            // Prioriser les jeux non-hack
-            if (!isAHack && isBHack) return -1;
-            if (isAHack && !isBHack) return 1;
+            if (!isAHack) aScore += 500;
+            if (!isBHack) bScore += 500;
             
-            // Si les deux sont des hacks ou des jeux principaux, trier par pertinence
-            const aStartsWith = aName.startsWith(queryLower);
-            const bStartsWith = bName.startsWith(queryLower);
+            // Match exact
+            if (aName === queryLower) aScore += 300;
+            if (bName === queryLower) bScore += 300;
             
-            if (aStartsWith && !bStartsWith) return -1;
-            if (!aStartsWith && bStartsWith) return 1;
+            // Commence par la requête
+            if (aName.startsWith(queryLower)) aScore += 200;
+            if (bName.startsWith(queryLower)) bScore += 200;
             
-            // Exactitude du match
-            const aExact = aName === queryLower;
-            const bExact = bName === queryLower;
-            
-            if (aExact && !bExact) return -1;
-            if (!aExact && bExact) return 1;
-            
-            // Mots-clés présents dans le nom (plus de mots-clés = plus pertinent)
-            const queryWords = queryLower.split(' ');
+            // Contient tous les mots de la requête
+            const queryWords = queryLower.split(' ').filter(w => w.length > 0);
             const aMatches = queryWords.filter(word => aName.includes(word)).length;
             const bMatches = queryWords.filter(word => bName.includes(word)).length;
             
-            if (aMatches !== bMatches) return bMatches - aMatches;
+            aScore += aMatches * 50;
+            bScore += bMatches * 50;
             
-            // Longueur du nom (plus court = plus principal généralement)
-            const lengthDiff = aName.length - bName.length;
-            if (Math.abs(lengthDiff) > 15) return lengthDiff;
+            // Pénalité pour longueur excessive (souvent des ROM hacks)
+            if (aName.length > 50) aScore -= 100;
+            if (bName.length > 50) bScore -= 100;
             
-            // Ordre alphabétique par défaut
-            return aName.localeCompare(bName);
+            // Pénalité pour certains mots suspects
+            const suspiciousWords = ['version', 'edition', 'collection', 'compilation'];
+            suspiciousWords.forEach(word => {
+              if (aName.includes(word)) aScore -= 50;
+              if (bName.includes(word)) bScore -= 50;
+            });
+            
+            console.log(`🔍 Score de recherche pour "${queryLower}":`, {
+              a: { name: a.name.substring(0, 30), score: aScore, isOfficial: aIsOfficial, isHack: isAHack },
+              b: { name: b.name.substring(0, 30), score: bScore, isOfficial: bIsOfficial, isHack: isBHack }
+            });
+            
+            // Retourner la comparaison inverse (score plus élevé en premier)
+            return bScore - aScore;
           });
           
           // Limiter à 8 résultats pour l'affichage
