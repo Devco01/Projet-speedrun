@@ -258,17 +258,11 @@ export default function ActivityPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
           <div>
             <h2 className="text-2xl font-semibold text-white mb-2">
-              📈 20 Derniers Runs Soumis
+              20 Derniers Runs Soumis
             </h2>
             <p className="text-slate-400">
               Les courses les plus récentes vérifiées sur speedrun.com
             </p>
-          </div>
-          <div className="mt-3 sm:mt-0">
-            <span className="inline-flex items-center px-3 py-1 bg-green-900/30 text-green-300 rounded-full text-sm">
-              <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-              Temps réel
-            </span>
           </div>
         </div>
         
