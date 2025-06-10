@@ -86,6 +86,92 @@ export default function PageRaces() {
   const [messagesChat, setMessagesChat] = useState<MessageChat[]>([]);
   const [nouveauMessage, setNouveauMessage] = useState('');
 
+  // ⏱️ NOUVEAUX ÉTATS POUR LE TIMER EN TEMPS RÉEL
+  const [timerState, setTimerState] = useState<'waiting' | 'countdown' | 'racing' | 'finished'>('waiting');
+  const [timeRemaining, setTimeRemaining] = useState(30); // Décompte de 30 secondes
+  const [raceTime, setRaceTime] = useState(0); // Temps de course en secondes
+  const [personalStartTime, setPersonalStartTime] = useState<Date | null>(null);
+
+  // Timer en temps réel avec effets sonores
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    if (timerState === 'countdown' && timeRemaining > 0) {
+      // Décompte avant le début
+      interval = setInterval(() => {
+        setTimeRemaining(prev => {
+          const newTime = prev - 1;
+          
+          if (newTime === 0) {
+            setTimerState('racing');
+            setPersonalStartTime(new Date());
+            setRaceTime(0);
+            return 0;
+          }
+          
+          return newTime;
+        });
+      }, 1000);
+    } else if (timerState === 'racing' && personalStartTime) {
+      // Chronomètre de course avec précision centième
+      interval = setInterval(() => {
+        const now = new Date();
+        const elapsed = (now.getTime() - personalStartTime.getTime()) / 1000;
+        setRaceTime(elapsed);
+      }, 10); // Mise à jour tous les 10ms pour une précision maximale
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [timerState, timeRemaining, personalStartTime]);
+
+  // Démarrer le décompte quand l'utilisateur clique sur "Commencer"
+  const startCountdown = () => {
+    setTimerState('countdown');
+    setTimeRemaining(30);
+    setRaceTime(0);
+    setPersonalStartTime(null);
+  };
+
+  // Arrêter la course (finish)
+  const finishRace = () => {
+    setTimerState('finished');
+    if (raceSelectionnee) {
+      changerStatutParticipant(raceSelectionnee.id, 'termine');
+    }
+  };
+
+  // Reset du timer (abandon ou nouvelle course)
+  const resetTimer = (isAbandon: boolean = false) => {
+    setTimerState('waiting');
+    setTimeRemaining(30);
+    setRaceTime(0);
+    setPersonalStartTime(null);
+    
+    if (raceSelectionnee && isAbandon) {
+      changerStatutParticipant(raceSelectionnee.id, 'abandon');
+    }
+  };
+
+  // Fonctions pour les clics de boutons (avec gestion d'événements)
+  const handleAbandonClick = () => resetTimer(true);
+  const handleNewRaceClick = () => resetTimer(false);
+
+  // Fonction pour formater le temps avec millisecondes
+  const formatRaceTime = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    const ms = Math.floor((seconds % 1) * 100); // Centièmes de seconde
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+    } else {
+      return `${minutes}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+    }
+  };
+
   // Liste de jeux populaires prédéfinis
   const jeuxPopulaires: JeuSpeedrun[] = [
     {
@@ -575,7 +661,7 @@ export default function PageRaces() {
     }
   };
 
-  const supprimerRace = (raceId: string) => {
+  const supprimerRace = async (raceId: string) => {
     if (!utilisateurActuel) return;
     
     const race = races.find(r => r.id === raceId);
@@ -585,12 +671,34 @@ export default function PageRaces() {
     }
     
     if (confirm('Êtes-vous sûr de vouloir supprimer cette course ?')) {
-      setRaces(races.filter(r => r.id !== raceId));
-      
-      // Si on supprime la race qu'on regardait, retourner à la vue parcourir
-      if (raceSelectionnee && raceSelectionnee.id === raceId) {
-        setVueActive('parcourir');
-        setRaceSelectionnee(null);
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const response = await fetch(`${apiUrl}/api/races/${raceId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        if (response.ok) {
+          // Supprimer localement seulement si l'API confirme
+          setRaces(races.filter(r => r.id !== raceId));
+          
+          // Si on supprime la race qu'on regardait, retourner à la vue parcourir
+          if (raceSelectionnee && raceSelectionnee.id === raceId) {
+            setVueActive('parcourir');
+            setRaceSelectionnee(null);
+          }
+          
+          console.log('✅ Race supprimée avec succès');
+        } else {
+          console.error('❌ Erreur lors de la suppression:', response.status);
+          alert('Erreur lors de la suppression de la course. Veuillez réessayer.');
+        }
+      } catch (error) {
+        console.error('❌ Erreur réseau lors de la suppression:', error);
+        alert('Erreur de connexion. Veuillez réessayer.');
       }
     }
   };
@@ -717,8 +825,6 @@ export default function PageRaces() {
   const obtenirTempsEcoule = (heureDebut: string): number => {
     return Math.floor((Date.now() - new Date(heureDebut).getTime()) / 1000);
   };
-
-
 
   if (!estAuthentifie) {
     return (
@@ -1189,6 +1295,66 @@ export default function PageRaces() {
 
       {vueActive === 'course' && raceSelectionnee && (
         <div className="bg-slate-800 rounded-lg overflow-hidden">
+          {/* ⏱️ TIMER EN TEMPS RÉEL - Section principale */}
+          {timerState !== 'waiting' && (
+            <div className={`px-6 py-8 text-center border-b border-slate-600 ${
+              timerState === 'countdown' ? 'bg-gradient-to-r from-red-900/50 to-orange-900/50' :
+              timerState === 'racing' ? 'bg-gradient-to-r from-green-900/50 to-emerald-900/50' :
+              'bg-gradient-to-r from-blue-900/50 to-purple-900/50'
+            }`}>
+              {timerState === 'countdown' && (
+                <div className="space-y-4">
+                  <h3 className="text-white text-lg font-semibold">🏁 Course commence dans...</h3>
+                  <div className={`text-8xl font-black font-mono ${
+                    timeRemaining <= 3 ? 'text-red-400 animate-pulse' : 'text-orange-400'
+                  }`}>
+                    {timeRemaining}
+                  </div>
+                  <p className="text-slate-300">Préparez-vous ! La course démarre automatiquement.</p>
+                </div>
+              )}
+              
+              {timerState === 'racing' && (
+                <div className="space-y-4">
+                  <h3 className="text-white text-lg font-semibold">🚀 Course en cours !</h3>
+                  <div className="text-6xl font-black font-mono text-green-400">
+                    {formatRaceTime(raceTime)}
+                  </div>
+                  <div className="flex justify-center space-x-4">
+                    <button
+                      onClick={finishRace}
+                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105"
+                    >
+                      🏁 Finir la course
+                    </button>
+                    <button
+                      onClick={handleAbandonClick}
+                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-semibold"
+                    >
+                      ❌ Abandonner
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              {timerState === 'finished' && (
+                <div className="space-y-4">
+                  <h3 className="text-white text-xl font-bold">🎉 Course terminée !</h3>
+                  <div className="text-5xl font-black font-mono text-blue-400">
+                    {formatRaceTime(raceTime)}
+                  </div>
+                  <p className="text-slate-300">Félicitations ! Votre temps a été enregistré.</p>
+                  <button
+                    onClick={handleNewRaceClick}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold"
+                  >
+                    🔄 Nouvelle course
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* En-tête de la course */}
           <div className="bg-slate-700 px-6 py-4 border-b border-slate-600">
             <div className="flex items-center justify-between">
@@ -1290,34 +1456,34 @@ export default function PageRaces() {
                     )}
                     
                     {/* Commencer (si prêt) */}
-                    {raceSelectionnee.participants.find(p => p.id === utilisateurActuel?.id)?.statut === 'pret' && (
+                    {raceSelectionnee.participants.find(p => p.id === utilisateurActuel?.id)?.statut === 'pret' && timerState === 'waiting' && (
                       <button 
-                        onClick={() => changerStatutParticipant(raceSelectionnee.id, 'en-course')}
-                        className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded text-sm font-medium"
+                        onClick={() => {
+                          startCountdown();
+                          changerStatutParticipant(raceSelectionnee.id, 'en-course');
+                        }}
+                        className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white px-6 py-3 rounded-lg font-bold text-lg transition-all duration-200 transform hover:scale-105 animate-pulse"
                       >
-                        🏃 Commencer
+                        🏁 DÉMARRER LA COURSE
                       </button>
+                    )}
+
+                    {/* Timer Info quand en cours */}
+                    {timerState === 'countdown' && (
+                      <div className="flex items-center space-x-2 text-orange-400">
+                        <span className="animate-spin">⏱️</span>
+                        <span className="font-mono font-bold">Course démarre dans {timeRemaining}s...</span>
+                      </div>
+                    )}
+
+                    {timerState === 'racing' && (
+                      <div className="flex items-center space-x-2 text-green-400">
+                        <span className="animate-pulse">🏃</span>
+                        <span className="font-mono font-bold">Course en cours : {formatRaceTime(raceTime)}</span>
+                      </div>
                     )}
                     
-                    {/* Terminé (si en course) */}
-                    {raceSelectionnee.participants.find(p => p.id === utilisateurActuel?.id)?.statut === 'en-course' && (
-                      <button 
-                        onClick={() => changerStatutParticipant(raceSelectionnee.id, 'termine')}
-                        className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded text-sm font-medium"
-                      >
-                        🏁 Terminé
-                      </button>
-                    )}
-                    
-                    {/* Abandon (si en course) */}
-                    {raceSelectionnee.participants.find(p => p.id === utilisateurActuel?.id)?.statut === 'en-course' && (
-                      <button 
-                        onClick={() => changerStatutParticipant(raceSelectionnee.id, 'abandon')}
-                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-medium"
-                      >
-                        ❌ Abandon
-                      </button>
-                    )}
+                    {/* Note: Les boutons Terminé et Abandon sont maintenant dans la section timer principale */}
                   </div>
                 )}
                 
