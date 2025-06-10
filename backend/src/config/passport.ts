@@ -30,13 +30,21 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_CLIENT_ID !== 'your-googl
       });
 
       if (user) {
-        // Utilisateur existant, mettre à jour l'avatar Google s'il a changé
+        // Utilisateur existant - ne pas écraser un avatar personnalisé avec l'avatar Google
         const googleAvatar = profile.photos?.[0]?.value;
-        if (googleAvatar && user.profileImage !== googleAvatar) {
+        const hasCustomAvatar = user.profileImage && user.profileImage.startsWith('data:');
+        
+        // Seulement mettre à jour avec l'avatar Google si :
+        // 1. L'utilisateur n'a pas d'avatar personnalisé (base64)
+        // 2. OU l'avatar actuel est déjà un avatar Google et il a changé
+        if (googleAvatar && !hasCustomAvatar && user.profileImage !== googleAvatar) {
+          console.log(`🖼️ Mise à jour avatar Google pour ${user.username} (pas d'avatar personnalisé)`);
           user = await prisma.user.update({
             where: { id: user.id },
             data: { profileImage: googleAvatar }
           });
+        } else if (hasCustomAvatar) {
+          console.log(`🎨 Conservation de l'avatar personnalisé pour ${user.username}`);
         }
         
         // Générer un token JWT
