@@ -1,7 +1,160 @@
 import { Request, Response } from 'express';
 import { speedrunApiService } from '../services/speedrunApiService';
 
-export class SpeedrunController {
+/**
+ * Fonctions utilitaires pour l'enrichissement des données
+ */
+const formatTime = (seconds: number): string => {
+  if (!seconds || isNaN(seconds)) return 'Temps invalide';
+  
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  const ms = Math.floor((seconds % 1) * 1000);
+
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+  } else if (minutes > 0) {
+    return `${minutes}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+  } else {
+    return `${secs}.${ms.toString().padStart(3, '0')}s`;
+  }
+};
+
+const getGamesData = async (gameIds: string[]): Promise<Record<string, any>> => {
+  const gamesData: Record<string, any> = {};
+  
+  // Traitement par petits groupes pour éviter le rate limiting
+  const batchSize = 5;
+  for (let i = 0; i < gameIds.length; i += batchSize) {
+    const batch = gameIds.slice(i, i + batchSize);
+    
+    await Promise.all(batch.map(async (gameId) => {
+      try {
+        const game = await speedrunApiService.getGameById(gameId);
+        if (game) {
+          gamesData[gameId] = game;
+        }
+        // Petit délai pour éviter le rate limiting
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        console.warn(`⚠️ Impossible de récupérer le jeu ${gameId}`);
+      }
+    }));
+  }
+  
+  return gamesData;
+};
+
+const getCategoriesData = async (categoryIds: string[]): Promise<Record<string, any>> => {
+  const categoriesData: Record<string, any> = {};
+  
+  // Pour les catégories, on doit faire des appels via les jeux
+  // C'est plus complexe, pour l'instant on utilisera un cache local
+  for (const categoryId of categoryIds) {
+    try {
+      // L'API speedrun.com ne permet pas de récupérer directement une catégorie par ID
+      // On devra enrichir ça différemment, pour l'instant on garde un placeholder
+      categoriesData[categoryId] = {
+        id: categoryId,
+        name: 'Any%' // Placeholder commun
+      };
+    } catch (error) {
+      console.warn(`⚠️ Impossible de récupérer la catégorie ${categoryId}`);
+    }
+  }
+  
+  return categoriesData;
+};
+
+const getPlayersData = async (playerIds: string[]): Promise<Record<string, any>> => {
+  const playersData: Record<string, any> = {};
+  
+  // Traitement par petits groupes pour éviter le rate limiting
+  const batchSize = 3;
+  for (let i = 0; i < playerIds.length; i += batchSize) {
+    const batch = playerIds.slice(i, i + batchSize);
+    
+    await Promise.all(batch.map(async (playerId) => {
+      try {
+        const player = await speedrunApiService.getUserById(playerId);
+        if (player) {
+          playersData[playerId] = player;
+        }
+        // Délai plus long pour les utilisateurs (plus sensible au rate limiting)
+        await new Promise(resolve => setTimeout(resolve, 200));
+      } catch (error) {
+        console.warn(`⚠️ Impossible de récupérer le joueur ${playerId}`);
+      }
+    }));
+  }
+  
+  return playersData;
+};
+
+const getFallbackRuns = async (limit: number): Promise<any[]> => {
+  console.log(`🔄 Fallback: récupération depuis jeux populaires...`);
+  
+  // Logique précédente simplifiée
+  const popularGames = await speedrunApiService.getPopularGames(15, 0, false);
+  let allRecentRuns: any[] = [];
+  const gameInfoMap = new Map();
+  
+  for (const game of popularGames.slice(0, 10)) {
+    try {
+      const gameRuns = await speedrunApiService.getRecentRuns(game.id, 3);
+      if (gameRuns.length > 0) {
+        const transformedRuns = gameRuns.map(run => speedrunApiService.transformRunData(run));
+        transformedRuns.forEach(run => run.gameId = game.id);
+        
+        gameInfoMap.set(game.id, {
+          id: game.id,
+          name: game.names.international,
+          cover: game.assets?.['cover-medium']?.uri || null,
+          abbreviation: game.abbreviation
+        });
+        
+        allRecentRuns.push(...transformedRuns);
+      }
+    } catch (error) {
+      console.warn(`⚠️ Erreur fallback pour ${game.names.international}`);
+    }
+  }
+  
+  // Transformation simple pour le fallback
+  return allRecentRuns
+    .slice(0, limit)
+    .map(run => {
+      const gameInfo = gameInfoMap.get(run.gameId);
+      return {
+        id: run.id,
+        user: {
+          id: 'unknown',
+          username: run.playerName || 'Joueur inconnu',
+          profileImage: null
+        },
+        game: {
+          id: run.gameId,
+          title: gameInfo?.name || 'Jeu inconnu',
+          cover: gameInfo?.cover || null
+        },
+        category: {
+          id: run.categoryId,
+          name: 'Catégorie inconnue'
+        },
+        time: run.time,
+        formattedTime: formatTime(run.time),
+        submittedAt: run.submittedAt.toISOString(),
+        verifiedAt: run.verifiedAt?.toISOString() || null,
+        isVerified: run.isVerified
+      };
+    });
+};
+
+/**
+ * Contrôleur pour l'intégration avec l'API speedrun.com
+ */
+export const speedrunController = {
   /**
    * Récupère les jeux populaires depuis speedrun.com
    */
@@ -47,7 +200,7 @@ export class SpeedrunController {
         message: 'Erreur lors de la récupération des jeux populaires'
       });
     }
-  }
+  },
 
   /**
    * Recherche des jeux par nom
@@ -117,7 +270,7 @@ export class SpeedrunController {
         data: []
       });
     }
-  }
+  },
 
   /**
    * Recherche exhaustive des jeux par nom (récupère TOUS les résultats)
@@ -188,7 +341,7 @@ export class SpeedrunController {
         data: [] // Retourner un tableau vide en cas d'erreur
       });
     }
-  }
+  },
 
   /**
    * Récupère un jeu par son ID speedrun.com
@@ -219,7 +372,7 @@ export class SpeedrunController {
         message: 'Erreur lors de la récupération du jeu'
       });
     }
-  }
+  },
 
   /**
    * Récupère les catégories d'un jeu
@@ -247,7 +400,7 @@ export class SpeedrunController {
         categories: []
       });
     }
-  }
+  },
 
   /**
    * Récupère le leaderboard d'une catégorie
@@ -379,7 +532,7 @@ export class SpeedrunController {
         });
       }
     }
-  }
+  },
 
   /**
    * Récupère les runs récents d'un jeu
@@ -405,7 +558,7 @@ export class SpeedrunController {
         message: 'Erreur lors de la récupération des runs récents'
       });
     }
-  }
+  },
 
   /**
    * Récupère les runs d'un utilisateur speedrun.com
@@ -431,7 +584,7 @@ export class SpeedrunController {
         message: 'Erreur lors de la récupération des runs de l\'utilisateur'
       });
     }
-  }
+  },
 
   /**
    * Teste la connexion à l'API speedrun.com
@@ -462,7 +615,7 @@ export class SpeedrunController {
         error: errorMessage
       });
     }
-  }
+  },
 
   /**
    * Récupère les jeux Zelda populaires
@@ -492,7 +645,7 @@ export class SpeedrunController {
         error: error instanceof Error ? error.message : 'Erreur inconnue'
       });
     }
-  }
+  },
 
   /**
    * Debug - Test de connexion de base
@@ -514,7 +667,7 @@ export class SpeedrunController {
         error: errorMessage
       });
     }
-  }
+  },
 
   /**
    * Debug - Recherche simple
@@ -539,7 +692,7 @@ export class SpeedrunController {
         error: errorMessage
       });
     }
-  }
+  },
 
   /**
    * Debug pour tester la recherche Mario
@@ -563,12 +716,12 @@ export class SpeedrunController {
         error: errorMessage
       });
     }
-  }
+  },
 
   /**
    * Récupère les runs récents globaux (toutes catégories/jeux confondus)
    */
-  async getGlobalRecentRuns(req: Request, res: Response) {
+  async getGlobalRecentRuns(req: Request, res: Response): Promise<void> {
     try {
       const limit = parseInt(req.query.limit as string) || 20;
       
@@ -580,7 +733,17 @@ export class SpeedrunController {
       
       if (globalRuns.length === 0) {
         console.log(`⚠️ Aucun run global récupéré, fallback vers jeux populaires...`);
-        return this.getFallbackRuns(req, res);
+        const fallbackRuns = await getFallbackRuns(limit);
+        res.json({
+          success: true,
+          data: fallbackRuns,
+          metadata: {
+            limit,
+            count: fallbackRuns.length,
+            note: 'Runs récents (mode fallback)'
+          }
+        });
+        return;
       }
       
       // 2. Récupérer les informations des jeux, catégories et joueurs
@@ -594,9 +757,9 @@ export class SpeedrunController {
       
       // Récupération en parallèle des données manquantes
       const [gamesData, categoriesData, playersData] = await Promise.all([
-        this.getGamesData(gameIds),
-        this.getCategoriesData(categoryIds),
-        this.getPlayersData(playerIds)
+        getGamesData(gameIds),
+        getCategoriesData(categoryIds),
+        getPlayersData(playerIds)
       ]);
       
       console.log(`✅ Données récupérées: ${Object.keys(gamesData).length} jeux, ${Object.keys(categoriesData).length} catégories, ${Object.keys(playersData).length} joueurs`);
@@ -640,7 +803,7 @@ export class SpeedrunController {
               name: categoryInfo?.name || 'Catégorie inconnue'
             },
             time: run.times.primary_t,
-            formattedTime: this.formatTime(run.times.primary_t),
+            formattedTime: formatTime(run.times.primary_t),
             submittedAt: run.submitted,
             verifiedAt: run.status['verify-date'] || null,
             isVerified: run.status.status === 'verified'
@@ -665,7 +828,17 @@ export class SpeedrunController {
       // Fallback en cas d'erreur
       try {
         console.log('🔄 Tentative de fallback...');
-        return this.getFallbackRuns(req, res);
+        const fallbackRuns = await getFallbackRuns(req.query.limit ? parseInt(req.query.limit as string) : 20);
+        res.json({
+          success: true,
+          data: fallbackRuns,
+          metadata: {
+            limit: req.query.limit ? parseInt(req.query.limit as string) : 20,
+            count: fallbackRuns.length,
+            note: 'Runs récents (mode fallback)'
+          }
+        });
+        return;
       } catch (fallbackError) {
         res.status(500).json({
           success: false,
@@ -677,179 +850,5 @@ export class SpeedrunController {
     }
   }
 
-  /**
-   * Méthode utilitaire pour formater le temps
-   */
-  private formatTime(seconds: number): string {
-    if (!seconds || isNaN(seconds)) return 'Temps invalide';
-    
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-    const ms = Math.floor((seconds % 1) * 1000);
-
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
-    } else if (minutes > 0) {
-      return `${minutes}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
-    } else {
-      return `${secs}.${ms.toString().padStart(3, '0')}s`;
-    }
-  }
-
-  /**
-   * Récupère les données des jeux en parallèle
-   */
-  private async getGamesData(gameIds: string[]): Promise<Record<string, any>> {
-    const gamesData: Record<string, any> = {};
-    
-    // Traitement par petits groupes pour éviter le rate limiting
-    const batchSize = 5;
-    for (let i = 0; i < gameIds.length; i += batchSize) {
-      const batch = gameIds.slice(i, i + batchSize);
-      
-      await Promise.all(batch.map(async (gameId) => {
-        try {
-          const game = await speedrunApiService.getGameById(gameId);
-          if (game) {
-            gamesData[gameId] = game;
-          }
-          // Petit délai pour éviter le rate limiting
-          await new Promise(resolve => setTimeout(resolve, 100));
-        } catch (error) {
-          console.warn(`⚠️ Impossible de récupérer le jeu ${gameId}`);
-        }
-      }));
-    }
-    
-    return gamesData;
-  }
-
-  /**
-   * Récupère les données des catégories en parallèle
-   */
-  private async getCategoriesData(categoryIds: string[]): Promise<Record<string, any>> {
-    const categoriesData: Record<string, any> = {};
-    
-    // Pour les catégories, on doit faire des appels via les jeux
-    // C'est plus complexe, pour l'instant on utilisera un cache local
-    for (const categoryId of categoryIds) {
-      try {
-        // L'API speedrun.com ne permet pas de récupérer directement une catégorie par ID
-        // On devra enrichir ça différemment, pour l'instant on garde un placeholder
-        categoriesData[categoryId] = {
-          id: categoryId,
-          name: 'Any%' // Placeholder commun
-        };
-      } catch (error) {
-        console.warn(`⚠️ Impossible de récupérer la catégorie ${categoryId}`);
-      }
-    }
-    
-    return categoriesData;
-  }
-
-  /**
-   * Récupère les données des joueurs en parallèle
-   */
-  private async getPlayersData(playerIds: string[]): Promise<Record<string, any>> {
-    const playersData: Record<string, any> = {};
-    
-    // Traitement par petits groupes pour éviter le rate limiting
-    const batchSize = 3;
-    for (let i = 0; i < playerIds.length; i += batchSize) {
-      const batch = playerIds.slice(i, i + batchSize);
-      
-      await Promise.all(batch.map(async (playerId) => {
-        try {
-          const player = await speedrunApiService.getUserById(playerId);
-          if (player) {
-            playersData[playerId] = player;
-          }
-          // Délai plus long pour les utilisateurs (plus sensible au rate limiting)
-          await new Promise(resolve => setTimeout(resolve, 200));
-        } catch (error) {
-          console.warn(`⚠️ Impossible de récupérer le joueur ${playerId}`);
-        }
-      }));
-    }
-    
-    return playersData;
-  }
-
-  /**
-   * Méthode de fallback en cas d'erreur avec les runs globaux
-   */
-  private async getFallbackRuns(req: Request, res: Response) {
-    const limit = parseInt(req.query.limit as string) || 20;
-    
-    console.log(`🔄 Fallback: récupération depuis jeux populaires...`);
-    
-    // Logique précédente simplifiée
-    const popularGames = await speedrunApiService.getPopularGames(15, 0, false);
-    let allRecentRuns: any[] = [];
-    const gameInfoMap = new Map();
-    
-    for (const game of popularGames.slice(0, 10)) {
-      try {
-        const gameRuns = await speedrunApiService.getRecentRuns(game.id, 3);
-        if (gameRuns.length > 0) {
-          const transformedRuns = gameRuns.map(run => speedrunApiService.transformRunData(run));
-          transformedRuns.forEach(run => run.gameId = game.id);
-          
-          gameInfoMap.set(game.id, {
-            id: game.id,
-            name: game.names.international,
-            cover: game.assets?.['cover-medium']?.uri || null,
-            abbreviation: game.abbreviation
-          });
-          
-          allRecentRuns.push(...transformedRuns);
-        }
-      } catch (error) {
-        console.warn(`⚠️ Erreur fallback pour ${game.names.international}`);
-      }
-    }
-    
-    // Transformation simple pour le fallback
-    const transformedRuns = allRecentRuns
-      .slice(0, limit)
-      .map(run => {
-        const gameInfo = gameInfoMap.get(run.gameId);
-        return {
-          id: run.id,
-          user: {
-            id: 'unknown',
-            username: run.playerName || 'Joueur inconnu',
-            profileImage: null
-          },
-          game: {
-            id: run.gameId,
-            title: gameInfo?.name || 'Jeu inconnu',
-            cover: gameInfo?.cover || null
-          },
-          category: {
-            id: run.categoryId,
-            name: 'Catégorie inconnue'
-          },
-          time: run.time,
-          formattedTime: this.formatTime(run.time),
-          submittedAt: run.submittedAt.toISOString(),
-          verifiedAt: run.verifiedAt?.toISOString() || null,
-          isVerified: run.isVerified
-        };
-      });
-    
-    res.json({
-      success: true,
-      data: transformedRuns,
-      metadata: {
-        limit,
-        count: transformedRuns.length,
-        note: 'Runs récents (mode fallback)'
-      }
-    });
-  }
-}
-
-export const speedrunController = new SpeedrunController(); 
+  // Note: les fonctions utilitaires getFallbackRuns, formatTime, etc. sont maintenant définies en haut du fichier
+}; 

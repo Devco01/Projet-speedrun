@@ -171,6 +171,7 @@ app.get('/api', (req, res) => {
           'GET /games/:gameId - Détails d\'un jeu speedrun.com',
           'GET /games/:gameId/categories - Catégories d\'un jeu',
           'GET /games/:gameId/runs/recent - Runs récents d\'un jeu',
+          'GET /runs/recent-global - Runs récents globaux (tous jeux)',
           'GET /leaderboards/:gameId/:categoryId - Leaderboard d\'une catégorie',
           'GET /users/:userId/runs - Runs d\'un utilisateur speedrun.com'
         ]
