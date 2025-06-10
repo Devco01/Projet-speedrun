@@ -535,11 +535,29 @@ export class SpeedrunController {
           // Transformer les runs avec les bonnes propriétés
           const transformedRuns = gameRuns.map(run => speedrunApiService.transformRunData(run));
           
-          // Stocker les infos du jeu
+          // Stocker les infos du jeu - s'assurer que c'est cohérent avec l'ID du run
           gameInfoMap.set(game.id, {
             id: game.id,
             name: game.names.international,
             cover: game.assets?.['cover-medium']?.uri || game.assets?.['cover-small']?.uri || null
+          });
+          
+          // IMPORTANT: S'assurer que chaque run transformé a le bon gameId
+          transformedRuns.forEach(run => {
+            // Si le run n'a pas le bon gameId, le corriger
+            if (run.gameId !== game.id) {
+              console.warn(`⚠️ Correction gameId pour run ${run.id}: ${run.gameId} -> ${game.id}`);
+              run.gameId = game.id;
+            }
+            
+            // Double vérification: s'assurer que gameInfoMap contient ce gameId
+            if (!gameInfoMap.has(run.gameId)) {
+              gameInfoMap.set(run.gameId, {
+                id: game.id,
+                name: game.names.international,
+                cover: game.assets?.['cover-medium']?.uri || game.assets?.['cover-small']?.uri || null
+              });
+            }
           });
           
           allRecentRuns.push(...transformedRuns);
@@ -579,6 +597,17 @@ export class SpeedrunController {
         .map(run => {
           const gameInfo = gameInfoMap.get(run.gameId);
           
+          // Debug logging pour comprendre le problème
+          if (!gameInfo) {
+            console.warn(`⚠️ Jeu introuvable dans gameInfoMap pour run ${run.id}:`, {
+              runGameId: run.gameId,
+              availableGameIds: Array.from(gameInfoMap.keys()),
+              gameInfoMapSize: gameInfoMap.size
+            });
+          }
+          
+          const gameTitle = gameInfo?.name || 'Jeu inconnu';
+          
           return {
             id: run.id,
             user: {
@@ -588,8 +617,8 @@ export class SpeedrunController {
             },
             game: {
               id: run.gameId,
-              title: gameInfo?.name || 'Jeu inconnu',
-              cover: gameInfo?.cover
+              title: gameTitle,
+              cover: gameInfo?.cover || null
             },
             category: {
               id: run.categoryId,
@@ -601,6 +630,24 @@ export class SpeedrunController {
             verifiedAt: run.verifiedAt?.toISOString() || null,
             isVerified: run.isVerified
           };
+        })
+        .filter(run => {
+          // Validation finale: s'assurer que les données obligatoires sont présentes
+          const isValid = run.id && run.game.id && run.game.title && run.game.title !== 'undefined';
+          
+          if (!isValid) {
+            console.error(`❌ Run rejeté - données invalides:`, {
+              id: run.id,
+              gameId: run.game?.id,
+              gameTitle: run.game?.title,
+              hasId: !!run.id,
+              hasGameId: !!run.game?.id,
+              hasGameTitle: !!run.game?.title,
+              titleNotUndefined: run.game?.title !== 'undefined'
+            });
+          }
+          
+          return isValid;
         });
       
       console.log(`✅ ${transformedRuns.length} runs récents valides récupérés avec succès`);

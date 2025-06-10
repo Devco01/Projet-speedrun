@@ -92,9 +92,21 @@ export default function ActivityPage() {
         
         // Filtrer les runs avec des données de jeu valides
         const validRuns = recentRunsData.filter(run => {
-          const isValid = run.game && run.game.id && run.game.title && run.game.id.length >= 3;
+          // Validation simplifiée - le backend s'assure déjà que les données sont valides
+          const hasBasicData = run.id && run.game && run.game.id && run.game.title;
+          const titleNotUndefined = run.game.title !== 'undefined' && run.game.title !== undefined;
+          const isValid = hasBasicData && titleNotUndefined;
+          
           if (!isValid) {
-            console.warn('Run ignoré - données de jeu invalides:', run);
+            console.warn('Run ignoré - données de base manquantes:', {
+              runId: run.id,
+              hasId: !!run.id,
+              hasGame: !!run.game,
+              hasGameId: !!run.game?.id,
+              hasGameTitle: !!run.game?.title,
+              gameTitle: run.game?.title,
+              titleNotUndefined
+            });
           }
           return isValid;
         });
