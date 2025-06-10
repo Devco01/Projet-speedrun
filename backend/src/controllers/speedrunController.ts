@@ -525,12 +525,24 @@ export class SpeedrunController {
       const popularGames = await speedrunApiService.getPopularGames(10, 0, false);
       
       let allRecentRuns: any[] = [];
+      const gameInfoMap = new Map(); // Pour stocker les infos des jeux
       
       // Récupérer les runs récents pour chaque jeu populaire
       for (const game of popularGames.slice(0, 5)) { // Limiter à 5 jeux pour éviter trop d'appels API
         try {
           const gameRuns = await speedrunApiService.getRecentRuns(game.id, 4);
-          allRecentRuns.push(...gameRuns);
+          
+          // Transformer les runs avec les bonnes propriétés
+          const transformedRuns = gameRuns.map(run => speedrunApiService.transformRunData(run));
+          
+          // Stocker les infos du jeu
+          gameInfoMap.set(game.id, {
+            id: game.id,
+            name: game.names.international,
+            cover: game.assets?.['cover-medium']?.uri || game.assets?.['cover-small']?.uri || null
+          });
+          
+          allRecentRuns.push(...transformedRuns);
         } catch (error) {
           console.error(`Erreur lors de la récupération des runs pour ${game.names.international}:`, error);
           // Continuer avec les autres jeux
@@ -545,6 +557,8 @@ export class SpeedrunController {
       
       // Fonction utilitaire pour formater le temps
       const formatTime = (seconds: number): string => {
+        if (!seconds || isNaN(seconds)) return 'Temps invalide';
+        
         const hours = Math.floor(seconds / 3600);
         const minutes = Math.floor((seconds % 3600) / 60);
         const secs = Math.floor(seconds % 60);
@@ -560,30 +574,36 @@ export class SpeedrunController {
       };
       
       // Transformer pour le format attendu par le frontend
-      const transformedRuns = limitedRuns.map(run => ({
-        id: run.id,
-        user: {
-          id: run.playerId || 'unknown',
-          username: run.playerName || 'Joueur inconnu',
-          profileImage: null
-        },
-        game: {
-          id: run.gameId,
-          title: run.gameName || 'Jeu inconnu',
-          cover: run.gameCover
-        },
-        category: {
-          id: run.categoryId,
-          name: run.categoryName || 'Catégorie inconnue'
-        },
-        time: run.time,
-        formattedTime: formatTime(run.time),
-        submittedAt: run.submittedAt,
-        verifiedAt: run.verifiedAt,
-        isVerified: run.isVerified
-      }));
+      const transformedRuns = limitedRuns
+        .filter(run => run.time && !isNaN(run.time)) // Filtrer les runs avec un temps valide
+        .map(run => {
+          const gameInfo = gameInfoMap.get(run.gameId);
+          
+          return {
+            id: run.id,
+            user: {
+              id: run.externalData?.speedruncom?.players?.[0]?.id || 'unknown',
+              username: run.playerName || 'Joueur inconnu',
+              profileImage: null
+            },
+            game: {
+              id: run.gameId,
+              title: gameInfo?.name || 'Jeu inconnu',
+              cover: gameInfo?.cover
+            },
+            category: {
+              id: run.categoryId,
+              name: 'Catégorie inconnue' // Il faudrait récupérer le nom de la catégorie séparément
+            },
+            time: run.time,
+            formattedTime: formatTime(run.time),
+            submittedAt: run.submittedAt.toISOString(),
+            verifiedAt: run.verifiedAt?.toISOString() || null,
+            isVerified: run.isVerified
+          };
+        });
       
-      console.log(`✅ ${transformedRuns.length} runs récents récupérés avec succès`);
+      console.log(`✅ ${transformedRuns.length} runs récents valides récupérés avec succès`);
       
       res.json({
         success: true,
