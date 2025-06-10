@@ -271,115 +271,84 @@ export default function LeaderboardsPage() {
             const aName = a.name.toLowerCase();
             const bName = b.name.toLowerCase();
             
-            // Score de priorité pour chaque jeu
-            let aScore = 0;
-            let bScore = 0;
+            // Approche simplifiée mais plus efficace
             
-            // Indicateurs de ROM hack ou mods (plus complets)
-            const romHackKeywords = [
-              'hack', 'mod', 'randomizer', 'kaizo', 'romhack', 'custom', 'fan',
-              'homebrew', 'sms', 'smw2', 'sm64', 'oot', 'remix', 'remaster',
-              'beta', 'demo', 'prototype', 'challenge', 'difficulty',
-              'level editor', 'maker', 'creator', 'mario 64', 'super mario 64'
-            ];
-            
-            const isAHack = romHackKeywords.some(keyword => aName.includes(keyword) && keyword !== queryLower);
-            const isBHack = romHackKeywords.some(keyword => bName.includes(keyword) && keyword !== queryLower);
-            
-            // Jeux officiels reconnus par franchise
-            const officialGames = {
+            // 1. Jeux officiels explicites (priorité absolue)
+            const officialTitles = {
               'zelda': [
                 'the legend of zelda: ocarina of time',
-                'the legend of zelda: majora\'s mask', 
+                'the legend of zelda: majora\'s mask',
                 'the legend of zelda: breath of the wild',
                 'the legend of zelda: tears of the kingdom',
                 'the legend of zelda: twilight princess',
                 'the legend of zelda: wind waker',
                 'the legend of zelda: skyward sword',
-                'the legend of zelda: link to the past',
+                'the legend of zelda: a link to the past',
                 'the legend of zelda: link\'s awakening',
                 'zelda ii: the adventure of link',
                 'zelda (game & watch)',
-                'zelda 64: dawn & dusk',
                 'zelda classic'
               ],
               'mario': [
                 'super mario 64',
-                'super mario odyssey', 
+                'super mario odyssey',
                 'super mario world',
                 'super mario bros.',
-                'super mario bros. 3',
-                'super mario 3d world',
+                'super mario sunshine',
                 'super mario galaxy',
-                'mario kart 64',
-                'mario kart 8',
-                'paper mario'
-              ],
-              'sonic': [
-                'sonic the hedgehog',
-                'sonic the hedgehog 2', 
-                'sonic the hedgehog 3',
-                'sonic mania',
-                'sonic forces',
-                'sonic generations',
-                'sonic adventure',
-                'sonic adventure 2'
+                'mario kart 64'
               ]
             };
             
-            // Vérifier si c'est un jeu officiel
+            // 2. Mots qui indiquent clairement un ROM hack
+            const definiteHackWords = [
+              'hack', 'mod', 'randomizer', 'kaizo', 'romhack', 'custom',
+              'fan made', 'homebrew', 'beta', 'demo', 'challenge',
+              'difficulty', 'editor', 'maker', 'creator', 'remix'
+            ];
+            
+            // Détection des jeux officiels
             let aIsOfficial = false;
             let bIsOfficial = false;
             
-            for (const [franchise, games] of Object.entries(officialGames)) {
+            for (const [franchise, titles] of Object.entries(officialTitles)) {
               if (queryLower.includes(franchise)) {
-                aIsOfficial = games.some(game => aName.includes(game.toLowerCase())) && !isAHack;
-                bIsOfficial = games.some(game => bName.includes(game.toLowerCase())) && !isBHack;
+                aIsOfficial = titles.some(title => aName === title || aName.includes(title));
+                bIsOfficial = titles.some(title => bName === title || bName.includes(title));
                 break;
               }
             }
             
-            // Système de score
-            if (aIsOfficial) aScore += 1000;
-            if (bIsOfficial) bScore += 1000;
+            // Détection des ROM hacks
+            const aIsHack = definiteHackWords.some(word => aName.includes(word));
+            const bIsHack = definiteHackWords.some(word => bName.includes(word));
             
-            if (!isAHack) aScore += 500;
-            if (!isBHack) bScore += 500;
+            // Logique de tri simple mais efficace
             
-            // Match exact
-            if (aName === queryLower) aScore += 300;
-            if (bName === queryLower) bScore += 300;
+            // Priorité 1: Jeux officiels d'abord
+            if (aIsOfficial && !bIsOfficial) return -1;
+            if (!aIsOfficial && bIsOfficial) return 1;
             
-            // Commence par la requête
-            if (aName.startsWith(queryLower)) aScore += 200;
-            if (bName.startsWith(queryLower)) bScore += 200;
+            // Priorité 2: Éviter les ROM hacks
+            if (!aIsHack && bIsHack) return -1;
+            if (aIsHack && !bIsHack) return 1;
             
-            // Contient tous les mots de la requête
-            const queryWords = queryLower.split(' ').filter(w => w.length > 0);
-            const aMatches = queryWords.filter(word => aName.includes(word)).length;
-            const bMatches = queryWords.filter(word => bName.includes(word)).length;
+            // Priorité 3: Match exact
+            if (aName === queryLower && bName !== queryLower) return -1;
+            if (bName === queryLower && aName !== queryLower) return 1;
             
-            aScore += aMatches * 50;
-            bScore += bMatches * 50;
+            // Priorité 4: Commence par la requête
+            const aStarts = aName.startsWith(queryLower);
+            const bStarts = bName.startsWith(queryLower);
+            if (aStarts && !bStarts) return -1;
+            if (bStarts && !aStarts) return 1;
             
-            // Pénalité pour longueur excessive (souvent des ROM hacks)
-            if (aName.length > 50) aScore -= 100;
-            if (bName.length > 50) bScore -= 100;
+            // Priorité 5: Plus court = plus officiel généralement
+            const lengthDiff = aName.length - bName.length;
+            if (Math.abs(lengthDiff) > 20) return lengthDiff;
             
-            // Pénalité pour certains mots suspects
-            const suspiciousWords = ['version', 'edition', 'collection', 'compilation'];
-            suspiciousWords.forEach(word => {
-              if (aName.includes(word)) aScore -= 50;
-              if (bName.includes(word)) bScore -= 50;
-            });
-            
-            console.log(`🔍 Score de recherche pour "${queryLower}":`, {
-              a: { name: a.name.substring(0, 30), score: aScore, isOfficial: aIsOfficial, isHack: isAHack },
-              b: { name: b.name.substring(0, 30), score: bScore, isOfficial: bIsOfficial, isHack: isBHack }
-            });
-            
-            // Retourner la comparaison inverse (score plus élevé en premier)
-            return bScore - aScore;
+            // Par défaut: ordre alphabétique
+            return aName.localeCompare(bName);
           });
           
           // Limiter à 8 résultats pour l'affichage

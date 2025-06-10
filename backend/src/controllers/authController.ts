@@ -6,6 +6,23 @@ import passport from '../config/passport';
 import prisma from '../config/database';
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
 
+// Stockage temporaire des sessions Google (en mémoire, expire après 5 minutes)
+const tempGoogleSessions = new Map<string, { 
+  token: string; 
+  user: any; 
+  expiresAt: number; 
+}>();
+
+// Nettoyer les sessions expirées toutes les minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [sessionId, session] of tempGoogleSessions.entries()) {
+    if (now > session.expiresAt) {
+      tempGoogleSessions.delete(sessionId);
+    }
+  }
+}, 60000);
+
 class AuthController {
   /**
    * Inscription d'un nouvel utilisateur
@@ -316,14 +333,26 @@ class AuthController {
       console.log(`✅ Authentification réussie (${callbackId}), redirection vers page de succès`);
       console.log('👤 Utilisateur:', authResult.user.username, authResult.user.email);
       
+      // Créer une session temporaire sécurisée (expire dans 5 minutes)
+      const sessionId = `gs_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+      const expiresAt = Date.now() + (5 * 60 * 1000); // 5 minutes
+      
+      tempGoogleSessions.set(sessionId, {
+        token: authResult.token,
+        user: authResult.user,
+        expiresAt
+      });
+      
+      console.log(`📦 Session temporaire créée: ${sessionId} (expire dans 5min)`);
+      
       res.send(`
         <!DOCTYPE html>
         <html>
         <head>
           <title>Authentification réussie</title>
           <script>
-            console.log('✅ Authentification Google réussie, redirection vers page de succès');
-            window.location.href = '${frontendUrl}/auth/google/success?token=${authResult.token}&user=${userData}';
+            console.log('✅ Authentification Google réussie, redirection avec session sécurisée');
+            window.location.href = '${frontendUrl}/auth/google/success?session=${sessionId}';
           </script>
         </head>
         <body>
@@ -332,6 +361,60 @@ class AuthController {
         </html>
       `);
     })(req, res, next);
+  };
+
+  /**
+   * Récupérer et consommer une session Google temporaire
+   */
+  getGoogleSession = (req: Request, res: Response) => {
+    try {
+      const { sessionId } = req.params;
+      
+      if (!sessionId || !sessionId.startsWith('gs_')) {
+        return res.status(400).json({
+          success: false,
+          message: 'ID de session invalide'
+        });
+      }
+      
+      const session = tempGoogleSessions.get(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({
+          success: false,
+          message: 'Session expirée ou introuvable'
+        });
+      }
+      
+      // Vérifier l'expiration
+      if (Date.now() > session.expiresAt) {
+        tempGoogleSessions.delete(sessionId);
+        return res.status(410).json({
+          success: false,
+          message: 'Session expirée'
+        });
+      }
+      
+      // Consommer la session (usage unique)
+      tempGoogleSessions.delete(sessionId);
+      
+      console.log(`📦 Session consommée: ${sessionId} pour ${session.user.username}`);
+      
+      res.json({
+        success: true,
+        data: {
+          token: session.token,
+          user: session.user
+        }
+      });
+      
+    } catch (error) {
+      console.error('Erreur lors de la récupération de session Google:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur interne du serveur'
+      });
+    }
   };
 
   /**
