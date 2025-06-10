@@ -27,7 +27,7 @@ export default function LoginPage() {
       console.log('🔐 Récupération des données Google depuis session:', google_session);
 
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/google/session/${google_session}`);
+        const response = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '')}/api/auth/google/session/${google_session}`);
         
         if (!response.ok) {
           const errorData = await response.json().catch(() => null);
