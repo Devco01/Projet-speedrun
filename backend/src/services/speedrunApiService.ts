@@ -1030,16 +1030,19 @@ export class SpeedrunApiService {
 
   /**
    * Récupère les runs récents globaux (tous jeux confondus)
+   * ATTENTION: Cette méthode provoque l'erreur [object Object] à cause d'embed
+   * Utiliser la méthode du contrôleur à la place
    */
   async getGlobalRecentRuns(limit: number = 20): Promise<SpeedrunRun[]> {
     try {
+      // NE PAS utiliser embed car ça transforme les IDs en objets !
       const response = await this.api.get('/runs', {
         params: {
           status: 'verified',
           orderby: 'verify-date',
           direction: 'desc',
-          max: limit,
-          embed: 'game,category,level,players,platforms'
+          max: limit
+          // PAS D'EMBED ici !
         }
       });
 
