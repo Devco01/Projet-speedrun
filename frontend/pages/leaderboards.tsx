@@ -916,49 +916,51 @@ export default function LeaderboardsPage() {
             </div>
           )}
           
-                      {/* Contrôles de pagination du bas - Optimisé mobile */}
-            {totalPages > 1 && (
-              <div className="flex justify-center items-center mt-8 p-3 sm:p-6">
-                <div className="flex items-center space-x-2 sm:space-x-4 bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-2 sm:p-4 shadow-xl w-full max-w-md sm:max-w-none">
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    className="group flex items-center px-3 py-2 sm:px-6 sm:py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-600 disabled:opacity-50 text-white font-semibold rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg disabled:hover:scale-100 text-sm sm:text-base flex-1 sm:flex-none justify-center"
-                  >
-                    <svg className="w-4 h-4 sm:mr-2 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                    <span className="hidden sm:inline">Précédent</span>
-                  </button>
-                  
-                  <div className="flex items-center space-x-1 sm:space-x-3 px-2 sm:px-4">
-                    <div className="text-slate-300 font-medium text-sm sm:text-base hidden sm:block">
-                      Page
-                    </div>
-                    <div className="flex items-center space-x-1 sm:space-x-2">
-                      <span className="px-2 py-1 sm:px-4 sm:py-2 bg-gradient-to-r from-violet-500 to-purple-500 text-white font-bold rounded-lg shadow-md text-sm sm:text-base">
-                        {currentPage}
-                      </span>
-                      <span className="text-slate-400 text-sm sm:text-base">
-                        /
-                      </span>
-                      <span className="px-2 py-1 sm:px-4 sm:py-2 bg-slate-700 text-slate-300 font-medium rounded-lg text-sm sm:text-base">
-                        {totalPages}
-                      </span>
-                    </div>
+          {/* Contrôles de pagination du bas - Optimisé mobile */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center mt-8 px-4">
+              <div className="flex items-center space-x-3 bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-4 shadow-xl">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="group flex items-center px-4 py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-600 disabled:opacity-50 text-white font-semibold rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg disabled:hover:scale-100 min-w-[100px] justify-center"
+                >
+                  <svg className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  <span className="hidden sm:inline">Précédent</span>
+                  <span className="sm:hidden">‹</span>
+                </button>
+                
+                <div className="flex items-center space-x-3 px-4">
+                  <div className="text-slate-300 font-medium hidden sm:block">
+                    Page
                   </div>
-                  
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                    className="group flex items-center px-3 py-2 sm:px-6 sm:py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-600 disabled:opacity-50 text-white font-semibold rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg disabled:hover:scale-100 text-sm sm:text-base flex-1 sm:flex-none justify-center"
-                  >
-                    <span className="hidden sm:inline">Suivant</span>
-                    <svg className="w-4 h-4 sm:ml-2 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <span className="px-4 py-2 bg-gradient-to-r from-violet-500 to-purple-500 text-white font-bold rounded-lg shadow-md min-w-[50px] text-center">
+                      {currentPage}
+                    </span>
+                    <span className="text-slate-400">
+                      /
+                    </span>
+                    <span className="px-4 py-2 bg-slate-700 text-slate-300 font-medium rounded-lg min-w-[50px] text-center">
+                      {totalPages}
+                    </span>
+                  </div>
                 </div>
+                
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="group flex items-center px-4 py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-600 disabled:opacity-50 text-white font-semibold rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg disabled:hover:scale-100 min-w-[100px] justify-center"
+                >
+                  <span className="hidden sm:inline">Suivant</span>
+                  <span className="sm:hidden">›</span>
+                  <svg className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
             </div>
           )}
         </div>
