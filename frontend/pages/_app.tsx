@@ -320,10 +320,10 @@ export default function App({ Component, pageProps }: AppProps) {
         <footer className="bg-slate-900 border-t border-slate-800 py-16 mt-20">
           <div className="max-w-7xl mx-auto px-4">
             {/* Contenu principal du footer */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
               
               {/* Logo et description */}
-              <div className="lg:col-span-2">
+              <div>
                 <div className="flex items-center space-x-3 mb-6">
                   <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg">
                     <span className="text-xl font-bold text-white">⚡</span>
@@ -333,10 +333,6 @@ export default function App({ Component, pageProps }: AppProps) {
                 <p className="text-slate-400 text-lg leading-relaxed max-w-md mb-6"> 
                   Explorez les temps, découvrez les records et plongez dans l'univers du speedrunning !
                 </p>
-                <div className="flex items-center space-x-2 text-slate-500 text-sm">
-                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                  <span>Plateforme active</span>
-                </div>
               </div>
 
               {/* Navigation */}
@@ -359,36 +355,6 @@ export default function App({ Component, pageProps }: AppProps) {
                     <span className="mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">→</span>
                     Événements
                   </Link></div>
-                </div>
-              </div>
-
-              {/* Compte */}
-              <div>
-                <h4 className="text-white font-semibold text-lg mb-6 pb-2 border-b border-slate-800">Compte</h4>
-                <div className="space-y-3">
-                  {estAuthentifie && utilisateurActuel ? (
-                    <>
-                      <div><Link href="/profile" className="text-slate-400 hover:text-violet-400 transition-colors duration-200 flex items-center group">
-                        <span className="mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">→</span>
-                        Mon Profil
-                      </Link></div>
-                      <div className="flex items-center space-x-2 text-green-400 text-sm">
-                        <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-                        <span>Connecté en tant que {utilisateurActuel.nomUtilisateur}</span>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div><Link href="/login" className="text-slate-400 hover:text-violet-400 transition-colors duration-200 flex items-center group">
-                        <span className="mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">→</span>
-                        Connexion
-                      </Link></div>
-                      <div><Link href="/register" className="text-slate-400 hover:text-emerald-400 transition-colors duration-200 flex items-center group">
-                        <span className="mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">→</span>
-                        Inscription
-                      </Link></div>
-                    </>
-                  )}
                 </div>
               </div>
 
@@ -415,7 +381,7 @@ export default function App({ Component, pageProps }: AppProps) {
             {/* Ligne de séparation */}
             <div className="border-t border-slate-800"></div>
             
-            {/* Copyright et liens légaux */}
+            {/* Copyright */}
             <div className="flex flex-col md:flex-row justify-between items-center pt-8 space-y-4 md:space-y-0">
               <div className="flex items-center space-x-6">
                 <p className="text-slate-400 text-sm">
@@ -427,17 +393,8 @@ export default function App({ Component, pageProps }: AppProps) {
                 </p>
               </div>
               
-              <div className="flex items-center space-x-4">
-                <div className="text-slate-500 text-xs">
-                  Made with ❤️ pour la communauté speedrun
-                </div>
-                <Link 
-                  href="/admin/login" 
-                  className="text-slate-700 hover:text-slate-500 transition-colors duration-200 text-xs opacity-40 hover:opacity-70"
-                  title="Administration"
-                >
-                  Admin
-                </Link>
+              <div className="text-slate-500 text-xs">
+                Made with ❤️ pour la communauté speedrun
               </div>
             </div>
           </div>
