@@ -277,7 +277,7 @@ export default function LeaderboardsPage() {
             const officialTitles = {
               'zelda': [
                 'the legend of zelda: ocarina of time',
-                'the legend of zelda: majora\'s mask',
+                'the legend of zelda: majora\'s mask', 
                 'the legend of zelda: breath of the wild',
                 'the legend of zelda: tears of the kingdom',
                 'the legend of zelda: twilight princess',
@@ -285,7 +285,17 @@ export default function LeaderboardsPage() {
                 'the legend of zelda: skyward sword',
                 'the legend of zelda: a link to the past',
                 'the legend of zelda: link\'s awakening',
+                'the legend of zelda: a link between worlds',
+                'the legend of zelda: tri force heroes',
+                'the legend of zelda: spirit tracks',
+                'the legend of zelda: phantom hourglass',
+                'the legend of zelda: minish cap',
+                'the legend of zelda: four swords adventures',
+                'the legend of zelda: oracle of seasons',
+                'the legend of zelda: oracle of ages',
                 'zelda ii: the adventure of link',
+                'zelda ii: adventure of link',
+                'the legend of zelda',
                 'zelda (game & watch)',
                 'zelda classic'
               ],
@@ -296,26 +306,165 @@ export default function LeaderboardsPage() {
                 'super mario bros.',
                 'super mario sunshine',
                 'super mario galaxy',
-                'mario kart 64'
+                'super mario galaxy 2',
+                'mario kart 64',
+                'mario kart 8',
+                'mario kart: double dash',
+                'super mario bros. 3',
+                'super mario bros. 2',
+                'super mario land',
+                'super mario land 2',
+                'super mario 3d world',
+                'super mario 3d land',
+                'new super mario bros.',
+                'mario party',
+                'paper mario',
+                'mario & luigi'
+              ],
+              'sonic': [
+                'sonic the hedgehog',
+                'sonic the hedgehog 2',
+                'sonic the hedgehog 3',
+                'sonic & knuckles',
+                'sonic 3 & knuckles',
+                'sonic cd',
+                'sonic adventure',
+                'sonic adventure 2',
+                'sonic heroes',
+                'sonic generations',
+                'sonic forces',
+                'sonic frontiers',
+                'sonic mania',
+                'sonic colors'
+              ],
+              'metroid': [
+                'super metroid',
+                'metroid',
+                'metroid ii',
+                'metroid prime',
+                'metroid prime 2',
+                'metroid prime 3',
+                'metroid fusion',
+                'metroid zero mission',
+                'metroid: other m',
+                'metroid dread',
+                'metroid: samus returns'
+              ],
+              'pokemon': [
+                'pokemon red',
+                'pokemon blue',
+                'pokemon yellow',
+                'pokemon gold',
+                'pokemon silver',
+                'pokemon crystal',
+                'pokemon ruby',
+                'pokemon sapphire',
+                'pokemon emerald',
+                'pokemon diamond',
+                'pokemon pearl',
+                'pokemon platinum',
+                'pokemon black',
+                'pokemon white',
+                'pokemon black 2',
+                'pokemon white 2'
+              ],
+              'final fantasy': [
+                'final fantasy',
+                'final fantasy ii',
+                'final fantasy iii',
+                'final fantasy iv',
+                'final fantasy v',
+                'final fantasy vi',
+                'final fantasy vii',
+                'final fantasy viii',
+                'final fantasy ix',
+                'final fantasy x',
+                'final fantasy xii',
+                'final fantasy xiii',
+                'final fantasy xv'
+              ],
+              'crash': [
+                'crash bandicoot',
+                'crash bandicoot 2',
+                'crash bandicoot 3',
+                'crash team racing',
+                'crash bash',
+                'crash twinsanity',
+                'crash of the titans'
+              ],
+              'spyro': [
+                'spyro the dragon',
+                'spyro 2',
+                'spyro 3',
+                'spyro: year of the dragon',
+                'spyro: ripto\'s rage',
+                'spyro: gateway to glimmer'
               ]
             };
             
-            // 2. Mots qui indiquent clairement un ROM hack
+            // 2. Mots qui indiquent clairement un ROM hack (toutes franchises)
             const definiteHackWords = [
-              'hack', 'mod', 'randomizer', 'kaizo', 'romhack', 'custom',
-              'fan made', 'homebrew', 'beta', 'demo', 'challenge',
-              'difficulty', 'editor', 'maker', 'creator', 'remix'
+              // Mots génériques
+              'hack', 'mod', 'randomizer', 'kaizo', 'romhack', 'rom hack', 'custom',
+              'fan made', 'fanmade', 'homebrew', 'beta', 'demo', 'challenge',
+              'difficulty', 'editor', 'maker', 'creator', 'remix', 'remaster',
+              'enhanced', 'redux', 'tribute', 'fan game', 'fangame', 'bootleg',
+              
+              // Hacks Zelda spécifiques
+              'master quest', 'parallel worlds', 'goddess', 'missing link', 
+              'time to triumph', 'dawn & dusk', 'return of ganon', 'outlands', 
+              'ancient stone tablets', 'bs zelda',
+              
+              // Hacks Mario spécifiques  
+              'star road', 'last impact', 'sunshine 64', 'peach\'s fury',
+              'mario 64 chaos edition', 'mario builder', 'mario forever',
+              
+              // Hacks Sonic spécifiques
+              'sonic 2 xl', 'sonic classic heroes', 'sonic megamix', 
+              'sonic the hedgehog 2 nick arcade', 'sonic 3 complete',
+              
+              // Hacks Pokemon spécifiques
+              'pokemon uranium', 'pokemon prism', 'pokemon dark rising',
+              'pokemon glazed', 'pokemon light platinum', 'pokemon flora sky',
+              
+              // Termes techniques/communauté
+              'tas', 'tool assisted', 'speedhack', 'practice', 'training'
             ];
             
-            // Détection des jeux officiels
+            // Détection des jeux officiels (toutes franchises)
             let aIsOfficial = false;
             let bIsOfficial = false;
             
+            // Chercher dans toutes les franchises qui correspondent à la requête
             for (const [franchise, titles] of Object.entries(officialTitles)) {
-              if (queryLower.includes(franchise)) {
-                aIsOfficial = titles.some(title => aName === title || aName.includes(title));
-                bIsOfficial = titles.some(title => bName === title || bName.includes(title));
-                break;
+              if (queryLower.includes(franchise) || 
+                  franchise.includes(queryLower) ||
+                  titles.some(title => title.toLowerCase().includes(queryLower))) {
+                
+                // Correspondance pour le jeu A
+                const aMatchesThisFranchise = titles.some(title => {
+                  const cleanTitle = title.replace(/[:\-\.']/g, ' ').toLowerCase().trim();
+                  const cleanAName = aName.replace(/[:\-\.']/g, ' ').toLowerCase().trim();
+                  return cleanAName === cleanTitle || 
+                         cleanAName.includes(cleanTitle) || 
+                         cleanTitle.includes(cleanAName) ||
+                         aName === title ||
+                         aName.includes(title);
+                });
+                
+                // Correspondance pour le jeu B
+                const bMatchesThisFranchise = titles.some(title => {
+                  const cleanTitle = title.replace(/[:\-\.']/g, ' ').toLowerCase().trim();
+                  const cleanBName = bName.replace(/[:\-\.']/g, ' ').toLowerCase().trim();
+                  return cleanBName === cleanTitle || 
+                         cleanBName.includes(cleanTitle) || 
+                         cleanTitle.includes(cleanBName) ||
+                         bName === title ||
+                         bName.includes(title);
+                });
+                
+                if (aMatchesThisFranchise) aIsOfficial = true;
+                if (bMatchesThisFranchise) bIsOfficial = true;
               }
             }
             
