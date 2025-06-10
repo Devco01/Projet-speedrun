@@ -510,6 +510,101 @@ export class SpeedrunController {
       });
     }
   }
+
+  /**
+   * Récupère les runs récents globaux (toutes catégories/jeux confondus)
+   */
+  async getGlobalRecentRuns(req: Request, res: Response) {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      
+      console.log(`🏃 Récupération des ${limit} runs récents globaux...`);
+      
+      // Pour le moment, récupérer les runs récents des jeux populaires
+      // C'est un workaround car speedrun.com n'a pas d'endpoint "runs récents globaux"
+      const popularGames = await speedrunApiService.getPopularGames(10, 0, false);
+      
+      let allRecentRuns: any[] = [];
+      
+      // Récupérer les runs récents pour chaque jeu populaire
+      for (const game of popularGames.slice(0, 5)) { // Limiter à 5 jeux pour éviter trop d'appels API
+        try {
+          const gameRuns = await speedrunApiService.getRecentRuns(game.id, 4);
+          allRecentRuns.push(...gameRuns);
+        } catch (error) {
+          console.error(`Erreur lors de la récupération des runs pour ${game.names.international}:`, error);
+          // Continuer avec les autres jeux
+        }
+      }
+      
+      // Trier par date de soumission (plus récent en premier)
+      allRecentRuns.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+      
+      // Limiter au nombre demandé
+      const limitedRuns = allRecentRuns.slice(0, limit);
+      
+      // Fonction utilitaire pour formater le temps
+      const formatTime = (seconds: number): string => {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = Math.floor(seconds % 60);
+        const ms = Math.floor((seconds % 1) * 1000);
+
+        if (hours > 0) {
+          return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+        } else if (minutes > 0) {
+          return `${minutes}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+        } else {
+          return `${secs}.${ms.toString().padStart(3, '0')}s`;
+        }
+      };
+      
+      // Transformer pour le format attendu par le frontend
+      const transformedRuns = limitedRuns.map(run => ({
+        id: run.id,
+        user: {
+          id: run.playerId || 'unknown',
+          username: run.playerName || 'Joueur inconnu',
+          profileImage: null
+        },
+        game: {
+          id: run.gameId,
+          title: run.gameName || 'Jeu inconnu',
+          cover: run.gameCover
+        },
+        category: {
+          id: run.categoryId,
+          name: run.categoryName || 'Catégorie inconnue'
+        },
+        time: run.time,
+        formattedTime: formatTime(run.time),
+        submittedAt: run.submittedAt,
+        verifiedAt: run.verifiedAt,
+        isVerified: run.isVerified
+      }));
+      
+      console.log(`✅ ${transformedRuns.length} runs récents récupérés avec succès`);
+      
+      res.json({
+        success: true,
+        data: transformedRuns,
+        metadata: {
+          limit,
+          count: transformedRuns.length,
+          note: 'Runs récents des jeux populaires sur speedrun.com'
+        }
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      console.error('❌ Erreur lors de la récupération des runs récents globaux:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur lors de la récupération des runs récents',
+        error: errorMessage,
+        data: []
+      });
+    }
+  }
 }
 
 export const speedrunController = new SpeedrunController(); 
