@@ -31,13 +31,7 @@ interface PlatformGrowth {
   weeklyGrowth: number;
 }
 
-interface ActivityFeedItem {
-  id: string;
-  username: string;
-  action: string;
-  timestamp: string;
-  type: string;
-}
+
 
 interface AnalyticsData {
   dailyActivity: DailyActivity[];
@@ -50,7 +44,7 @@ export default function AnalyticsPage() {
   const { utilisateurActuel, estAuthentifie } = useAuth();
   const router = useRouter();
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
-  const [activityFeed, setActivityFeed] = useState<ActivityFeedItem[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState(30);
@@ -68,8 +62,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     if (isAdmin) {
-      loadAnalytics();
-      loadActivityFeed();
+          loadAnalytics();
     }
   }, [isAdmin, timeRange]);
 
@@ -159,34 +152,7 @@ export default function AnalyticsPage() {
     }
   };
 
-  const loadActivityFeed = async () => {
-    try {
-      const adminToken = localStorage.getItem('adminToken');
-      const authToken = localStorage.getItem('authToken');
-      const token = adminToken || authToken;
-      
-      if (!token) {
-        console.error('Token manquant pour le feed activité');
-        return;
-      }
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiUrl}/api/analytics/activity-feed?limit=10`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Erreur feed activité');
-      }
-
-      const data = await response.json();
-      setActivityFeed(data.data);
-    } catch (error) {
-      console.error('Erreur feed activité:', error);
-    }
-  };
 
   const formatTime = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
@@ -209,14 +175,7 @@ export default function AnalyticsPage() {
     });
   };
 
-  const formatTimestamp = (timestamp: string): string => {
-    return new Date(timestamp).toLocaleString('fr-FR', {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+
 
   const getGrowthColor = (growth: number): string => {
     if (growth > 0) return 'text-green-400';
@@ -348,7 +307,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Activité quotidienne */}
               <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
                 <h2 className="text-xl font-bold text-white mb-4 flex items-center">
@@ -413,32 +372,6 @@ export default function AnalyticsPage() {
                         {game.avgTime > 0 && (
                           <span>⏱️ {formatTime(game.avgTime)} moy.</span>
                         )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Feed d'activité */}
-              <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-                <h2 className="text-xl font-bold text-white mb-4 flex items-center">
-                  ⚡ Activité Récente
-                </h2>
-                <div className="space-y-3 max-h-80 overflow-y-auto">
-                  {activityFeed.map((activity) => (
-                    <div key={activity.id} className="p-3 bg-slate-700/50 rounded-lg">
-                      <div className="flex items-start space-x-3">
-                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                          {activity.username.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-white text-sm">
-                            <span className="font-medium">{activity.username}</span> {activity.action}
-                          </div>
-                          <div className="text-slate-400 text-xs">
-                            {formatTimestamp(activity.timestamp)}
-                          </div>
-                        </div>
                       </div>
                     </div>
                   ))}

@@ -231,10 +231,6 @@ export default function AdminDashboard() {
                 Analytics Avancées
               </Link>
               
-              <button className="group bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-green-500/25 border border-green-500/20">
-                Exporter Données
-              </button>
-              
               <button 
                 onClick={forceCleanup}
                 disabled={cleanupLoading}
