@@ -155,10 +155,25 @@ export default function AdminDashboard() {
               </button>
             </div>
             <h1 className="text-4xl font-bold text-white flex items-center gap-3 mb-2 pr-24">
-              <span className="text-blue-400">⚡</span>
               Tableau de bord administrateur
             </h1>
             <p className="text-gray-400">Surveillance et statistiques de la plateforme speedrun</p>
+          </div>
+
+          {/* Actions rapides */}
+          <div className="mb-8">
+            <div className="flex flex-wrap gap-4">
+              <Link 
+                href="/analytics"
+                className="group bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-purple-500/25 border border-purple-500/20"
+              >
+                Analytics Avancées
+              </Link>
+              
+              <button className="group bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-green-500/25 border border-green-500/20">
+                Exporter Données
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -167,24 +182,6 @@ export default function AdminDashboard() {
             </div>
           ) : (
             <div className="space-y-8">
-              {/* Actions rapides */}
-              <div className="mb-6">
-                <div className="flex flex-wrap gap-4">
-                  <Link 
-                    href="/analytics"
-                    className="group bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-purple-500/25 border border-purple-500/20 flex items-center space-x-2"
-                  >
-                    <span>📊</span>
-                    <span>Analytics Avancées</span>
-                  </Link>
-                  
-                  <button className="group bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-green-500/25 border border-green-500/20 flex items-center space-x-2">
-                    <span>📤</span>
-                    <span>Exporter Données</span>
-                  </button>
-                </div>
-              </div>
-
               {/* Statistiques principales */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-blue-500 transition-colors">
