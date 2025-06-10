@@ -54,6 +54,14 @@ export default function App({ Component, pageProps }: AppProps) {
       email,
       imageProfile
     };
+    
+    console.log('💾 Sauvegarde utilisateur avec avatar:', {
+      nomUtilisateur,
+      email,
+      hasAvatar: !!imageProfile,
+      avatarStart: imageProfile?.substring(0, 50) + '...'
+    });
+    
     setUtilisateurActuel(nouvelUtilisateur);
     setEstAuthentifie(true);
     localStorage.setItem('utilisateurSpeedrun', JSON.stringify(nouvelUtilisateur));

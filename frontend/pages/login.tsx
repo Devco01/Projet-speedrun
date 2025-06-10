@@ -40,11 +40,18 @@ export default function LoginPage() {
           throw new Error('Données d\'authentification invalides');
         }
 
+        console.log('🖼️ Données utilisateur reçues:', {
+          username: data.user.username,
+          email: data.user.email,
+          hasProfileImage: !!data.user.profileImage,
+          profileImageStart: data.user.profileImage?.substring(0, 50) + '...'
+        });
+
         // Stocker les données d'authentification
         localStorage.setItem('authToken', data.token);
         
-        // Connecter l'utilisateur
-        gererConnexion(data.user.username, data.user.email);
+        // Connecter l'utilisateur avec avatar
+        gererConnexion(data.user.username, data.user.email, data.user.profileImage);
         
         setGoogleAuthStatus('success');
         
@@ -101,7 +108,7 @@ export default function LoginPage() {
 
       // Se connecter via le contexte global
       const user = data.data.user;
-      gererConnexion(user.username, user.email);
+      gererConnexion(user.username, user.email, user.profileImage);
       
       // Redirection vers la page d'événements
       router.push('/events');
