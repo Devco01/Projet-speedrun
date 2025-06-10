@@ -248,36 +248,89 @@ class AuthController {
         userExists: !!authResult?.user 
       });
 
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
       if (err) {
         console.error(`❌ Erreur Google OAuth (${callbackId}):`, err);
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
         
         // Gestion spécifique de l'erreur "invalid_grant" (code déjà utilisé)
         if (err.code === 'invalid_grant') {
-          console.log(`⚠️ Code d'autorisation déjà utilisé (${callbackId}) - redirection vers succès`);
-          return res.redirect(`${frontendUrl}/profile?welcome=true&source=google&note=already_processed`);
+          console.log(`⚠️ Code d'autorisation déjà utilisé (${callbackId}) - redirection vers profil`);
+          // Utiliser une redirection HTML au lieu d'une redirection HTTP pour éviter les 502
+          return res.send(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <title>Redirection en cours...</title>
+              <script>
+                console.log('🔄 Redirection automatique vers le profil');
+                window.location.href = '${frontendUrl}/profile?welcome=true&source=google&note=already_processed';
+              </script>
+            </head>
+            <body>
+              <p>Redirection en cours...</p>
+            </body>
+            </html>
+          `);
         }
         
-        const redirectUrl = `${frontendUrl}/login?error=google_auth_failed&details=${encodeURIComponent(err.message)}`;
-        console.log('🔄 Redirection vers:', redirectUrl);
-        return res.redirect(redirectUrl);
+        // Autres erreurs - redirection HTML
+        return res.send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Erreur d'authentification</title>
+            <script>
+              console.log('❌ Erreur Google OAuth, redirection vers login');
+              window.location.href = '${frontendUrl}/login?error=google_auth_failed&details=${encodeURIComponent(err.message)}';
+            </script>
+          </head>
+          <body>
+            <p>Erreur d'authentification, redirection...</p>
+          </body>
+          </html>
+        `);
       }
 
       if (!authResult) {
         console.log(`❌ Pas de résultat d'authentification (${callbackId})`);
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-        const redirectUrl = `${frontendUrl}/login?error=google_auth_cancelled`;
-        console.log('🔄 Redirection vers:', redirectUrl);
-        return res.redirect(redirectUrl);
+        return res.send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Authentification annulée</title>
+            <script>
+              console.log('❌ Authentification Google annulée');
+              window.location.href = '${frontendUrl}/login?error=google_auth_cancelled';
+            </script>
+          </head>
+          <body>
+            <p>Authentification annulée, redirection...</p>
+          </body>
+          </html>
+        `);
       }
 
-      // Rediriger vers le frontend avec le token
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      const successUrl = `${frontendUrl}/auth/google/success?token=${authResult.token}&user=${encodeURIComponent(JSON.stringify(authResult.user))}`;
-      console.log(`✅ Authentification réussie (${callbackId}), redirection vers:`, frontendUrl + '/auth/google/success');
+      // Authentification réussie - utiliser une redirection HTML
+      const userData = encodeURIComponent(JSON.stringify(authResult.user));
+      console.log(`✅ Authentification réussie (${callbackId}), redirection vers page de succès`);
       console.log('👤 Utilisateur:', authResult.user.username, authResult.user.email);
       
-      res.redirect(successUrl);
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Authentification réussie</title>
+          <script>
+            console.log('✅ Authentification Google réussie, redirection vers page de succès');
+            window.location.href = '${frontendUrl}/auth/google/success?token=${authResult.token}&user=${userData}';
+          </script>
+        </head>
+        <body>
+          <p>Authentification réussie, redirection...</p>
+        </body>
+        </html>
+      `);
     })(req, res, next);
   };
 
