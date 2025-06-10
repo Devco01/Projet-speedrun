@@ -352,7 +352,10 @@ class AuthController {
           <title>Authentification réussie</title>
           <script>
             console.log('✅ Authentification Google réussie, redirection avec session sécurisée');
-            window.location.href = '${frontendUrl}/auth/google/success?session=${sessionId}';
+            
+            // Au lieu de rediriger vers une page success séparée, utilisons la page login
+            // qui peut gérer l'authentification automatique avec le paramètre session
+            window.location.href = '${frontendUrl}/login?google_session=${sessionId}';
           </script>
         </head>
         <body>
