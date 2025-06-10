@@ -5,7 +5,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 /**
- * Middleware d'authentification JWT
+ * Middleware d'authentification JWT avec support token admin spécial
  */
 export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers['authorization'];
@@ -16,6 +16,18 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
       success: false,
       message: 'Token d\'accès requis'
     });
+  }
+
+  // Vérifier si c'est le token admin spécial
+  if (token === 'admin-jwt-token-simulation') {
+    req.user = {
+      userId: 'admin-special',
+      email: 'admin@speedrun.com'
+    };
+    req.userId = 'admin-special';
+    console.log('🔑 Token admin spécial accepté');
+    next();
+    return;
   }
 
   try {
@@ -47,16 +59,11 @@ export const requireAdmin = async (req: Request, res: Response, next: NextFuncti
       });
     }
 
-    // Vérifier si c'est un token admin spécial (connexion admin@speedrun.com)
-    const authHeader = req.headers.authorization;
-    if (authHeader) {
-      const token = authHeader.split(' ')[1];
-      // Pour la démo, accepter le token admin spécial
-      if (token === 'admin-jwt-token-simulation') {
-        console.log('🔑 Accès admin autorisé via token spécial');
-        next();
-        return;
-      }
+    // Cas spécial pour le token admin
+    if ((req.user as any).userId === 'admin-special') {
+      console.log('🔑 Accès admin autorisé via token spécial');
+      next();
+      return;
     }
 
     // Vérifier le rôle de l'utilisateur en base de données
