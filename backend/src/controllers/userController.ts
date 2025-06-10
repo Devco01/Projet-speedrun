@@ -8,6 +8,9 @@ import {
   getCategoryById,
   formatTime 
 } from '../data/mockData';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 interface AuthenticatedRequest extends Request {
   userId?: string;
@@ -334,5 +337,8 @@ class UserController {
     }
   }
 }
+
+// Fonctions temporairement commentées en attendant la migration de la base de données
+// TODO: Décommenter après avoir ajouté le champ 'role' au modèle User
 
 export default new UserController(); 
