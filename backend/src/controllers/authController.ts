@@ -221,19 +221,42 @@ class AuthController {
    * Callback Google OAuth
    */
   googleCallback = (req: Request, res: Response, next: any) => {
+    console.log('🔐 Début du callback Google OAuth');
+    console.log('URL complète:', req.originalUrl);
+    console.log('Query params:', req.query);
+    console.log('Headers:', req.headers['user-agent']);
+    
     passport.authenticate('google', { session: false }, (err, authResult) => {
+      console.log('🔐 Résultat de l\'authentification Passport:', { 
+        hasError: !!err, 
+        hasAuthResult: !!authResult,
+        errorMessage: err?.message,
+        userExists: !!authResult?.user 
+      });
+
       if (err) {
-        console.error('Erreur Google OAuth:', err);
-        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=google_auth_failed`);
+        console.error('❌ Erreur Google OAuth:', err);
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const redirectUrl = `${frontendUrl}/login?error=google_auth_failed`;
+        console.log('🔄 Redirection vers:', redirectUrl);
+        return res.redirect(redirectUrl);
       }
 
       if (!authResult) {
-        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=google_auth_cancelled`);
+        console.log('❌ Pas de résultat d\'authentification');
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const redirectUrl = `${frontendUrl}/login?error=google_auth_cancelled`;
+        console.log('🔄 Redirection vers:', redirectUrl);
+        return res.redirect(redirectUrl);
       }
 
       // Rediriger vers le frontend avec le token
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      res.redirect(`${frontendUrl}/auth/google/success?token=${authResult.token}&user=${encodeURIComponent(JSON.stringify(authResult.user))}`);
+      const successUrl = `${frontendUrl}/auth/google/success?token=${authResult.token}&user=${encodeURIComponent(JSON.stringify(authResult.user))}`;
+      console.log('✅ Authentification réussie, redirection vers:', frontendUrl + '/auth/google/success');
+      console.log('👤 Utilisateur:', authResult.user.username, authResult.user.email);
+      
+      res.redirect(successUrl);
     })(req, res, next);
   };
 

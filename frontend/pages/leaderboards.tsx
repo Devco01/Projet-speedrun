@@ -10,6 +10,11 @@ export default function LeaderboardsPage() {
   const [selectedCategory, setSelectedCategory] = useState<any | null>(null);
   const [leaderboard, setLeaderboard] = useState<Leaderboard | null>(null);
   
+  // États pour la pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+  
   // États pour la recherche
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SpeedrunGame[]>([]);
@@ -57,6 +62,8 @@ export default function LeaderboardsPage() {
             return;
           } catch (error) {
             console.error('Erreur lors du chargement du jeu depuis l\'URL:', error);
+            // Afficher un message d'erreur plus explicite
+            setError(`Le jeu demandé (ID: ${gameIdFromUrl}) n'a pas pu être trouvé. Chargement d'un jeu par défaut...`);
             // Continuer vers le fallback Mario 64
           }
         }
@@ -121,12 +128,21 @@ export default function LeaderboardsPage() {
         
         // Vérifier que categories est défini et est un tableau
         if (categories && Array.isArray(categories)) {
-          setGameCategories(categories);
+          // Filtrer les catégories valides
+          const validCategories = categories.filter(cat => {
+            const isValid = cat && cat.id && cat.name && cat.id.length >= 3;
+            if (!isValid) {
+              console.warn('Catégorie ignorée - données invalides:', cat);
+            }
+            return isValid;
+          });
+          
+          setGameCategories(validCategories);
           
           // OPTIMISATION : Sélectionner directement la première catégorie logique sans test
-          if (categories.length > 0) {
+          if (validCategories.length > 0) {
             // Trier les catégories par priorité mais sans les tester
-            const priorityOrder = categories.sort((a, b) => {
+            const priorityOrder = validCategories.sort((a, b) => {
               // Priorité aux catégories principales
               if (!a.isMiscellaneous && b.isMiscellaneous) return -1;
               if (a.isMiscellaneous && !b.isMiscellaneous) return 1;
@@ -141,6 +157,9 @@ export default function LeaderboardsPage() {
             // Sélectionner directement la première catégorie prioritaire
             console.log(`✅ Sélection directe de la catégorie: ${priorityOrder[0].name}`);
             setSelectedCategory(priorityOrder[0]);
+            setCurrentPage(1); // Reset pagination pour nouvelle catégorie
+          } else {
+            setError('Aucune catégorie valide disponible pour ce jeu');
           }
         } else {
           // Si categories est undefined ou pas un tableau, on initialise avec un tableau vide
@@ -169,30 +188,49 @@ export default function LeaderboardsPage() {
         setLoadingLeaderboard(true);
         setError(null);
         
+        // Calculer le nombre de runs à récupérer basé sur la page actuelle
+        const runsToFetch = Math.min(currentPage * itemsPerPage, 100); // Maximum 100 runs
+        
         // OPTIMISATION : Une seule tentative avec paramètres génériques
         const leaderboardData = await speedrunApiClient.getLeaderboard(
           selectedGame.id, 
           selectedCategory.id,
-          { top: 20 } // Paramètres simples et génériques
+          { top: runsToFetch } // Récupérer plus de runs selon la page
         );
         
         if (leaderboardData && leaderboardData.runs && leaderboardData.runs.length > 0) {
           setLeaderboard(leaderboardData);
+          // Calculer le nombre total de pages (max 5 pages pour top 100)
+          const maxPages = Math.ceil(Math.min(leaderboardData.runs.length, 100) / itemsPerPage);
+          setTotalPages(maxPages);
         } else {
           setLeaderboard(null);
+          setTotalPages(1);
           setError(`Aucun run disponible pour "${selectedCategory.name}" de ${selectedGame.name}`);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Erreur lors du chargement du leaderboard:', error);
         setLeaderboard(null);
-        setError(`Impossible de charger le classement pour "${selectedCategory.name}"`);
+        
+        // Gestion d'erreurs plus spécifique
+        if (error.message && error.message.includes('404')) {
+          setError(`La catégorie "${selectedCategory.name}" n'existe plus ou a été modifiée sur speedrun.com`);
+          // Nettoyer l'erreur après 5 secondes pour les erreurs 404
+          setTimeout(() => {
+            setError(null);
+          }, 5000);
+        } else if (error.message && error.message.includes('timeout')) {
+          setError('Délai d\'attente dépassé. Veuillez réessayer.');
+        } else {
+          setError(`Impossible de charger le classement pour "${selectedCategory.name}"`);
+        }
       } finally {
         setLoadingLeaderboard(false);
       }
     };
 
     fetchLeaderboard();
-  }, [selectedGame, selectedCategory]);
+  }, [selectedGame, selectedCategory, currentPage, itemsPerPage]);
 
   // Recherche de jeux avec debounce
   useEffect(() => {
@@ -205,10 +243,49 @@ export default function LeaderboardsPage() {
     const delayedSearch = setTimeout(async () => {
       try {
         setLoadingSearch(true);
-        const results = await speedrunApiClient.searchGames(searchQuery, 8);
+        const results = await speedrunApiClient.searchGames(searchQuery, 20); // Augmenter le nombre de résultats
+        
         // S'assurer que results est un tableau
         if (Array.isArray(results)) {
-          setSearchResults(results);
+          // Améliorer l'algorithme de tri pour prioriser les jeux principaux
+          const sortedResults = results.sort((a, b) => {
+            const queryLower = searchQuery.toLowerCase();
+            const aName = a.name.toLowerCase();
+            const bName = b.name.toLowerCase();
+            
+            // Indicateurs de ROM hack ou mods
+            const romHackKeywords = ['hack', 'mod', 'randomizer', 'kaizo', 'sm64', 'romhack', 'custom', 'fan'];
+            const isAHack = romHackKeywords.some(keyword => aName.includes(keyword));
+            const isBHack = romHackKeywords.some(keyword => bName.includes(keyword));
+            
+            // Prioriser les jeux non-hack
+            if (!isAHack && isBHack) return -1;
+            if (isAHack && !isBHack) return 1;
+            
+            // Si les deux sont des hacks ou des jeux principaux, trier par pertinence
+            const aStartsWith = aName.startsWith(queryLower);
+            const bStartsWith = bName.startsWith(queryLower);
+            
+            if (aStartsWith && !bStartsWith) return -1;
+            if (!aStartsWith && bStartsWith) return 1;
+            
+            // Exactitude du match
+            const aExact = aName === queryLower;
+            const bExact = bName === queryLower;
+            
+            if (aExact && !bExact) return -1;
+            if (!aExact && bExact) return 1;
+            
+            // Longueur du nom (plus court = plus principal généralement)
+            const lengthDiff = aName.length - bName.length;
+            if (Math.abs(lengthDiff) > 10) return lengthDiff;
+            
+            // Ordre alphabétique par défaut
+            return aName.localeCompare(bName);
+          });
+          
+          // Limiter à 8 résultats pour l'affichage
+          setSearchResults(sortedResults.slice(0, 8));
           setShowSearchResults(true);
         } else {
           console.warn('Résultats de recherche invalides:', results);
@@ -244,6 +321,7 @@ export default function LeaderboardsPage() {
     setSelectedGame(game);
     setSelectedCategory(null);
     setLeaderboard(null);
+    setCurrentPage(1); // Reset pagination
     setShowSearchResults(false);
     setSearchQuery('');
     setHasUserSelected(true);
@@ -465,7 +543,10 @@ export default function LeaderboardsPage() {
                 {gameCategories.map((category) => (
                   <div
                     key={category.id}
-                    onClick={() => setSelectedCategory(category)}
+                    onClick={() => {
+                      setSelectedCategory(category);
+                      setCurrentPage(1); // Reset pagination
+                    }}
                     className={`cursor-pointer p-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
                       selectedCategory?.id === category.id
                         ? 'border-violet-500 bg-violet-900/20'
@@ -532,15 +613,20 @@ export default function LeaderboardsPage() {
                 </div>
               </div>
               
-              {leaderboard.runs.map((entry, index) => (
+              {leaderboard.runs
+                .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                .map((entry, index) => {
+                  // Calculer l'index global pour le placement correct
+                  const globalIndex = (currentPage - 1) * itemsPerPage + index;
+                  return (
                 <div
                   key={entry.run.id}
                   className={`grid grid-cols-12 gap-4 items-center p-4 rounded-lg border transition-colors ${
-                    index === 0
+                    globalIndex === 0
                       ? 'border-yellow-500/50 bg-gradient-to-r from-yellow-900/20 to-amber-900/20'
-                      : index === 1
+                      : globalIndex === 1
                       ? 'border-gray-400/50 bg-gradient-to-r from-gray-800/20 to-slate-800/20'
-                      : index === 2
+                      : globalIndex === 2
                       ? 'border-orange-500/50 bg-gradient-to-r from-orange-900/20 to-red-900/20'
                       : 'border-slate-700 bg-slate-800/30 hover:bg-slate-800/50'
                   }`}
@@ -616,13 +702,60 @@ export default function LeaderboardsPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+              );
+            })}
             </div>
           ) : (
             <div className="text-center py-12">
               <p className="text-slate-300 text-lg">Aucun run trouvé pour cette catégorie</p>
             </div>
           )}
+          
+                      {/* Contrôles de pagination du bas */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center mt-8 p-6">
+                <div className="flex items-center space-x-4 bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-4 shadow-xl">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="group flex items-center px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-600 disabled:opacity-50 text-white font-semibold rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg disabled:hover:scale-100"
+                  >
+                    <svg className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Précédent
+                  </button>
+                  
+                  <div className="flex items-center space-x-3 px-4">
+                    <div className="text-slate-300 font-medium">
+                      Page
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="px-4 py-2 bg-gradient-to-r from-violet-500 to-purple-500 text-white font-bold rounded-lg shadow-md">
+                        {currentPage}
+                      </span>
+                      <span className="text-slate-400">
+                        /
+                      </span>
+                      <span className="px-4 py-2 bg-slate-700 text-slate-300 font-medium rounded-lg">
+                        {totalPages}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="group flex items-center px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-600 disabled:opacity-50 text-white font-semibold rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg disabled:hover:scale-100"
+                  >
+                    Suivant
+                    <svg className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
         </div>
       )}
     </div>
