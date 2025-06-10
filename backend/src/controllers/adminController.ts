@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import cleanupService from '../services/cleanupService';
 
 const prisma = new PrismaClient();
 
@@ -161,6 +162,50 @@ class AdminController {
       res.status(500).json({
         success: false,
         message: 'Erreur interne du serveur'
+      });
+    }
+  }
+
+  /**
+   * Force le nettoyage manuel des courses terminées
+   */
+  async forceCleanup(req: Request, res: Response) {
+    try {
+      const result = await cleanupService.forceCleanup();
+      
+      res.json({
+        success: true,
+        message: `Nettoyage forcé terminé: ${result.deletedCount} course(s) supprimée(s)`,
+        data: {
+          deletedCount: result.deletedCount,
+          deletedRaces: result.deletedRaces
+        }
+      });
+    } catch (error) {
+      console.error('Erreur nettoyage forcé:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur lors du nettoyage forcé'
+      });
+    }
+  }
+
+  /**
+   * Obtient les statistiques de nettoyage
+   */
+  async getCleanupStats(req: Request, res: Response) {
+    try {
+      const stats = await cleanupService.getCleanupStats();
+      
+      res.json({
+        success: true,
+        data: stats
+      });
+    } catch (error) {
+      console.error('Erreur stats nettoyage:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur lors de la récupération des stats'
       });
     }
   }

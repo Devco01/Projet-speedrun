@@ -10,4 +10,10 @@ router.get('/stats', authenticateToken, requireAdmin, adminController.getDashboa
 router.get('/users', authenticateToken, requireAdmin, adminController.getAllUsers);
 router.delete('/users/:id', authenticateToken, requireAdmin, adminController.deleteUser);
 
+// POST /admin/cleanup - Forcer le nettoyage des courses terminées
+router.post('/cleanup', authenticateToken, requireAdmin, adminController.forceCleanup);
+
+// GET /admin/cleanup/stats - Statistiques de nettoyage
+router.get('/cleanup/stats', authenticateToken, requireAdmin, adminController.getCleanupStats);
+
 export default router; 

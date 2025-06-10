@@ -288,13 +288,7 @@ export default function AnalyticsPage() {
             </span>
           </div>
           
-          {/* Message d'information sur les restrictions d'accès */}
-          <div className="mt-4 p-3 bg-amber-900/30 border border-amber-700/50 rounded-lg max-w-2xl mx-auto">
-            <p className="text-amber-200 text-sm">
-              🔒 <strong>Accès restreint :</strong> Cette page est réservée aux administrateurs uniquement. 
-              Connectez-vous avec le compte admin@speedrun.com pour accéder aux analytics MongoDB.
-            </p>
-          </div>
+
         </div>
 
         {/* Contrôles */}

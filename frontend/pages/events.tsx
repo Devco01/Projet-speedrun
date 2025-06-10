@@ -673,11 +673,12 @@ export default function PageRaces() {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette course ?')) {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const token = localStorage.getItem('authToken');
         const response = await fetch(`${apiUrl}/api/races/${raceId}`, {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${token}`
           }
         });
 
