@@ -574,44 +574,101 @@ export class SpeedrunController {
       
       console.log(`🏃 Récupération des ${limit} runs récents globaux...`);
       
-      // Utiliser directement l'endpoint global de runs récents de speedrun.com
-      const recentRuns = await speedrunApiService.getGlobalRecentRuns(limit * 2); // Récupérer plus pour filtrer
+      // Récupérer plus de jeux populaires pour avoir plus de variété
+      const popularGames = await speedrunApiService.getPopularGames(30, 0, false);
+      console.log(`🎮 ${popularGames.length} jeux populaires récupérés`);
       
-      if (!recentRuns || recentRuns.length === 0) {
-        return res.json({
-          success: true,
-          data: [],
-          metadata: {
-            limit,
-            count: 0,
-            note: 'Aucun run récent trouvé'
-          }
-        });
-      }
+      let allRecentRuns: any[] = [];
+      const gameInfoMap = new Map(); // Pour stocker les infos des jeux
       
-      // Créer une map pour stocker les infos des jeux
-      const gameInfoMap = new Map();
-      const gameIds = [...new Set(recentRuns.map(run => run.game))]; // IDs uniques des jeux
-      
-      // Récupérer les infos des jeux en parallèle (mais limité pour éviter le rate limiting)
-      console.log(`📋 Récupération des infos pour ${gameIds.length} jeux uniques...`);
-      
-      for (const gameId of gameIds.slice(0, 15)) { // Limiter à 15 jeux pour éviter trop d'appels API
+      // Récupérer les runs récents pour chaque jeu populaire - SIMPLIFIÉ
+      for (const game of popularGames.slice(0, 15)) { // Plus de jeux pour plus de variété
         try {
-          const gameInfo = await speedrunApiService.getGameById(gameId);
-          if (gameInfo) {
-            gameInfoMap.set(gameId, {
-              id: gameInfo.id,
-              name: gameInfo.names.international,
-              cover: gameInfo.assets?.['cover-medium']?.uri || gameInfo.assets?.['cover-small']?.uri || null
-            });
+          console.log(`🔍 Récupération des runs pour: ${game.names.international} (ID: ${game.id})`);
+          
+          // Récupérer les runs directement sans embed complexe
+          const gameRuns = await speedrunApiService.getRecentRuns(game.id, 4);
+          
+          if (gameRuns.length === 0) {
+            console.log(`⚠️ Aucun run récent pour ${game.names.international}`);
+            continue;
           }
-          // Petit délai pour éviter le rate limiting
-          await new Promise(resolve => setTimeout(resolve, 50));
+          
+          // Transformer les runs avec les bonnes propriétés
+          const transformedRuns = gameRuns.map(run => speedrunApiService.transformRunData(run));
+          
+          // Stocker les infos du jeu AVANT de traiter les runs
+          gameInfoMap.set(game.id, {
+            id: game.id,
+            name: game.names.international,
+            cover: game.assets?.['cover-medium']?.uri || game.assets?.['cover-small']?.uri || null,
+            abbreviation: game.abbreviation
+          });
+          
+          // S'assurer que chaque run transformé a le bon gameId
+          transformedRuns.forEach(run => {
+            // Force le gameId correct
+            run.gameId = game.id;
+            
+            // Assurance que gameInfoMap contient ce gameId
+            if (!gameInfoMap.has(run.gameId)) {
+              gameInfoMap.set(run.gameId, {
+                id: game.id,
+                name: game.names.international,
+                cover: game.assets?.['cover-medium']?.uri || game.assets?.['cover-small']?.uri || null,
+                abbreviation: game.abbreviation
+              });
+            }
+          });
+          
+          allRecentRuns.push(...transformedRuns);
+          console.log(`✅ ${transformedRuns.length} runs ajoutés pour ${game.names.international} (Total: ${allRecentRuns.length})`);
+          
         } catch (error) {
-          console.warn(`⚠️ Impossible de récupérer les infos du jeu ${gameId}:`, error);
+          console.error(`❌ Erreur lors de la récupération des runs pour ${game.names.international}:`, error);
+          // Continuer avec les autres jeux
         }
       }
+      
+      console.log(`📊 Total de ${allRecentRuns.length} runs récupérés avant tri`);
+      
+      // Si nous n'avons pas assez de runs, essayons quelques jeux de plus
+      if (allRecentRuns.length < limit && popularGames.length > 15) {
+        console.log(`🔄 Pas assez de runs (${allRecentRuns.length}/${limit}), récupération de jeux supplémentaires...`);
+        
+        for (const game of popularGames.slice(15, 25)) {
+          try {
+            const gameRuns = await speedrunApiService.getRecentRuns(game.id, 3);
+            if (gameRuns.length > 0) {
+              const transformedRuns = gameRuns.map(run => {
+                const transformed = speedrunApiService.transformRunData(run);
+                transformed.gameId = game.id;
+                return transformed;
+              });
+              
+              gameInfoMap.set(game.id, {
+                id: game.id,
+                name: game.names.international,
+                cover: game.assets?.['cover-medium']?.uri || game.assets?.['cover-small']?.uri || null,
+                abbreviation: game.abbreviation
+              });
+              
+              allRecentRuns.push(...transformedRuns);
+              console.log(`✅ ${transformedRuns.length} runs supplémentaires ajoutés pour ${game.names.international}`);
+            }
+            
+            if (allRecentRuns.length >= limit * 1.5) break; // Arrêter si on a assez
+          } catch (error) {
+            console.error(`❌ Erreur jeu supplémentaire ${game.names.international}:`, error);
+          }
+        }
+      }
+      
+      // Trier par date de soumission (plus récent en premier)
+      allRecentRuns.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+      
+      // Limiter au nombre demandé
+      const limitedRuns = allRecentRuns.slice(0, limit);
       
       // Fonction utilitaire pour formater le temps
       const formatTime = (seconds: number): string => {
@@ -631,59 +688,54 @@ export class SpeedrunController {
         }
       };
       
-      // Transformer et filtrer les runs
-      const transformedRuns = recentRuns
+      // Transformer pour le format attendu par le frontend avec validation STRICTE
+      const transformedRuns = limitedRuns
         .filter(run => {
-          // Filtrer les runs avec temps valide
-          const hasValidTime = run.times && run.times.primary_t && !isNaN(run.times.primary_t);
+          const hasValidTime = run.time && !isNaN(run.time);
+          if (!hasValidTime) {
+            console.warn(`⚠️ Run ${run.id} filtré - temps invalide: ${run.time}`);
+          }
           return hasValidTime;
         })
         .map(run => {
-          // Transformer le run en utilisant transformRunData
-          const transformedRun = speedrunApiService.transformRunData(run);
-          const gameInfo = gameInfoMap.get(run.game);
+          const gameInfo = gameInfoMap.get(run.gameId);
+          
+          // Validation STRICTE des gameInfo
+          if (!gameInfo) {
+            console.error(`❌ ERREUR CRITIQUE: GameInfo manquant pour run ${run.id} avec gameId ${run.gameId}`);
+            console.error(`📋 GameInfoMap disponible:`, Array.from(gameInfoMap.keys()));
+            return null; // Retourner null pour filtrer plus tard
+          }
+          
+          console.log(`✅ Jeu trouvé pour run ${run.id}: ${gameInfo.name}`);
           
           return {
-            id: transformedRun.id,
+            id: run.id,
             user: {
-              id: transformedRun.externalData?.speedruncom?.players?.[0]?.id || 'unknown',
-              username: transformedRun.playerName || 'Joueur inconnu',
+              id: run.externalData?.speedruncom?.players?.[0]?.id || 'unknown',
+              username: run.playerName || 'Joueur inconnu',
               profileImage: null
             },
             game: {
-              id: run.game, // Utiliser l'ID original du run
-              title: gameInfo?.name || 'Jeu inconnu',
-              cover: gameInfo?.cover || null
+              id: run.gameId,
+              title: gameInfo.name, // Pas de fallback - on a vérifié que gameInfo existe
+              cover: gameInfo.cover || null
             },
             category: {
-              id: run.category, // Utiliser l'ID original du run
-              name: 'Catégorie inconnue' // Il faudrait récupérer le nom de la catégorie séparément
+              id: run.categoryId,
+              name: 'Catégorie inconnue'
             },
-            time: transformedRun.time,
-            formattedTime: formatTime(transformedRun.time),
-            submittedAt: transformedRun.submittedAt.toISOString(),
-            verifiedAt: transformedRun.verifiedAt?.toISOString() || null,
-            isVerified: transformedRun.isVerified
+            time: run.time,
+            formattedTime: formatTime(run.time),
+            submittedAt: run.submittedAt.toISOString(),
+            verifiedAt: run.verifiedAt?.toISOString() || null,
+            isVerified: run.isVerified
           };
         })
-        .filter(run => {
-          // Validation finale
-          const isValid = run.id && run.game.id && run.time && !isNaN(run.time);
-          
-          if (!isValid) {
-            console.warn(`❌ Run rejeté - données invalides:`, {
-              id: run.id,
-              gameId: run.game?.id,
-              gameTitle: run.game?.title,
-              time: run.time
-            });
-          }
-          
-          return isValid;
-        })
-        .slice(0, limit); // Limiter au nombre demandé
+        .filter(run => run !== null); // Filtrer les runs null
       
-      console.log(`✅ ${transformedRuns.length} runs récents valides récupérés avec succès`);
+      console.log(`🎯 ${transformedRuns.length} runs finaux valides sur ${limitedRuns.length} runs traités`);
+      console.log(`📋 GameInfoMap final: ${gameInfoMap.size} jeux - ${Array.from(gameInfoMap.keys()).slice(0, 5).join(', ')}${gameInfoMap.size > 5 ? '...' : ''}`);
       
       res.json({
         success: true,
@@ -692,7 +744,8 @@ export class SpeedrunController {
           limit,
           count: transformedRuns.length,
           totalGames: gameInfoMap.size,
-          note: 'Runs récents globaux de speedrun.com'
+          totalRunsProcessed: allRecentRuns.length,
+          note: 'Runs récents des jeux populaires sur speedrun.com'
         }
       });
     } catch (error) {
