@@ -13,10 +13,12 @@ import speedrunRoutes from './routes/speedrunRoutes';
 import raceRoutes from './routes/raceRoutes';
 import avatarRoutes from './routes/avatarRoutes';
 import adminRoutes from './routes/adminRoutes';
-// Service analytiques supprimé avec les événements
+import analyticsRoutes from './routes/analyticsRoutes';
+// Service analytiques recréé avec données simulées
 
 // Services
 import mongoService from './services/mongoService';
+import analyticsService from './services/analyticsService';
 
 // Configuration
 dotenv.config();
@@ -58,6 +60,7 @@ app.use('/api/speedrun', speedrunRoutes);
 app.use('/api/races', raceRoutes);
 app.use('/api/avatars', avatarRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Route de test
 app.get('/', (req, res) => {
@@ -200,11 +203,15 @@ app.use('*', (req, res) => {
   });
 });
 
-// Initialisation MongoDB (optionnel)
+// Initialisation MongoDB et synchronisation des données réelles
 async function initializeServices() {
   try {
     await mongoService.connect();
     console.log('📦 Services MongoDB initialisés');
+    
+    // Synchroniser les données existantes de PostgreSQL vers MongoDB
+    await analyticsService.syncExistingData();
+    console.log('📊 Analytics initialisé avec vraies données');
   } catch (error) {
     console.log('⚠️ MongoDB non disponible - mode dégradé');
   }

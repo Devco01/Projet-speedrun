@@ -258,15 +258,16 @@ export default function ActivityPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
           <div>
             <h2 className="text-2xl font-semibold text-white mb-2">
-              🏃‍♂️ 20 Derniers Runs Soumis
+              📈 20 Derniers Runs Soumis
             </h2>
             <p className="text-slate-400">
               Les courses les plus récentes vérifiées sur speedrun.com
             </p>
           </div>
-          <div className="hidden sm:block">
-            <span className="px-3 py-1 bg-green-900/30 text-green-300 rounded-full text-sm">
-              🔄 Mis à jour en temps réel
+          <div className="mt-3 sm:mt-0">
+            <span className="inline-flex items-center px-3 py-1 bg-green-900/30 text-green-300 rounded-full text-sm">
+              <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+              Temps réel
             </span>
           </div>
         </div>
@@ -277,113 +278,164 @@ export default function ActivityPage() {
             <p className="text-slate-300">Chargement des runs récents...</p>
           </div>
         ) : recentRuns.length > 0 ? (
-          <div className="space-y-2 sm:space-y-3">
+          <div className="space-y-3">
             {recentRuns.map((run, index) => (
               <Link key={run.id} href={`/leaderboards?game=${run.game.id}&category=${run.category.id}`}>
-                <div className="group cursor-pointer p-3 sm:p-4 bg-slate-800/20 hover:bg-slate-800/40 rounded-lg border border-slate-700/50 hover:border-green-400/50 transition-all duration-200 hover:scale-[1.01]">
+                <div className="group cursor-pointer bg-slate-800/30 hover:bg-slate-800/60 rounded-xl border border-slate-700/30 hover:border-green-400/40 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-green-500/10">
+                  
                   {/* Version Desktop */}
-                  <div className="hidden sm:flex items-center space-x-4">
-                    {/* Position */}
-                    <div className="flex-shrink-0 w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center">
-                      <span className="text-slate-300 text-sm font-mono">#{index + 1}</span>
-                    </div>
-                    
-                    {/* Image du jeu */}
-                    <div className="flex-shrink-0 w-14 h-14">
-                      {run.gameDetails?.coverImage ? (
-                        <img
-                          src={run.gameDetails.coverImage}
-                          alt={run.gameDetails.name}
-                          className="w-full h-full object-cover rounded-lg group-hover:scale-105 transition-transform"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
-                          <span className="text-white text-lg">🎮</span>
-                        </div>
-                      )}
+                  <div className="hidden md:flex items-center p-4 space-x-5">
+                    {/* Position & Image */}
+                    <div className="flex items-center space-x-4">
+                      <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-slate-700 to-slate-600 rounded-xl flex items-center justify-center text-white font-mono text-sm font-bold group-hover:from-green-600 group-hover:to-green-500 transition-all duration-300">
+                        #{index + 1}
+                      </div>
+                      
+                      <div className="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 border-slate-600 group-hover:border-green-400 transition-all duration-300">
+                        {run.gameDetails?.coverImage ? (
+                          <img
+                            src={run.gameDetails.coverImage}
+                            alt={run.gameDetails.name}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                            <span className="text-white text-xl">🎮</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Infos du jeu */}
-                    <div className="flex-grow min-w-0">
-                      <h3 className="font-semibold text-white text-base group-hover:text-green-300 transition-colors truncate">
+                    {/* Infos principales */}
+                    <div className="flex-grow min-w-0 space-y-1">
+                      <h3 className="font-bold text-white text-lg group-hover:text-green-300 transition-colors truncate">
                         {run.gameDetails?.name || 'Jeu inconnu'}
                       </h3>
-                      <p className="text-slate-400 text-sm truncate">
-                        {run.category.name} • {getPlayerName(run)}
-                      </p>
+                      <div className="flex items-center space-x-4 text-sm">
+                        <span className="flex items-center text-amber-400">
+                          <span className="mr-1">🏆</span>
+                          {run.category.name}
+                        </span>
+                        <span className="flex items-center text-blue-300">
+                          <span className="mr-1">👤</span>
+                          {getPlayerName(run)}
+                        </span>
+                      </div>
                     </div>
 
-                    {/* Temps */}
-                    <div className="flex-shrink-0 text-right">
-                      <div className="text-green-400 font-mono font-bold text-lg">
+                    {/* Temps & Statut */}
+                    <div className="flex-shrink-0 text-right space-y-2">
+                      <div className="text-green-400 font-mono font-black text-xl">
                         {formatTime(run.time)}
                       </div>
-                      <div className="text-slate-500 text-xs">
-                        {formatDate(run.submittedAt)}
+                      <div className="flex items-center justify-end space-x-2">
+                        <span className="text-slate-500 text-xs">
+                          {formatDate(run.submittedAt)}
+                        </span>
+                        {run.isVerified && (
+                          <div className="px-2 py-1 bg-green-900/50 text-green-300 rounded-md text-xs font-medium">
+                            ✅ Vérifié
+                          </div>
+                        )}
                       </div>
-                    </div>
-
-                    {/* Statut */}
-                    <div className="flex-shrink-0">
-                      {run.isVerified && (
-                        <div className="px-3 py-1 bg-green-900/50 text-green-300 rounded-full text-xs flex items-center">
-                          <span className="mr-1">✅</span>
-                          Vérifié
-                        </div>
-                      )}
                     </div>
                   </div>
 
-                  {/* Version Mobile */}
-                  <div className="sm:hidden">
-                    <div className="flex items-start space-x-3">
-                      {/* Position + Image */}
-                      <div className="flex-shrink-0">
-                        <div className="relative">
+                  {/* Version Tablette */}
+                  <div className="hidden sm:flex md:hidden items-center p-4 space-x-4">
+                    <div className="flex-shrink-0">
+                      <div className="relative">
+                        <div className="w-14 h-14 rounded-lg overflow-hidden border border-slate-600">
                           {run.gameDetails?.coverImage ? (
                             <img
                               src={run.gameDetails.coverImage}
                               alt={run.gameDetails.name}
-                              className="w-12 h-12 object-cover rounded-lg"
+                              className="w-full h-full object-cover"
                             />
                           ) : (
-                            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
-                              <span className="text-white text-sm">🎮</span>
+                            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                              <span className="text-white">🎮</span>
                             </div>
                           )}
-                          <div className="absolute -top-1 -right-1 w-5 h-5 bg-slate-700 rounded-full flex items-center justify-center">
-                            <span className="text-white text-xs font-mono">#{index + 1}</span>
+                        </div>
+                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-slate-700 rounded-full flex items-center justify-center text-white text-xs font-mono">
+                          {index + 1}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex-grow min-w-0">
+                      <h3 className="font-semibold text-white truncate mb-1">
+                        {run.gameDetails?.name || 'Jeu inconnu'}
+                      </h3>
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1 text-xs text-slate-400">
+                          <div>{run.category.name} • {getPlayerName(run)}</div>
+                          <div>{formatDate(run.submittedAt)}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-green-400 font-mono font-bold text-lg">
+                            {formatTime(run.time)}
+                          </div>
+                          {run.isVerified && (
+                            <span className="text-green-300 text-xs">✅</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Version Mobile */}
+                  <div className="flex sm:hidden p-3">
+                    <div className="flex items-start space-x-3 w-full">
+                      {/* Image + Position */}
+                      <div className="flex-shrink-0">
+                        <div className="relative">
+                          <div className="w-12 h-12 rounded-lg overflow-hidden">
+                            {run.gameDetails?.coverImage ? (
+                              <img
+                                src={run.gameDetails.coverImage}
+                                alt={run.gameDetails.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                                <span className="text-white text-sm">🎮</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="absolute -top-1 -right-1 w-5 h-5 bg-slate-700 rounded-full flex items-center justify-center text-white text-xs font-mono">
+                            {index + 1}
                           </div>
                         </div>
                       </div>
 
                       {/* Contenu principal */}
-                      <div className="flex-grow min-w-0">
-                        <h3 className="font-semibold text-white text-sm truncate mb-1">
-                          {run.gameDetails?.name || 'Jeu inconnu'}
-                        </h3>
-                        
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-green-400 font-mono font-bold text-base">
+                      <div className="flex-grow min-w-0 space-y-2">
+                        <div className="flex items-start justify-between">
+                          <h3 className="font-semibold text-white text-sm leading-tight pr-2">
+                            {run.gameDetails?.name || 'Jeu inconnu'}
+                          </h3>
+                          <div className="text-green-400 font-mono font-bold text-base whitespace-nowrap">
                             {formatTime(run.time)}
-                          </span>
-                          {run.isVerified && (
-                            <span className="px-2 py-1 bg-green-900/50 text-green-300 rounded-full text-xs">
-                              ✅
-                            </span>
-                          )}
+                          </div>
                         </div>
                         
-                        <div className="space-y-1 text-xs text-slate-400">
-                          <div className="flex items-center">
-                            <span className="mr-1">🏆</span>
-                            <span className="truncate">{run.category.name}</span>
+                        <div className="space-y-1">
+                          <div className="flex items-center text-xs text-slate-400">
+                            <span className="text-amber-400 mr-1">🏆</span>
+                            <span className="truncate flex-grow">{run.category.name}</span>
+                            {run.isVerified && (
+                              <span className="text-green-300 ml-2">✅</span>
+                            )}
                           </div>
-                          <div className="flex items-center">
-                            <span className="mr-1">👤</span>
+                          
+                          <div className="flex items-center text-xs text-slate-400">
+                            <span className="text-blue-300 mr-1">👤</span>
                             <span className="truncate">{getPlayerName(run)}</span>
                           </div>
-                          <div className="flex items-center">
+                          
+                          <div className="flex items-center text-xs text-slate-500">
                             <span className="mr-1">📅</span>
                             <span>{formatDate(run.submittedAt)}</span>
                           </div>
@@ -396,12 +448,14 @@ export default function ActivityPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-slate-400 text-2xl">🏃‍♂️</span>
+          <div className="text-center py-16">
+            <div className="w-20 h-20 bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <span className="text-slate-400 text-3xl">📊</span>
             </div>
-            <p className="text-slate-400 text-lg mb-2">Aucun run récent trouvé</p>
-            <p className="text-slate-500 text-sm">Vérifiez votre connexion ou réessayez plus tard</p>
+            <h3 className="text-slate-300 text-xl font-semibold mb-2">Aucun run récent</h3>
+            <p className="text-slate-500 max-w-md mx-auto">
+              Les derniers runs apparaîtront ici une fois qu'ils seront soumis et vérifiés sur speedrun.com
+            </p>
           </div>
         )}
       </div>
