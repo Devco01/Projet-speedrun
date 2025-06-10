@@ -200,9 +200,23 @@ export default function LeaderboardsPage() {
         
         if (leaderboardData && leaderboardData.runs && leaderboardData.runs.length > 0) {
           setLeaderboard(leaderboardData);
-          // Calculer le nombre total de pages (max 5 pages pour top 100)
-          const maxPages = Math.ceil(Math.min(leaderboardData.runs.length, 100) / itemsPerPage);
-          setTotalPages(maxPages);
+          // Calculer le nombre total de pages correctement
+          // Si on a récupéré le maximum possible (100 runs), on peut avoir jusqu'à 5 pages
+          // Sinon, on calcule selon le nombre de runs récupérés
+          const totalRuns = Math.min(leaderboardData.runs.length, 100);
+          const calculatedPages = Math.ceil(totalRuns / itemsPerPage);
+          
+          // S'assurer qu'on a au moins 1 page et pas plus de 5
+          const finalPages = Math.max(1, Math.min(calculatedPages, 5));
+          setTotalPages(finalPages);
+          
+          console.log('📊 Pagination calculée:', {
+            totalRuns,
+            itemsPerPage,
+            calculatedPages,
+            finalPages,
+            currentPage
+          });
         } else {
           setLeaderboard(null);
           setTotalPages(1);
@@ -253,10 +267,41 @@ export default function LeaderboardsPage() {
             const aName = a.name.toLowerCase();
             const bName = b.name.toLowerCase();
             
-            // Indicateurs de ROM hack ou mods
-            const romHackKeywords = ['hack', 'mod', 'randomizer', 'kaizo', 'sm64', 'romhack', 'custom', 'fan'];
+            // Indicateurs de ROM hack ou mods (plus complets)
+            const romHackKeywords = [
+              'hack', 'mod', 'randomizer', 'kaizo', 'romhack', 'custom', 'fan',
+              'homebrew', 'sms', 'smw2', 'sm64', 'oot', 'remix', 'remaster',
+              'beta', 'demo', 'prototype', 'challenge', 'difficulty',
+              'level editor', 'maker', 'creator'
+            ];
+            
             const isAHack = romHackKeywords.some(keyword => aName.includes(keyword));
             const isBHack = romHackKeywords.some(keyword => bName.includes(keyword));
+            
+            // Mots-clés des franchises principales pour prioriser
+            const mainFranchiseKeywords = {
+              'zelda': ['ocarina of time', 'majora', 'breath of the wild', 'tears of the kingdom', 'twilight princess', 'wind waker', 'skyward sword', 'link to the past', 'link\'s awakening'],
+              'mario': ['super mario 64', 'super mario odyssey', 'super mario world', 'super mario bros', 'super mario 3d', 'super mario galaxy', 'mario kart'],
+              'sonic': ['sonic the hedgehog', 'sonic 2', 'sonic 3', 'sonic mania', 'sonic forces', 'sonic generations', 'sonic adventure'],
+              'metroid': ['super metroid', 'metroid prime', 'metroid dread', 'metroid fusion'],
+              'castlevania': ['symphony of the night', 'aria of sorrow', 'portrait of ruin']
+            };
+            
+            // Vérifier si c'est un jeu principal d'une franchise connue
+            let aIsMainGame = false;
+            let bIsMainGame = false;
+            
+            for (const [franchise, games] of Object.entries(mainFranchiseKeywords)) {
+              if (queryLower.includes(franchise)) {
+                aIsMainGame = games.some(game => aName.includes(game)) && !isAHack;
+                bIsMainGame = games.some(game => bName.includes(game)) && !isBHack;
+                break;
+              }
+            }
+            
+            // Prioriser les jeux principaux de franchise
+            if (aIsMainGame && !bIsMainGame) return -1;
+            if (!aIsMainGame && bIsMainGame) return 1;
             
             // Prioriser les jeux non-hack
             if (!isAHack && isBHack) return -1;
@@ -276,9 +321,16 @@ export default function LeaderboardsPage() {
             if (aExact && !bExact) return -1;
             if (!aExact && bExact) return 1;
             
+            // Mots-clés présents dans le nom (plus de mots-clés = plus pertinent)
+            const queryWords = queryLower.split(' ');
+            const aMatches = queryWords.filter(word => aName.includes(word)).length;
+            const bMatches = queryWords.filter(word => bName.includes(word)).length;
+            
+            if (aMatches !== bMatches) return bMatches - aMatches;
+            
             // Longueur du nom (plus court = plus principal généralement)
             const lengthDiff = aName.length - bName.length;
-            if (Math.abs(lengthDiff) > 10) return lengthDiff;
+            if (Math.abs(lengthDiff) > 15) return lengthDiff;
             
             // Ordre alphabétique par défaut
             return aName.localeCompare(bName);

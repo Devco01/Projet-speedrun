@@ -226,24 +226,45 @@ class AuthController {
     console.log('Query params:', req.query);
     console.log('Headers:', req.headers['user-agent']);
     
+    // Protection contre les appels multiples - vérifier si le code a déjà été traité
+    const authCode = req.query.code as string;
+    if (!authCode) {
+      console.log('❌ Aucun code d\'autorisation Google fourni');
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      return res.redirect(`${frontendUrl}/login?error=missing_auth_code`);
+    }
+    
+    // Créer un identifiant unique pour ce callback pour éviter les conflits
+    const callbackId = `${authCode.substring(0, 10)}-${Date.now()}`;
+    console.log(`🔄 Traitement du callback ${callbackId}`);
+    
     passport.authenticate('google', { session: false }, (err, authResult) => {
       console.log('🔐 Résultat de l\'authentification Passport:', { 
+        callbackId,
         hasError: !!err, 
         hasAuthResult: !!authResult,
         errorMessage: err?.message,
+        errorCode: err?.code,
         userExists: !!authResult?.user 
       });
 
       if (err) {
-        console.error('❌ Erreur Google OAuth:', err);
+        console.error(`❌ Erreur Google OAuth (${callbackId}):`, err);
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-        const redirectUrl = `${frontendUrl}/login?error=google_auth_failed`;
+        
+        // Gestion spécifique de l'erreur "invalid_grant" (code déjà utilisé)
+        if (err.code === 'invalid_grant') {
+          console.log(`⚠️ Code d'autorisation déjà utilisé (${callbackId}) - redirection vers succès`);
+          return res.redirect(`${frontendUrl}/profile?welcome=true&source=google&note=already_processed`);
+        }
+        
+        const redirectUrl = `${frontendUrl}/login?error=google_auth_failed&details=${encodeURIComponent(err.message)}`;
         console.log('🔄 Redirection vers:', redirectUrl);
         return res.redirect(redirectUrl);
       }
 
       if (!authResult) {
-        console.log('❌ Pas de résultat d\'authentification');
+        console.log(`❌ Pas de résultat d'authentification (${callbackId})`);
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
         const redirectUrl = `${frontendUrl}/login?error=google_auth_cancelled`;
         console.log('🔄 Redirection vers:', redirectUrl);
@@ -253,7 +274,7 @@ class AuthController {
       // Rediriger vers le frontend avec le token
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
       const successUrl = `${frontendUrl}/auth/google/success?token=${authResult.token}&user=${encodeURIComponent(JSON.stringify(authResult.user))}`;
-      console.log('✅ Authentification réussie, redirection vers:', frontendUrl + '/auth/google/success');
+      console.log(`✅ Authentification réussie (${callbackId}), redirection vers:`, frontendUrl + '/auth/google/success');
       console.log('👤 Utilisateur:', authResult.user.username, authResult.user.email);
       
       res.redirect(successUrl);
