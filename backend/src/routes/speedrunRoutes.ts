@@ -29,6 +29,9 @@ router.get('/games/:gameId', speedrunController.getGameById);
 router.get('/games/:gameId/categories', speedrunController.getGameCategories);
 router.get('/games/:gameId/runs/recent', speedrunController.getRecentRuns);
 
+// Runs récents globaux
+router.get('/runs/recent', speedrunController.getGlobalRecentRuns);
+
 // Leaderboards
 router.get('/leaderboards/:gameId/:categoryId', speedrunController.getLeaderboard);
 

@@ -5,8 +5,10 @@ import Head from 'next/head';
 
 interface Stats {
   totalUsers: number;
-  totalEvents: number;
-  pastEvents: number;
+  totalRaces: number;
+  activeRaces: number;
+  completedRaces: number;
+  newUsersThisMonth: number;
 }
 
 interface User {
@@ -18,27 +20,18 @@ interface User {
   isActive: boolean;
 }
 
-interface Event {
-  id: string;
-  name: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  createdBy: string;
-}
-
 export default function AdminDashboard() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<Stats>({
     totalUsers: 0,
-    totalEvents: 0,
-    pastEvents: 0
+    totalRaces: 0,
+    activeRaces: 0,
+    completedRaces: 0,
+    newUsersThisMonth: 0
   });
   const [users, setUsers] = useState<User[]>([]);
-  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
-  const [pastEvents, setPastEvents] = useState<Event[]>([]);
 
   useEffect(() => {
     // Vérifier l'authentification admin
@@ -74,9 +67,11 @@ export default function AdminDashboard() {
         const statsData = await statsResponse.json();
         console.log('DEBUG: Stats data:', statsData);
         setStats({
-          totalUsers: statsData.data.totalUsers,
-          totalEvents: statsData.data.totalEvents,
-          pastEvents: statsData.data.pastEvents
+          totalUsers: statsData.data.totalUsers || 0,
+          totalRaces: statsData.data.totalRaces || 0,
+          activeRaces: statsData.data.activeRaces || 0,
+          completedRaces: statsData.data.completedRaces || 0,
+          newUsersThisMonth: statsData.data.newUsersThisMonth || 0
         });
       } else {
         console.error('DEBUG: Stats response error:', await statsResponse.text());
@@ -96,29 +91,17 @@ export default function AdminDashboard() {
         setUsers([]); // S'assurer que c'est vide en cas d'erreur
       }
 
-      // Récupérer les événements
-      const eventsResponse = await fetch(`${apiUrl}/api/admin/events`, { headers });
-      console.log('DEBUG: Events response status:', eventsResponse.status);
-      if (eventsResponse.ok) {
-        const eventsData = await eventsResponse.json();
-        console.log('DEBUG: Events data:', eventsData);
-        setUpcomingEvents(eventsData.data.upcoming);
-        setPastEvents(eventsData.data.past);
-      } else {
-        console.error('DEBUG: Events response error:', await eventsResponse.text());
-      }
-
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
       // Garder les données par défaut en cas d'erreur
       setStats({
         totalUsers: 0,
-        totalEvents: 0,
-        pastEvents: 0
+        totalRaces: 0,
+        activeRaces: 0,
+        completedRaces: 0,
+        newUsersThisMonth: 0
       });
       setUsers([]);
-      setUpcomingEvents([]);
-      setPastEvents([]);
     } finally {
       setLoading(false);
     }
@@ -191,7 +174,7 @@ export default function AdminDashboard() {
           ) : (
             <div className="space-y-8">
               {/* Statistiques principales */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-blue-500 transition-colors">
                   <div className="flex items-center">
                     <div className="p-3 bg-blue-600 rounded-lg">
@@ -207,11 +190,11 @@ export default function AdminDashboard() {
                 <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-purple-500 transition-colors">
                   <div className="flex items-center">
                     <div className="p-3 bg-purple-600 rounded-lg">
-                      <span className="text-white text-xl">📅</span>
+                      <span className="text-white text-xl">🏁</span>
                     </div>
                     <div className="ml-4">
-                      <p className="text-gray-400 text-sm">Événements à venir</p>
-                      <p className="text-white text-2xl font-bold">{stats.totalEvents.toLocaleString()}</p>
+                      <p className="text-gray-400 text-sm">Races actives</p>
+                      <p className="text-white text-2xl font-bold">{stats.activeRaces.toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
@@ -219,11 +202,23 @@ export default function AdminDashboard() {
                 <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-orange-500 transition-colors">
                   <div className="flex items-center">
                     <div className="p-3 bg-orange-600 rounded-lg">
-                      <span className="text-white text-xl">📚</span>
+                      <span className="text-white text-xl">🏆</span>
                     </div>
                     <div className="ml-4">
-                      <p className="text-gray-400 text-sm">Événements passés</p>
-                      <p className="text-white text-2xl font-bold">{stats.pastEvents.toLocaleString()}</p>
+                      <p className="text-gray-400 text-sm">Races terminées</p>
+                      <p className="text-white text-2xl font-bold">{stats.completedRaces.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-green-500 transition-colors">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-green-600 rounded-lg">
+                      <span className="text-white text-xl">📈</span>
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-gray-400 text-sm">Nouveaux ce mois</p>
+                      <p className="text-white text-2xl font-bold">{stats.newUsersThisMonth.toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
@@ -310,140 +305,6 @@ export default function AdminDashboard() {
                                   : 'bg-red-100 text-red-800'
                               }`}>
                                 {user.isActive ? 'Actif' : 'Inactif'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              </div>
-
-              {/* Événements à venir */}
-              <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
-                <div className="p-6 border-b border-gray-700">
-                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <span className="text-purple-400">📅</span>
-                    Événements en ligne à venir
-                  </h2>
-                </div>
-                
-                <div className="overflow-x-auto">
-                  {upcomingEvents.length === 0 ? (
-                    <div className="px-6 py-8 text-center">
-                      <p className="text-gray-400 text-lg">Aucun événement à venir</p>
-                      <p className="text-gray-500 text-sm mt-2">Les événements en ligne créés par les utilisateurs apparaîtront ici</p>
-                    </div>
-                  ) : (
-                    <table className="min-w-full">
-                      <thead className="bg-gray-700">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Nom de l'événement
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Créé par
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Date début
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Date fin
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-700">
-                        {upcomingEvents.map((event) => (
-                          <tr key={event.id} className="hover:bg-gray-750">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-white">
-                                {event.name}
-                              </div>
-                              <div className="text-xs text-gray-400">
-                                {event.description}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-300">
-                                {event.createdBy}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                              {formatDate(event.startDate)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                              {formatDate(event.endDate)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              </div>
-
-              {/* Historique des événements passés */}
-              <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
-                <div className="p-6 border-b border-gray-700">
-                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <span className="text-orange-400">📚</span>
-                    Historique des événements passés
-                  </h2>
-                </div>
-                
-                <div className="overflow-x-auto">
-                  {pastEvents.length === 0 ? (
-                    <div className="px-6 py-8 text-center">
-                      <p className="text-gray-400 text-lg">Aucun événement dans l'historique</p>
-                      <p className="text-gray-500 text-sm mt-2">Les événements terminés apparaîtront ici automatiquement</p>
-                    </div>
-                  ) : (
-                    <table className="min-w-full">
-                      <thead className="bg-gray-700">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Nom de l'événement
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Créé par
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Date début
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Date fin
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Statut
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-700">
-                        {pastEvents.map((event) => (
-                          <tr key={event.id} className="hover:bg-gray-750">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-white">
-                                {event.name}
-                              </div>
-                              <div className="text-xs text-gray-400">
-                                {event.description}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-300">
-                                {event.createdBy}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                              {formatDate(event.startDate)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                              {formatDate(event.endDate)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                                Terminé
                               </span>
                             </td>
                           </tr>

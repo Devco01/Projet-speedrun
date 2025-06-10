@@ -240,7 +240,7 @@ export default function LeaderboardsPage() {
         } else if (error.message && error.message.includes('timeout')) {
           setError('Délai d\'attente dépassé. Veuillez réessayer.');
         } else {
-          setError(`Impossible de charger le classement pour "${selectedCategory.name}"`);
+        setError(`Impossible de charger le classement pour "${selectedCategory.name}"`);
         }
       } finally {
         setLoadingLeaderboard(false);
@@ -959,10 +959,10 @@ export default function LeaderboardsPage() {
                     </svg>
                   </button>
                 </div>
-              </div>
-            )}
+            </div>
+          )}
         </div>
       )}
     </div>
   );
-}
+} 
