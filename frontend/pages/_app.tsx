@@ -37,10 +37,50 @@ export default function App({ Component, pageProps }: AppProps) {
   // Charger l'utilisateur depuis le localStorage au démarrage
   useEffect(() => {
     const utilisateurSauvegarde = localStorage.getItem('utilisateurSpeedrun');
-    if (utilisateurSauvegarde) {
+    const token = localStorage.getItem('authToken');
+    
+    if (utilisateurSauvegarde && token) {
       const utilisateur = JSON.parse(utilisateurSauvegarde);
       setUtilisateurActuel(utilisateur);
       setEstAuthentifie(true);
+      
+      // Vérifier le profil avec l'API pour synchroniser l'avatar
+      const verifierProfil = async () => {
+        try {
+          const response = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '')}/api/auth/profile`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.data) {
+              // Mettre à jour avec les données fraîches de l'API (notamment l'avatar)
+              const utilisateurMisAJour: Utilisateur = {
+                id: data.data.id,
+                nomUtilisateur: data.data.username,
+                email: data.data.email,
+                imageProfile: data.data.profileImage
+              };
+              
+              console.log('🔄 Synchronisation avatar depuis l\'API:', {
+                hasAvatar: !!data.data.profileImage,
+                avatarChanged: utilisateur.imageProfile !== data.data.profileImage
+              });
+              
+              setUtilisateurActuel(utilisateurMisAJour);
+              localStorage.setItem('utilisateurSpeedrun', JSON.stringify(utilisateurMisAJour));
+            }
+          }
+        } catch (error) {
+          console.log('⚠️ Impossible de synchroniser le profil (mode offline):', error);
+          // En cas d'erreur API, on garde les données locales
+        }
+      };
+      
+      verifierProfil();
     }
   }, []);
 
