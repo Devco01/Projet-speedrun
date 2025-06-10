@@ -18,6 +18,7 @@ model User {
   password      String
   profileImage  String?
   bio           String?
+  role          String    @default("user") // "user" ou "admin"
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   runs          Run[]

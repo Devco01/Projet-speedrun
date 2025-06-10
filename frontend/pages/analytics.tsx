@@ -75,30 +75,50 @@ export default function AnalyticsPage() {
 
   const checkAdminAccess = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        router.push('/login');
+      // Vérifier d'abord si l'utilisateur est connecté comme admin
+      const adminToken = localStorage.getItem('adminToken');
+      const authToken = localStorage.getItem('authToken');
+      
+      if (!adminToken && !authToken) {
+        router.push('/admin/login');
         return;
       }
 
-      // Appel à l'API pour vérifier le statut admin
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/dashboard`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
+      // Si on a un adminToken, on est admin par définition
+      if (adminToken) {
+        console.log('✅ Accès admin autorisé via adminToken');
         setIsAdmin(true);
-      } else {
-        // Pas autorisé - rediriger vers l'accueil
-        setError('Accès non autorisé. Cette page est réservée aux administrateurs.');
-        setTimeout(() => {
-          router.push('/');
-        }, 3000);
+        return;
+      }
+
+      // Sinon, vérifier avec authToken normal (tous les users connectés sont admin pour l'instant)
+      if (authToken) {
+        console.log('🔍 Vérification accès admin avec authToken:', authToken.substring(0, 20) + '...');
+
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const response = await fetch(`${apiUrl}/api/admin/dashboard`, {
+          headers: {
+            'Authorization': `Bearer ${authToken}`
+          }
+        });
+
+        console.log('📡 Réponse API admin:', response.status, response.statusText);
+
+        if (response.ok) {
+          console.log('✅ Accès admin autorisé via authToken');
+          setIsAdmin(true);
+        } else {
+          console.log('❌ Accès admin refusé:', response.status);
+          const errorData = await response.json().catch(() => null);
+          const errorMessage = errorData?.message || 'Accès non autorisé. Cette page est réservée aux administrateurs.';
+          setError(errorMessage);
+          setTimeout(() => {
+            router.push('/admin/login');
+          }, 3000);
+        }
       }
     } catch (error) {
-      console.error('Erreur vérification admin:', error);
+      console.error('❌ Erreur vérification admin:', error);
       setError('Erreur de vérification des permissions.');
       setTimeout(() => {
         router.push('/');
@@ -109,8 +129,17 @@ export default function AnalyticsPage() {
   const loadAnalytics = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analytics/dashboard?days=${timeRange}`, {
+      const adminToken = localStorage.getItem('adminToken');
+      const authToken = localStorage.getItem('authToken');
+      const token = adminToken || authToken;
+      
+      if (!token) {
+        setError('Token d\'authentification manquant');
+        return;
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/analytics/dashboard?days=${timeRange}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -132,7 +161,21 @@ export default function AnalyticsPage() {
 
   const loadActivityFeed = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analytics/activity-feed?limit=10`);
+      const adminToken = localStorage.getItem('adminToken');
+      const authToken = localStorage.getItem('authToken');
+      const token = adminToken || authToken;
+      
+      if (!token) {
+        console.error('Token manquant pour le feed activité');
+        return;
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/analytics/activity-feed?limit=10`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       
       if (!response.ok) {
         throw new Error('Erreur feed activité');
@@ -243,6 +286,14 @@ export default function AnalyticsPage() {
             <span className="inline-flex items-center px-3 py-1 text-xs font-medium bg-purple-900/50 text-purple-300 rounded-full border border-purple-700">
               🔐 Accès Administrateur
             </span>
+          </div>
+          
+          {/* Message d'information sur les restrictions d'accès */}
+          <div className="mt-4 p-3 bg-amber-900/30 border border-amber-700/50 rounded-lg max-w-2xl mx-auto">
+            <p className="text-amber-200 text-sm">
+              🔒 <strong>Accès restreint :</strong> Cette page est réservée aux administrateurs uniquement. 
+              Connectez-vous avec le compte admin@speedrun.com pour accéder aux analytics MongoDB.
+            </p>
           </div>
         </div>
 

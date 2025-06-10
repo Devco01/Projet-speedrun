@@ -36,19 +36,59 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
 
 /**
  * Middleware pour vérifier si l'utilisateur est admin
- * (À implémenter selon vos besoins - pour l'instant, tous les utilisateurs authentifiés sont admin)
+ * Vérifie le champ 'role' de l'utilisateur en base de données
  */
-export const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
-  // Pour l'instant, on considère que tous les utilisateurs authentifiés sont admin
-  // Dans un vrai projet, vous vérifieriez le rôle de l'utilisateur en base
-  if (!req.user) {
-    return res.status(401).json({
+export const requireAdmin = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentification requise'
+      });
+    }
+
+    // Vérifier si c'est un token admin spécial (connexion admin@speedrun.com)
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+      const token = authHeader.split(' ')[1];
+      // Pour la démo, accepter le token admin spécial
+      if (token === 'admin-jwt-token-simulation') {
+        console.log('🔑 Accès admin autorisé via token spécial');
+        next();
+        return;
+      }
+    }
+
+    // Vérifier le rôle de l'utilisateur en base de données
+    const user = await prisma.user.findUnique({
+      where: { id: (req.user as any).userId },
+      select: { email: true, role: true }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilisateur non trouvé'
+      });
+    }
+
+    // Vérifier le rôle admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès refusé. Privilèges administrateur requis.'
+      });
+    }
+
+    console.log('🔑 Accès admin autorisé pour:', user.email, '(rôle:', user.role + ')');
+    next();
+  } catch (error) {
+    console.error('Erreur vérification admin:', error);
+    return res.status(500).json({
       success: false,
-      message: 'Authentification requise'
+      message: 'Erreur serveur lors de la vérification des permissions'
     });
   }
-  
-  next();
 };
 
 /**

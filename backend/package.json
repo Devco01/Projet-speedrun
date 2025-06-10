@@ -20,7 +20,7 @@
     "lint:fix": "eslint src --ext .ts --fix"
   },
   "dependencies": {
-    "@prisma/client": "^5.0.0",
+    "@prisma/client": "^5.22.0",
     "@types/axios": "^0.9.36",
     "@types/bcrypt": "^5.0.0",
     "@types/bcryptjs": "^2.4.6",

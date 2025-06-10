@@ -59,8 +59,17 @@ export default function AdminDashboard() {
       const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '');
       console.log('DEBUG: API URL utilisée:', apiUrl);
       
+      const adminToken = localStorage.getItem('adminToken');
+      const authToken = localStorage.getItem('authToken');
+      const token = adminToken || authToken;
+      
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       // Récupérer les statistiques
-      const statsResponse = await fetch(`${apiUrl}/api/admin/stats`);
+      const statsResponse = await fetch(`${apiUrl}/api/admin/stats`, { headers });
       console.log('DEBUG: Stats response status:', statsResponse.status);
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();
@@ -77,7 +86,7 @@ export default function AdminDashboard() {
       // Récupérer les utilisateurs
       const usersUrl = `${apiUrl}/api/admin/users?limit=50`;
       console.log('DEBUG: Tentative de récupération des utilisateurs:', usersUrl);
-      const usersResponse = await fetch(usersUrl);
+      const usersResponse = await fetch(usersUrl, { headers });
       console.log('DEBUG: Users response status:', usersResponse.status);
       if (usersResponse.ok) {
         const usersData = await usersResponse.json();
@@ -89,7 +98,7 @@ export default function AdminDashboard() {
       }
 
       // Récupérer les événements
-      const eventsResponse = await fetch(`${apiUrl}/api/admin/events`);
+      const eventsResponse = await fetch(`${apiUrl}/api/admin/events`, { headers });
       console.log('DEBUG: Events response status:', eventsResponse.status);
       if (eventsResponse.ok) {
         const eventsData = await eventsResponse.json();
