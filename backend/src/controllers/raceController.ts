@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import cleanupService from '../services/cleanupService';
 
 const prisma = new PrismaClient();
 
@@ -498,6 +499,10 @@ class RaceController {
         let newRaceStatus = race.status;
         const allReady = race.participants.every(p => p.status === 'pret');
         const anyInProgress = race.participants.some(p => p.status === 'en-course');
+        const allFinishedOrAbandoned = race.participants.every(p => 
+          p.status === 'termine' || p.status === 'abandon'
+        );
+        const someFinished = race.participants.some(p => p.status === 'termine');
         
         if (allReady && race.participants.length >= 2 && race.status === 'en-attente') {
           newRaceStatus = 'prete';
@@ -510,6 +515,22 @@ class RaceController {
               startTime: new Date()
             }
           });
+        } else if (allFinishedOrAbandoned && someFinished && race.status === 'en-cours') {
+          // La course est terminée - mettre à jour le statut et déclencher le nettoyage
+          newRaceStatus = 'terminee';
+          await prisma.race.update({
+            where: { id: raceId },
+            data: { 
+              status: newRaceStatus,
+              endTime: new Date()
+            }
+          });
+
+          // Déclencher le nettoyage automatique après 1 heure
+          console.log(`🏁 Course terminée: ${race.gameName} - Nettoyage programmé dans 1 heure`);
+          cleanupService.checkAndCleanup().catch(err => 
+            console.error('❌ Erreur nettoyage post-course:', err)
+          );
         }
       }
 

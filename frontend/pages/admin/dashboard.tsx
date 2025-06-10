@@ -11,6 +11,13 @@ interface Stats {
   newUsersThisMonth: number;
 }
 
+interface CleanupStats {
+  totalRaces: number;
+  finishedRaces: number;
+  racesToCleanup: number;
+  oldestFinishedRace?: string;
+}
+
 interface User {
   id: string;
   username: string;
@@ -32,6 +39,12 @@ export default function AdminDashboard() {
     newUsersThisMonth: 0
   });
   const [users, setUsers] = useState<User[]>([]);
+  const [cleanupStats, setCleanupStats] = useState<CleanupStats>({
+    totalRaces: 0,
+    finishedRaces: 0,
+    racesToCleanup: 0
+  });
+  const [cleanupLoading, setCleanupLoading] = useState(false);
 
   useEffect(() => {
     // Vérifier l'authentification admin
@@ -43,6 +56,7 @@ export default function AdminDashboard() {
     
     setIsAuthenticated(true);
     loadRealData();
+    loadCleanupStats();
   }, []);
 
   const loadRealData = async () => {
@@ -107,6 +121,62 @@ export default function AdminDashboard() {
     }
   };
 
+  const loadCleanupStats = async () => {
+    try {
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '');
+      const adminToken = localStorage.getItem('adminToken');
+      const authToken = localStorage.getItem('authToken');
+      const token = adminToken || authToken;
+      
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(`${apiUrl}/api/admin/cleanup/stats`, { headers });
+      if (response.ok) {
+        const data = await response.json();
+        setCleanupStats(data.data);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des stats de nettoyage:', error);
+    }
+  };
+
+  const forceCleanup = async () => {
+    setCleanupLoading(true);
+    try {
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '');
+      const adminToken = localStorage.getItem('adminToken');
+      const authToken = localStorage.getItem('authToken');
+      const token = adminToken || authToken;
+      
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(`${apiUrl}/api/admin/cleanup`, {
+        method: 'POST',
+        headers
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        alert(`Nettoyage terminé: ${data.data.deletedCount} course(s) supprimée(s)`);
+        loadCleanupStats(); // Recharger les stats
+        loadRealData(); // Recharger les données générales
+      } else {
+        alert('Erreur lors du nettoyage');
+      }
+    } catch (error) {
+      console.error('Erreur lors du nettoyage forcé:', error);
+      alert('Erreur lors du nettoyage');
+    } finally {
+      setCleanupLoading(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('fr-FR', {
       day: '2-digit',
@@ -164,6 +234,14 @@ export default function AdminDashboard() {
               <button className="group bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-green-500/25 border border-green-500/20">
                 Exporter Données
               </button>
+              
+              <button 
+                onClick={forceCleanup}
+                disabled={cleanupLoading}
+                className="group bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-orange-500/25 border border-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {cleanupLoading ? '🧹 Nettoyage...' : '🧹 Nettoyer courses terminées'}
+              </button>
             </div>
           </div>
 
@@ -174,7 +252,7 @@ export default function AdminDashboard() {
           ) : (
             <div className="space-y-8">
               {/* Statistiques principales */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
                 <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-blue-500 transition-colors">
                   <div className="flex items-center">
                     <div className="p-3 bg-blue-600 rounded-lg">
@@ -195,6 +273,18 @@ export default function AdminDashboard() {
                     <div className="ml-4">
                       <p className="text-gray-400 text-sm">Races actives</p>
                       <p className="text-white text-2xl font-bold">{stats.activeRaces.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-orange-500 transition-colors">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-orange-600 rounded-lg">
+                      <span className="text-white text-xl">🧹</span>
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-gray-400 text-sm">Courses à nettoyer</p>
+                      <p className="text-white text-2xl font-bold">{cleanupStats.racesToCleanup.toLocaleString()}</p>
                     </div>
                   </div>
                 </div>

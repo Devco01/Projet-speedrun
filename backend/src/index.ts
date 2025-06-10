@@ -19,6 +19,7 @@ import analyticsRoutes from './routes/analyticsRoutes';
 // Services
 import mongoService from './services/mongoService';
 import analyticsService from './services/analyticsService';
+import cleanupService from './services/cleanupService';
 
 // Configuration
 dotenv.config();
@@ -212,8 +213,16 @@ async function initializeServices() {
     // Synchroniser les données existantes de PostgreSQL vers MongoDB
     await analyticsService.syncExistingData();
     console.log('📊 Analytics initialisé avec vraies données');
+    
+    // Démarrer le service de nettoyage automatique (compatible Vercel)
+    cleanupService.start();
+    console.log('🧹 Service de nettoyage démarré (déclenché par requêtes)');
   } catch (error) {
     console.log('⚠️ MongoDB non disponible - mode dégradé');
+    
+    // Démarrer quand même le nettoyage (compatible Vercel, fonctionne avec PostgreSQL)
+    cleanupService.start();
+    console.log('🧹 Service de nettoyage démarré (mode dégradé, déclenché par requêtes)');
   }
 }
 
