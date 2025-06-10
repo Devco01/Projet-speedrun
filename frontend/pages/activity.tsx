@@ -207,26 +207,26 @@ export default function ActivityPage() {
             <p className="text-slate-300">Chargement des jeux actifs...</p>
           </div>
         ) : recentActiveGames.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4">
             {recentActiveGames.map((game) => (
               <Link key={game.id} href={`/leaderboards?game=${game.id}`}>
                 <div className="group cursor-pointer rounded-lg border-2 border-slate-700 hover:border-green-400 bg-slate-800/50 transition-all duration-200 hover:scale-105">
-                  <div className="p-3">
+                  <div className="p-2 sm:p-3">
                     {game.coverImage ? (
                       <img
                         src={game.coverImage}
                         alt={game.name}
-                        className="w-full h-20 object-cover rounded-lg mb-2"
+                        className="w-full h-16 sm:h-20 object-cover rounded-lg mb-2"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
                         }}
                       />
                     ) : (
-                      <div className="w-full h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg mb-2 flex items-center justify-center">
-                        <span className="text-white text-2xl">🎮</span>
+                      <div className="w-full h-16 sm:h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg mb-2 flex items-center justify-center">
+                        <span className="text-white text-xl sm:text-2xl">🎮</span>
                       </div>
                     )}
-                    <h3 className="font-semibold text-white text-sm group-hover:text-green-300 transition-colors truncate">
+                    <h3 className="font-semibold text-white text-xs sm:text-sm group-hover:text-green-300 transition-colors truncate leading-tight">
                       {game.name}
                     </h3>
                   </div>
@@ -260,10 +260,10 @@ export default function ActivityPage() {
             {recentRuns.map((run, index) => (
               <div
                 key={run.id}
-                className="flex items-center p-4 bg-slate-800/30 rounded-lg border border-slate-700 hover:bg-slate-800/50 transition-colors"
+                className="flex items-start sm:items-center p-3 sm:p-4 bg-slate-800/30 rounded-lg border border-slate-700 hover:bg-slate-800/50 transition-colors"
               >
                 {/* Jeu */}
-                <div className="flex-shrink-0 w-12 h-12 mr-4">
+                <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 mr-3 sm:mr-4">
                   {run.gameDetails?.coverImage ? (
                     <img
                       src={run.gameDetails.coverImage}
@@ -275,31 +275,44 @@ export default function ActivityPage() {
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
-                      <span className="text-white text-sm">🎮</span>
+                      <span className="text-white text-xs sm:text-sm">🎮</span>
                     </div>
                   )}
                 </div>
 
                 {/* Informations du run */}
                 <div className="flex-grow min-w-0">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <h3 className="font-semibold text-white truncate">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 mb-1">
+                    <h3 className="font-semibold text-white text-sm sm:text-base truncate">
                       {run.gameDetails?.name || 'Jeu inconnu'}
                     </h3>
-                    <span className="text-slate-400">•</span>
-                    <span className="text-green-400 font-mono font-bold">
+                    <span className="hidden sm:inline text-slate-400">•</span>
+                    <span className="text-green-400 font-mono font-bold text-sm sm:text-base">
                       {formatTime(run.time)}
                     </span>
                   </div>
-                  <div className="flex items-center space-x-4 text-sm text-slate-400">
-                    <span>👤 {getPlayerName(run)}</span>
-                    <span>🏆 {run.category.name}</span>
-                    <span>📅 {formatDate(run.submittedAt)}</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-1 sm:space-y-0 text-xs sm:text-sm text-slate-400">
+                    <span className="flex items-center">
+                      <span className="mr-1">👤</span>
+                      <span className="truncate">{getPlayerName(run)}</span>
+                    </span>
+                    <span className="flex items-center">
+                      <span className="mr-1">🏆</span>
+                      <span className="truncate">{run.category.name}</span>
+                    </span>
+                    <span className="hidden sm:flex items-center">
+                      <span className="mr-1">📅</span>
+                      <span>{formatDate(run.submittedAt)}</span>
+                    </span>
                     {run.isVerified && (
-                      <span className="px-2 py-1 bg-green-900/50 text-green-300 rounded-full text-xs">
-                        ✅ Vérifié
+                      <span className="px-2 py-1 bg-green-900/50 text-green-300 rounded-full text-xs inline-flex items-center w-fit">
+                        <span className="mr-1">✅</span>
+                        <span className="hidden sm:inline">Vérifié</span>
                       </span>
                     )}
+                  </div>
+                  <div className="sm:hidden mt-2 text-xs text-slate-500">
+                    📅 {formatDate(run.submittedAt)}
                   </div>
                 </div>
               </div>

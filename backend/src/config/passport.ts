@@ -23,7 +23,16 @@ passport.use(new GoogleStrategy({
     });
 
     if (user) {
-      // Utilisateur existant, générer un token JWT
+      // Utilisateur existant, mettre à jour l'avatar Google s'il a changé
+      const googleAvatar = profile.photos?.[0]?.value;
+      if (googleAvatar && user.profileImage !== googleAvatar) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { profileImage: googleAvatar }
+        });
+      }
+      
+      // Générer un token JWT
       const token = jwt.sign(
         { userId: user.id, username: user.username },
         JWT_SECRET,

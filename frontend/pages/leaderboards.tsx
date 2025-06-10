@@ -265,16 +265,14 @@ export default function LeaderboardsPage() {
         
         // S'assurer que results est un tableau
         if (Array.isArray(results)) {
-          // Améliorer l'algorithme de tri pour prioriser les jeux principaux
+          // Algorithme de tri avancé - Priorité aux jeux officiels, ROM hacks seulement si nom complet
           const sortedResults = results.sort((a, b) => {
             const queryLower = searchQuery.toLowerCase().trim();
             const aName = a.name.toLowerCase();
             const bName = b.name.toLowerCase();
             
-            // Approche simplifiée mais plus efficace
-            
-            // 1. Jeux officiels explicites (priorité absolue)
-            const officialTitles = {
+            // 1. Jeux iconiques officiels par franchise (priorité absolue)
+            const iconicTitles = {
               'zelda': [
                 'the legend of zelda: ocarina of time',
                 'the legend of zelda: majora\'s mask', 
@@ -282,22 +280,10 @@ export default function LeaderboardsPage() {
                 'the legend of zelda: tears of the kingdom',
                 'the legend of zelda: twilight princess',
                 'the legend of zelda: wind waker',
-                'the legend of zelda: skyward sword',
                 'the legend of zelda: a link to the past',
                 'the legend of zelda: link\'s awakening',
-                'the legend of zelda: a link between worlds',
-                'the legend of zelda: tri force heroes',
-                'the legend of zelda: spirit tracks',
-                'the legend of zelda: phantom hourglass',
-                'the legend of zelda: minish cap',
-                'the legend of zelda: four swords adventures',
-                'the legend of zelda: oracle of seasons',
-                'the legend of zelda: oracle of ages',
-                'zelda ii: the adventure of link',
-                'zelda ii: adventure of link',
                 'the legend of zelda',
-                'zelda (game & watch)',
-                'zelda classic'
+                'zelda ii: the adventure of link'
               ],
               'mario': [
                 'super mario 64',
@@ -306,49 +292,24 @@ export default function LeaderboardsPage() {
                 'super mario bros.',
                 'super mario sunshine',
                 'super mario galaxy',
-                'super mario galaxy 2',
-                'mario kart 64',
-                'mario kart 8',
-                'mario kart: double dash',
                 'super mario bros. 3',
-                'super mario bros. 2',
-                'super mario land',
-                'super mario land 2',
-                'super mario 3d world',
-                'super mario 3d land',
-                'new super mario bros.',
-                'mario party',
-                'paper mario',
-                'mario & luigi'
+                'mario kart 64',
+                'paper mario'
               ],
               'sonic': [
                 'sonic the hedgehog',
                 'sonic the hedgehog 2',
                 'sonic the hedgehog 3',
                 'sonic & knuckles',
-                'sonic 3 & knuckles',
-                'sonic cd',
                 'sonic adventure',
                 'sonic adventure 2',
-                'sonic heroes',
-                'sonic generations',
-                'sonic forces',
-                'sonic frontiers',
-                'sonic mania',
-                'sonic colors'
+                'sonic mania'
               ],
               'metroid': [
                 'super metroid',
-                'metroid',
-                'metroid ii',
                 'metroid prime',
-                'metroid prime 2',
-                'metroid prime 3',
                 'metroid fusion',
-                'metroid zero mission',
-                'metroid: other m',
-                'metroid dread',
-                'metroid: samus returns'
+                'metroid dread'
               ],
               'pokemon': [
                 'pokemon red',
@@ -356,9 +317,64 @@ export default function LeaderboardsPage() {
                 'pokemon yellow',
                 'pokemon gold',
                 'pokemon silver',
-                'pokemon crystal',
                 'pokemon ruby',
-                'pokemon sapphire',
+                'pokemon sapphire'
+              ]
+            };
+            
+            // 2. Tous les jeux officiels (deuxième priorité)
+            const allOfficialTitles = {
+              'zelda': [
+                ...iconicTitles.zelda,
+                'the legend of zelda: skyward sword',
+                'the legend of zelda: a link between worlds',
+                'the legend of zelda: tri force heroes',
+                'the legend of zelda: spirit tracks',
+                'the legend of zelda: phantom hourglass',
+                'the legend of zelda: minish cap',
+                'the legend of zelda: four swords adventures',
+                'the legend of zelda: oracle of seasons',
+                'the legend of zelda: oracle of ages',
+                'zelda (game & watch)',
+                'zelda classic'
+              ],
+              'mario': [
+                ...iconicTitles.mario,
+                'super mario galaxy 2',
+                'mario kart 8',
+                'mario kart: double dash',
+                'super mario bros. 2',
+                'super mario land',
+                'super mario land 2',
+                'super mario 3d world',
+                'super mario 3d land',
+                'new super mario bros.',
+                'mario party',
+                'mario & luigi'
+              ],
+              'sonic': [
+                ...iconicTitles.sonic,
+                'sonic 3 & knuckles',
+                'sonic cd',
+                'sonic heroes',
+                'sonic generations',
+                'sonic forces',
+                'sonic frontiers',
+                'sonic colors'
+              ],
+              'metroid': [
+                ...iconicTitles.metroid,
+                'metroid',
+                'metroid ii',
+                'metroid prime 2',
+                'metroid prime 3',
+                'metroid zero mission',
+                'metroid: other m',
+                'metroid: samus returns'
+              ],
+              'pokemon': [
+                ...iconicTitles.pokemon,
+                'pokemon crystal',
                 'pokemon emerald',
                 'pokemon diamond',
                 'pokemon pearl',
@@ -367,134 +383,107 @@ export default function LeaderboardsPage() {
                 'pokemon white',
                 'pokemon black 2',
                 'pokemon white 2'
-              ],
-              'final fantasy': [
-                'final fantasy',
-                'final fantasy ii',
-                'final fantasy iii',
-                'final fantasy iv',
-                'final fantasy v',
-                'final fantasy vi',
-                'final fantasy vii',
-                'final fantasy viii',
-                'final fantasy ix',
-                'final fantasy x',
-                'final fantasy xii',
-                'final fantasy xiii',
-                'final fantasy xv'
-              ],
-              'crash': [
-                'crash bandicoot',
-                'crash bandicoot 2',
-                'crash bandicoot 3',
-                'crash team racing',
-                'crash bash',
-                'crash twinsanity',
-                'crash of the titans'
-              ],
-              'spyro': [
-                'spyro the dragon',
-                'spyro 2',
-                'spyro 3',
-                'spyro: year of the dragon',
-                'spyro: ripto\'s rage',
-                'spyro: gateway to glimmer'
               ]
             };
             
-            // 2. Mots qui indiquent clairement un ROM hack (toutes franchises)
-            const definiteHackWords = [
-              // Mots génériques
+            // 3. ROM hacks - Liste exhaustive pour filtrage strict
+            const knownHacks = [
+              // Zelda hacks
+              'parallel worlds', 'goddess of wisdom', 'missing link', 
+              'time to triumph', 'dawn & dusk', 'return of ganon', 'outlands',
+              'ancient stone tablets', 'bs zelda', 'master quest',
+              
+              // Mario hacks
+              'star road', 'last impact', 'sunshine 64', 'peach\'s fury',
+              'mario 64 chaos edition', 'mario builder', 'mario forever',
+              
+              // Sonic hacks
+              'sonic 2 xl', 'sonic classic heroes', 'sonic megamix',
+              'sonic 3 complete', 'sonic the hedgehog 2 nick arcade',
+              
+              // Pokemon hacks
+              'pokemon uranium', 'pokemon prism', 'pokemon dark rising',
+              'pokemon glazed', 'pokemon light platinum', 'pokemon flora sky'
+            ];
+            
+            // 4. Mots indicateurs de hacks (pour détection générale)
+            const hackIndicators = [
               'hack', 'mod', 'randomizer', 'kaizo', 'romhack', 'rom hack', 'custom',
               'fan made', 'fanmade', 'homebrew', 'beta', 'demo', 'challenge',
               'difficulty', 'editor', 'maker', 'creator', 'remix', 'remaster',
               'enhanced', 'redux', 'tribute', 'fan game', 'fangame', 'bootleg',
-              
-              // Hacks Zelda spécifiques
-              'master quest', 'parallel worlds', 'goddess', 'missing link', 
-              'time to triumph', 'dawn & dusk', 'return of ganon', 'outlands', 
-              'ancient stone tablets', 'bs zelda',
-              
-              // Hacks Mario spécifiques  
-              'star road', 'last impact', 'sunshine 64', 'peach\'s fury',
-              'mario 64 chaos edition', 'mario builder', 'mario forever',
-              
-              // Hacks Sonic spécifiques
-              'sonic 2 xl', 'sonic classic heroes', 'sonic megamix', 
-              'sonic the hedgehog 2 nick arcade', 'sonic 3 complete',
-              
-              // Hacks Pokemon spécifiques
-              'pokemon uranium', 'pokemon prism', 'pokemon dark rising',
-              'pokemon glazed', 'pokemon light platinum', 'pokemon flora sky',
-              
-              // Termes techniques/communauté
               'tas', 'tool assisted', 'speedhack', 'practice', 'training'
             ];
             
-            // Détection des jeux officiels (toutes franchises)
+            // Détection des catégories
+            let aIsIconic = false;
+            let bIsIconic = false;
             let aIsOfficial = false;
             let bIsOfficial = false;
+            let aIsHack = false;
+            let bIsHack = false;
             
-            // Chercher dans toutes les franchises qui correspondent à la requête
-            for (const [franchise, titles] of Object.entries(officialTitles)) {
-              if (queryLower.includes(franchise) || 
-                  franchise.includes(queryLower) ||
-                  titles.some(title => title.toLowerCase().includes(queryLower))) {
+            // Détecter la franchise de la requête
+            for (const [franchise, titles] of Object.entries(iconicTitles)) {
+              if (queryLower.includes(franchise) && queryLower.length <= franchise.length + 3) {
+                // Requête simple de franchise (ex: "zelda", "mario")
                 
-                // Correspondance pour le jeu A
-                const aMatchesThisFranchise = titles.some(title => {
-                  const cleanTitle = title.replace(/[:\-\.']/g, ' ').toLowerCase().trim();
-                  const cleanAName = aName.replace(/[:\-\.']/g, ' ').toLowerCase().trim();
-                  return cleanAName === cleanTitle || 
-                         cleanAName.includes(cleanTitle) || 
-                         cleanTitle.includes(cleanAName) ||
-                         aName === title ||
-                         aName.includes(title);
-                });
+                // Jeux iconiques
+                aIsIconic = titles.some(title => aName === title || aName.includes(title));
+                bIsIconic = titles.some(title => bName === title || bName.includes(title));
                 
-                // Correspondance pour le jeu B
-                const bMatchesThisFranchise = titles.some(title => {
-                  const cleanTitle = title.replace(/[:\-\.']/g, ' ').toLowerCase().trim();
-                  const cleanBName = bName.replace(/[:\-\.']/g, ' ').toLowerCase().trim();
-                  return cleanBName === cleanTitle || 
-                         cleanBName.includes(cleanTitle) || 
-                         cleanTitle.includes(cleanBName) ||
-                         bName === title ||
-                         bName.includes(title);
-                });
+                                 // Tous les jeux officiels
+                 const allTitles = allOfficialTitles[franchise as keyof typeof allOfficialTitles] || [];
+                 aIsOfficial = allTitles.some((title: string) => aName === title || aName.includes(title));
+                 bIsOfficial = allTitles.some((title: string) => bName === title || bName.includes(title));
                 
-                if (aMatchesThisFranchise) aIsOfficial = true;
-                if (bMatchesThisFranchise) bIsOfficial = true;
+                break;
               }
             }
             
-            // Détection des ROM hacks
-            const aIsHack = definiteHackWords.some(word => aName.includes(word));
-            const bIsHack = definiteHackWords.some(word => bName.includes(word));
+            // Détection des ROM hacks - STRICTE
+            // Seulement si le nom du hack est tapé en entier OU contient des mots indicateurs
+            const queryIsSpecificHack = knownHacks.some(hack => 
+              queryLower.includes(hack) && queryLower.length >= hack.length - 2
+            );
             
-            // Logique de tri simple mais efficace
+            if (!queryIsSpecificHack) {
+              // Si l'utilisateur ne cherche pas spécifiquement un hack, on les filtre
+              aIsHack = knownHacks.some(hack => aName.includes(hack)) || 
+                        hackIndicators.some(indicator => aName.includes(indicator));
+              bIsHack = knownHacks.some(hack => bName.includes(hack)) || 
+                        hackIndicators.some(indicator => bName.includes(indicator));
+            }
             
-            // Priorité 1: Jeux officiels d'abord
+            // Logique de tri par priorité
+            
+            // Priorité 1: Jeux iconiques (pour requêtes simples comme "zelda")
+            if (aIsIconic && !bIsIconic) return -1;
+            if (!aIsIconic && bIsIconic) return 1;
+            
+            // Priorité 2: Jeux officiels
             if (aIsOfficial && !bIsOfficial) return -1;
             if (!aIsOfficial && bIsOfficial) return 1;
             
-            // Priorité 2: Éviter les ROM hacks
-            if (!aIsHack && bIsHack) return -1;
-            if (aIsHack && !bIsHack) return 1;
+            // Priorité 3: Filtrer les ROM hacks (sauf si recherche spécifique)
+            if (!queryIsSpecificHack) {
+              if (!aIsHack && bIsHack) return -1;
+              if (aIsHack && !bIsHack) return 1;
+            }
             
-            // Priorité 3: Match exact
+            // Priorité 4: Match exact
             if (aName === queryLower && bName !== queryLower) return -1;
             if (bName === queryLower && aName !== queryLower) return 1;
             
-            // Priorité 4: Commence par la requête
+            // Priorité 5: Commence par la requête
             const aStarts = aName.startsWith(queryLower);
             const bStarts = bName.startsWith(queryLower);
             if (aStarts && !bStarts) return -1;
             if (bStarts && !aStarts) return 1;
             
-            // Priorité 5: Plus court = plus officiel généralement
+            // Priorité 6: Plus court = probablement plus officiel
             const lengthDiff = aName.length - bName.length;
-            if (Math.abs(lengthDiff) > 20) return lengthDiff;
+            if (Math.abs(lengthDiff) > 15) return lengthDiff;
             
             // Par défaut: ordre alphabétique
             return aName.localeCompare(bName);
@@ -927,33 +916,33 @@ export default function LeaderboardsPage() {
             </div>
           )}
           
-                      {/* Contrôles de pagination du bas */}
+                      {/* Contrôles de pagination du bas - Optimisé mobile */}
             {totalPages > 1 && (
-              <div className="flex justify-center items-center mt-8 p-6">
-                <div className="flex items-center space-x-4 bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-4 shadow-xl">
+              <div className="flex justify-center items-center mt-8 p-3 sm:p-6">
+                <div className="flex items-center space-x-2 sm:space-x-4 bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-2 sm:p-4 shadow-xl w-full max-w-md sm:max-w-none">
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
-                    className="group flex items-center px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-600 disabled:opacity-50 text-white font-semibold rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg disabled:hover:scale-100"
+                    className="group flex items-center px-3 py-2 sm:px-6 sm:py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-600 disabled:opacity-50 text-white font-semibold rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg disabled:hover:scale-100 text-sm sm:text-base flex-1 sm:flex-none justify-center"
                   >
-                    <svg className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 sm:mr-2 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
-                    Précédent
+                    <span className="hidden sm:inline">Précédent</span>
                   </button>
                   
-                  <div className="flex items-center space-x-3 px-4">
-                    <div className="text-slate-300 font-medium">
+                  <div className="flex items-center space-x-1 sm:space-x-3 px-2 sm:px-4">
+                    <div className="text-slate-300 font-medium text-sm sm:text-base hidden sm:block">
                       Page
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="px-4 py-2 bg-gradient-to-r from-violet-500 to-purple-500 text-white font-bold rounded-lg shadow-md">
+                    <div className="flex items-center space-x-1 sm:space-x-2">
+                      <span className="px-2 py-1 sm:px-4 sm:py-2 bg-gradient-to-r from-violet-500 to-purple-500 text-white font-bold rounded-lg shadow-md text-sm sm:text-base">
                         {currentPage}
                       </span>
-                      <span className="text-slate-400">
+                      <span className="text-slate-400 text-sm sm:text-base">
                         /
                       </span>
-                      <span className="px-4 py-2 bg-slate-700 text-slate-300 font-medium rounded-lg">
+                      <span className="px-2 py-1 sm:px-4 sm:py-2 bg-slate-700 text-slate-300 font-medium rounded-lg text-sm sm:text-base">
                         {totalPages}
                       </span>
                     </div>
@@ -962,10 +951,10 @@ export default function LeaderboardsPage() {
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages}
-                    className="group flex items-center px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-600 disabled:opacity-50 text-white font-semibold rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg disabled:hover:scale-100"
+                    className="group flex items-center px-3 py-2 sm:px-6 sm:py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-600 disabled:opacity-50 text-white font-semibold rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg disabled:hover:scale-100 text-sm sm:text-base flex-1 sm:flex-none justify-center"
                   >
-                    Suivant
-                    <svg className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <span className="hidden sm:inline">Suivant</span>
+                    <svg className="w-4 h-4 sm:ml-2 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
@@ -976,4 +965,4 @@ export default function LeaderboardsPage() {
       )}
     </div>
   );
-} 
+}

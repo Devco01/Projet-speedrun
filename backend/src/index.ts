@@ -16,6 +16,7 @@ import leaderboardRoutes from './routes/leaderboardRoutes';
 import speedrunRoutes from './routes/speedrunRoutes';
 import avatarRoutes from './routes/avatarRoutes';
 import adminRoutes from './routes/adminRoutes';
+import analyticsRoutes from './routes/analyticsRoutes';
 
 // Services
 import mongoService from './services/mongoService';
@@ -64,6 +65,7 @@ app.use('/api/leaderboards', leaderboardRoutes);
 app.use('/api/speedrun', speedrunRoutes);
 app.use('/api/avatars', avatarRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Route de test
 app.get('/', (req, res) => {
