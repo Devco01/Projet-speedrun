@@ -35,13 +35,11 @@ export default function App({ Component, pageProps }: AppProps) {
   const [utilisateurActuel, setUtilisateurActuel] = useState<Utilisateur | null>(null);
   const [estAuthentifie, setEstAuthentifie] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
-  // Protection contre l'hydratation
-  const [estMonte, setEstMonte] = useState(false);
-
-  // Charger l'utilisateur depuis le localStorage au démarrage
+  // Marquer comme client et charger les données
   useEffect(() => {
-    setEstMonte(true); // Marquer comme monté
+    setIsClient(true);
     
     const utilisateurSauvegarde = localStorage.getItem('utilisateurSpeedrun');
     const token = localStorage.getItem('authToken');
@@ -194,7 +192,13 @@ export default function App({ Component, pageProps }: AppProps) {
                 
                 {/* Zone d'authentification desktop */}
                 <div className="flex items-center space-x-4 ml-8">
-                  {estAuthentifie && utilisateurActuel ? (
+                  {!isClient ? (
+                    // Rendu initial stable pour éviter l'hydratation
+                    <>
+                      <div className="w-20 h-8 bg-slate-700/30 rounded-xl"></div>
+                      <div className="w-20 h-8 bg-slate-700/30 rounded-xl"></div>
+                    </>
+                  ) : estAuthentifie && utilisateurActuel ? (
                     <>
                       {/* Bouton Profil */}
                       <Link 
@@ -326,7 +330,13 @@ export default function App({ Component, pageProps }: AppProps) {
               
               {/* Authentification mobile */}
               <div className="pt-4 border-t border-slate-600 space-y-3">
-                {estAuthentifie && utilisateurActuel ? (
+                {!isClient ? (
+                  // Rendu initial stable pour mobile
+                  <div className="space-y-3">
+                    <div className="w-full h-12 bg-slate-700/30 rounded-lg"></div>
+                    <div className="w-full h-12 bg-slate-700/30 rounded-lg"></div>
+                  </div>
+                ) : estAuthentifie && utilisateurActuel ? (
                   <>
                     <Link 
                       href="/profile" 
