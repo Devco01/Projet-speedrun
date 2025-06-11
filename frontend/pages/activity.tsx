@@ -189,7 +189,7 @@ export default function ActivityPage() {
       <div className="text-center">
         <h1 className="text-4xl font-bold mb-4">
           <span className="bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 bg-clip-text text-transparent">
-            ⚡ Activité Récente
+            Activité Récente
           </span>
         </h1>
         <p className="text-slate-300 text-lg">
