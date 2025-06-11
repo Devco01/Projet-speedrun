@@ -3,6 +3,7 @@ import Link from 'next/link'
 import Head from 'next/head'
 import { useState, useEffect, createContext, useContext } from 'react'
 import ErrorBoundary from '../components/ErrorBoundary'
+import ClientOnly from '../components/ClientOnly'
 import '../styles/globals.css'
 
 // Types pour l'authentification globale
@@ -187,58 +188,65 @@ export default function App({ Component, pageProps }: AppProps) {
                   Support
                 </Link>
                 
-                {/* Zone d'authentification desktop */}
-                <div className="flex items-center space-x-4 ml-8">
-                  {estAuthentifie && utilisateurActuel ? (
-                    <>
-                      {/* Bouton Profil */}
-                      <Link 
-                        href="/profile"
-                        className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded font-medium text-sm transition-colors"
-                      >
-                        Profil
-                      </Link>
-                      
-                      {/* Informations utilisateur */}
-                      <div className="flex items-center space-x-2 bg-slate-800 rounded-lg px-3 py-2">
-                        <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-cyan-500 rounded-full flex items-center justify-center overflow-hidden">
-                          {utilisateurActuel.imageProfile && utilisateurActuel.imageProfile.startsWith('data:') ? (
-                            <img 
-                              src={utilisateurActuel.imageProfile} 
-                              alt="Avatar" 
-                              className="w-full h-full object-cover" 
-                            />
-                          ) : (
-                            <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none">
-                              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor" />
-                            </svg>
-                          )}
+                {/* Zone d'authentification desktop - WRAPPER CLIENT ONLY */}
+                <ClientOnly fallback={
+                  <div className="flex items-center space-x-4 ml-8">
+                    <div className="w-20 h-8 bg-slate-700/30 rounded-xl animate-pulse"></div>
+                    <div className="w-20 h-8 bg-slate-700/30 rounded-xl animate-pulse"></div>
+                  </div>
+                }>
+                  <div className="flex items-center space-x-4 ml-8">
+                    {estAuthentifie && utilisateurActuel ? (
+                      <>
+                        {/* Bouton Profil */}
+                        <Link 
+                          href="/profile"
+                          className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded font-medium text-sm transition-colors"
+                        >
+                          Profil
+                        </Link>
+                        
+                        {/* Informations utilisateur */}
+                        <div className="flex items-center space-x-2 bg-slate-800 rounded-lg px-3 py-2">
+                          <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-cyan-500 rounded-full flex items-center justify-center overflow-hidden">
+                            {utilisateurActuel.imageProfile && utilisateurActuel.imageProfile.startsWith('data:') ? (
+                              <img 
+                                src={utilisateurActuel.imageProfile} 
+                                alt="Avatar" 
+                                className="w-full h-full object-cover" 
+                              />
+                            ) : (
+                              <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none">
+                                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor" />
+                              </svg>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <div className="text-white font-medium text-sm">{utilisateurActuel.nomUtilisateur}</div>
+                            <div className="text-slate-400 text-xs">En ligne</div>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-white font-medium text-sm">{utilisateurActuel.nomUtilisateur}</div>
-                          <div className="text-slate-400 text-xs">En ligne</div>
-                        </div>
-                      </div>
-                      
-                      {/* Bouton déconnexion */}
-                      <button
-                        onClick={gererDeconnexion}
-                        className="group bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-red-500/25 border border-red-500/20"
-                      >
-                        <span>Déconnexion</span>
-                      </button>
-                                         </>
-                   ) : (
-                     <>
-                       <Link href="/login" className="group bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-violet-500/25 border border-violet-500/20">
-                         <span>Connexion</span>
-                       </Link>
-                       <Link href="/register" className="group bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-green-500/25 border border-green-500/20">
-                         <span>S'inscrire</span>
-                       </Link>
-                     </>
-                   )}
-                 </div>
+                        
+                        {/* Bouton déconnexion */}
+                        <button
+                          onClick={gererDeconnexion}
+                          className="group bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-red-500/25 border border-red-500/20"
+                        >
+                          <span>Déconnexion</span>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <Link href="/login" className="group bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-violet-500/25 border border-violet-500/20">
+                          <span>Connexion</span>
+                        </Link>
+                        <Link href="/register" className="group bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-green-500/25 border border-green-500/20">
+                          <span>S'inscrire</span>
+                        </Link>
+                      </>
+                    )}
+                  </div>
+                </ClientOnly>
               </nav>
 
               {/* Menu burger - visible sur mobile uniquement */}
@@ -275,92 +283,94 @@ export default function App({ Component, pageProps }: AppProps) {
             </div>
           </div>
 
-          {/* Menu mobile - slide down propre */}
-          <div className={`md:hidden transition-all duration-300 ease-in-out ${
-            isMobileMenuOpen 
-              ? 'max-h-[500px] opacity-100 visible' 
-              : 'max-h-0 opacity-0 invisible'
-          } overflow-hidden`}>
-            <div className="px-4 pt-3 pb-6 space-y-1 bg-slate-800/95 backdrop-blur-md border-t border-slate-700 shadow-lg">
-              {/* Navigation mobile */}
-              <Link 
-                href="/" 
-                className="text-slate-300 hover:text-white hover:bg-slate-700/80 block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 hover:scale-[1.02]"
-                onClick={closeMobileMenu}
-              >
-                Accueil
-              </Link>
-              <Link 
-                href="/leaderboards" 
-                className="text-slate-300 hover:text-white hover:bg-slate-700/80 block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 hover:scale-[1.02]"
-                onClick={closeMobileMenu}
-              >
-                Classements
-              </Link>
-              <Link 
-                href="/activity" 
-                className="text-slate-300 hover:text-white hover:bg-slate-700/80 block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 hover:scale-[1.02]"
-                onClick={closeMobileMenu}
-              >
-                Activité
-              </Link>
-              <Link 
-                href="/events" 
-                className="text-slate-300 hover:text-white hover:bg-slate-700/80 block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 hover:scale-[1.02]"
-                onClick={closeMobileMenu}
-              >
-                Événements
-              </Link>
-              <Link 
-                href="/support" 
-                className="text-slate-300 hover:text-white hover:bg-slate-700/80 block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 hover:scale-[1.02]"
-                onClick={closeMobileMenu}
-              >
-                Support
-              </Link>
-              
-              {/* Authentification mobile */}
-              <div className="pt-4 border-t border-slate-600 space-y-3">
-                {estAuthentifie && utilisateurActuel ? (
-                  <>
-                    <Link 
-                      href="/profile" 
-                      className="bg-slate-700 hover:bg-slate-600 text-white block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 text-center hover:scale-[1.02]"
-                      onClick={closeMobileMenu}
-                    >
-                      Profil
-                    </Link>
-                    <button
-                      onClick={() => {
-                        gererDeconnexion();
-                        closeMobileMenu();
-                      }}
-                      className="bg-red-600 hover:bg-red-700 text-white block w-full px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 hover:scale-[1.02]"
-                    >
-                      Déconnexion
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <Link 
-                      href="/login" 
-                      className="bg-violet-600 hover:bg-violet-700 text-white block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 text-center hover:scale-[1.02]"
-                      onClick={closeMobileMenu}
-                    >
-                      Connexion
-                    </Link>
-                    <Link 
-                      href="/register" 
-                      className="bg-green-600 hover:bg-green-700 text-white block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 text-center hover:scale-[1.02]"
-                      onClick={closeMobileMenu}
-                    >
-                      S'inscrire
-                    </Link>
-                  </>
-                )}
+          {/* Menu mobile - slide down propre - WRAPPER CLIENT ONLY */}
+          <ClientOnly fallback={null}>
+            <div className={`md:hidden transition-all duration-300 ease-in-out ${
+              isMobileMenuOpen 
+                ? 'max-h-[500px] opacity-100 visible' 
+                : 'max-h-0 opacity-0 invisible'
+            } overflow-hidden`}>
+              <div className="px-4 pt-3 pb-6 space-y-1 bg-slate-800/95 backdrop-blur-md border-t border-slate-700 shadow-lg">
+                {/* Navigation mobile */}
+                <Link 
+                  href="/" 
+                  className="text-slate-300 hover:text-white hover:bg-slate-700/80 block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 hover:scale-[1.02]"
+                  onClick={closeMobileMenu}
+                >
+                  Accueil
+                </Link>
+                <Link 
+                  href="/leaderboards" 
+                  className="text-slate-300 hover:text-white hover:bg-slate-700/80 block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 hover:scale-[1.02]"
+                  onClick={closeMobileMenu}
+                >
+                  Classements
+                </Link>
+                <Link 
+                  href="/activity" 
+                  className="text-slate-300 hover:text-white hover:bg-slate-700/80 block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 hover:scale-[1.02]"
+                  onClick={closeMobileMenu}
+                >
+                  Activité
+                </Link>
+                <Link 
+                  href="/events" 
+                  className="text-slate-300 hover:text-white hover:bg-slate-700/80 block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 hover:scale-[1.02]"
+                  onClick={closeMobileMenu}
+                >
+                  Événements
+                </Link>
+                <Link 
+                  href="/support" 
+                  className="text-slate-300 hover:text-white hover:bg-slate-700/80 block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 hover:scale-[1.02]"
+                  onClick={closeMobileMenu}
+                >
+                  Support
+                </Link>
+                
+                {/* Authentification mobile */}
+                <div className="pt-4 border-t border-slate-600 space-y-3">
+                  {estAuthentifie && utilisateurActuel ? (
+                    <>
+                      <Link 
+                        href="/profile" 
+                        className="bg-slate-700 hover:bg-slate-600 text-white block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 text-center hover:scale-[1.02]"
+                        onClick={closeMobileMenu}
+                      >
+                        Profil
+                      </Link>
+                      <button
+                        onClick={() => {
+                          gererDeconnexion();
+                          closeMobileMenu();
+                        }}
+                        className="bg-red-600 hover:bg-red-700 text-white block w-full px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 hover:scale-[1.02]"
+                      >
+                        Déconnexion
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link 
+                        href="/login" 
+                        className="bg-violet-600 hover:bg-violet-700 text-white block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 text-center hover:scale-[1.02]"
+                        onClick={closeMobileMenu}
+                      >
+                        Connexion
+                      </Link>
+                      <Link 
+                        href="/register" 
+                        className="bg-green-600 hover:bg-green-700 text-white block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 text-center hover:scale-[1.02]"
+                        onClick={closeMobileMenu}
+                      >
+                        S'inscrire
+                      </Link>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          </ClientOnly>
         </header>
         
         {/* Contenu principal */}
