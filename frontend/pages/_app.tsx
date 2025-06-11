@@ -38,13 +38,9 @@ export default function App({ Component, pageProps }: AppProps) {
   // Protection contre l'hydratation
   const [estMonte, setEstMonte] = useState(false);
 
-  useEffect(() => {
-    setEstMonte(true);
-  }, []);
-
   // Charger l'utilisateur depuis le localStorage au démarrage
   useEffect(() => {
-    if (!estMonte) return; // Attendre que le composant soit monté côté client
+    setEstMonte(true); // Marquer comme monté
     
     const utilisateurSauvegarde = localStorage.getItem('utilisateurSpeedrun');
     const token = localStorage.getItem('authToken');
@@ -92,7 +88,7 @@ export default function App({ Component, pageProps }: AppProps) {
       
       verifierProfil();
     }
-  }, [estMonte]);
+  }, []);
 
   const gererConnexion = (nomUtilisateur: string, email: string, avatar?: string) => {
     // Utiliser l'avatar fourni, ou préserver l'avatar existant, ou utiliser undefined
@@ -196,7 +192,7 @@ export default function App({ Component, pageProps }: AppProps) {
                 
                 {/* Zone d'authentification desktop */}
                 <div className="flex items-center space-x-4 ml-8">
-                  {estMonte && estAuthentifie && utilisateurActuel ? (
+                  {estAuthentifie && utilisateurActuel ? (
                     <>
                       {/* Bouton Profil */}
                       <Link 
@@ -235,7 +231,7 @@ export default function App({ Component, pageProps }: AppProps) {
                         <span>Déconnexion</span>
                       </button>
                     </>
-                  ) : estMonte ? (
+                  ) : (
                     <>
                       <Link href="/login" className="group bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-violet-500/25 border border-violet-500/20">
                         <span>Connexion</span>
@@ -244,12 +240,6 @@ export default function App({ Component, pageProps }: AppProps) {
                         <span>S'inscrire</span>
                       </Link>
                     </>
-                  ) : (
-                    // Placeholder pendant l'hydratation
-                    <div className="flex items-center space-x-4">
-                      <div className="w-20 h-8 bg-slate-700/50 rounded-xl animate-pulse"></div>
-                      <div className="w-20 h-8 bg-slate-700/50 rounded-xl animate-pulse"></div>
-                    </div>
                   )}
                 </div>
               </nav>
@@ -334,7 +324,7 @@ export default function App({ Component, pageProps }: AppProps) {
               
               {/* Authentification mobile */}
               <div className="pt-4 border-t border-slate-600 space-y-3">
-                {estMonte && estAuthentifie && utilisateurActuel ? (
+                {estAuthentifie && utilisateurActuel ? (
                   <>
                     <Link 
                       href="/profile" 
@@ -353,7 +343,7 @@ export default function App({ Component, pageProps }: AppProps) {
                       Déconnexion
                     </button>
                                       </>
-                ) : estMonte ? (
+                ) : (
                   <>
                     <Link 
                       href="/login" 
@@ -370,12 +360,6 @@ export default function App({ Component, pageProps }: AppProps) {
                       S'inscrire
                     </Link>
                   </>
-                ) : (
-                  // Placeholder pendant l'hydratation
-                  <div className="space-y-3">
-                    <div className="w-full h-12 bg-slate-700/50 rounded-lg animate-pulse"></div>
-                    <div className="w-full h-12 bg-slate-700/50 rounded-lg animate-pulse"></div>
-                  </div>
                 )}
               </div>
             </div>
