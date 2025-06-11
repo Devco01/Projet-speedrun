@@ -35,12 +35,9 @@ export default function App({ Component, pageProps }: AppProps) {
   const [utilisateurActuel, setUtilisateurActuel] = useState<Utilisateur | null>(null);
   const [estAuthentifie, setEstAuthentifie] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isClient, setIsClient] = useState(false);
 
-  // Marquer comme client et charger les données
+  // Charger les données utilisateur côté client seulement
   useEffect(() => {
-    setIsClient(true);
-    
     const utilisateurSauvegarde = localStorage.getItem('utilisateurSpeedrun');
     const token = localStorage.getItem('authToken');
     
@@ -192,13 +189,7 @@ export default function App({ Component, pageProps }: AppProps) {
                 
                 {/* Zone d'authentification desktop */}
                 <div className="flex items-center space-x-4 ml-8">
-                  {!isClient ? (
-                    // Rendu initial stable pour éviter l'hydratation
-                    <>
-                      <div className="w-20 h-8 bg-slate-700/30 rounded-xl"></div>
-                      <div className="w-20 h-8 bg-slate-700/30 rounded-xl"></div>
-                    </>
-                  ) : estAuthentifie && utilisateurActuel ? (
+                  {estAuthentifie && utilisateurActuel ? (
                     <>
                       {/* Bouton Profil */}
                       <Link 
@@ -236,18 +227,18 @@ export default function App({ Component, pageProps }: AppProps) {
                       >
                         <span>Déconnexion</span>
                       </button>
-                    </>
-                  ) : (
-                    <>
-                      <Link href="/login" className="group bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-violet-500/25 border border-violet-500/20">
-                        <span>Connexion</span>
-                      </Link>
-                      <Link href="/register" className="group bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-green-500/25 border border-green-500/20">
-                        <span>S'inscrire</span>
-                      </Link>
-                    </>
-                  )}
-                </div>
+                                         </>
+                   ) : (
+                     <>
+                       <Link href="/login" className="group bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-violet-500/25 border border-violet-500/20">
+                         <span>Connexion</span>
+                       </Link>
+                       <Link href="/register" className="group bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-green-500/25 border border-green-500/20">
+                         <span>S'inscrire</span>
+                       </Link>
+                     </>
+                   )}
+                 </div>
               </nav>
 
               {/* Menu burger - visible sur mobile uniquement */}
@@ -330,13 +321,7 @@ export default function App({ Component, pageProps }: AppProps) {
               
               {/* Authentification mobile */}
               <div className="pt-4 border-t border-slate-600 space-y-3">
-                {!isClient ? (
-                  // Rendu initial stable pour mobile
-                  <div className="space-y-3">
-                    <div className="w-full h-12 bg-slate-700/30 rounded-lg"></div>
-                    <div className="w-full h-12 bg-slate-700/30 rounded-lg"></div>
-                  </div>
-                ) : estAuthentifie && utilisateurActuel ? (
+                {estAuthentifie && utilisateurActuel ? (
                   <>
                     <Link 
                       href="/profile" 
@@ -354,7 +339,7 @@ export default function App({ Component, pageProps }: AppProps) {
                     >
                       Déconnexion
                     </button>
-                                      </>
+                  </>
                 ) : (
                   <>
                     <Link 
