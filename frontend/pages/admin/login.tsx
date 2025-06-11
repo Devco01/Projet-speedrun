@@ -42,7 +42,15 @@ export default function AdminLogin() {
           {/* Header */}
           <div className="text-center">
             <div className="mx-auto h-12 w-12 bg-gradient-to-br from-violet-500 to-cyan-500 rounded-xl flex items-center justify-center mb-4">
-              <span className="text-xl font-bold bg-gradient-to-r from-violet-300 to-cyan-300 bg-clip-text text-transparent">⚡</span>
+                                <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none">
+                    <defs>
+                      <linearGradient id="adminIconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#8b5cf6" />
+                        <stop offset="100%" stopColor="#06b6d4" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="url(#adminIconGradient)" />
+                  </svg>
             </div>
             <h2 className="text-3xl font-bold bg-gradient-to-r from-violet-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
               Administration
