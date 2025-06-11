@@ -2,6 +2,7 @@ import type { AppProps } from 'next/app'
 import Link from 'next/link'
 import Head from 'next/head'
 import { useState, useEffect, createContext, useContext } from 'react'
+import ErrorBoundary from '../components/ErrorBoundary'
 import '../styles/globals.css'
 
 // Types pour l'authentification globale
@@ -141,13 +142,14 @@ export default function App({ Component, pageProps }: AppProps) {
   };
 
   return (
-    <AuthContext.Provider value={authValue}>
-      <Head>
-        <title>SpeedrunSchedule - Explorez les temps et records</title>
-        <meta name="description" content="Découvrez les temps record, classements et performances légendaires du speedrunning" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-      <div className="min-h-screen bg-slate-900">
+    <ErrorBoundary>
+      <AuthContext.Provider value={authValue}>
+        <Head>
+          <title>SpeedrunSchedule - Explorez les temps et records</title>
+          <meta name="description" content="Découvrez les temps record, classements et performances légendaires du speedrunning" />
+          <link rel="icon" href="/favicon.ico" />
+        </Head>
+        <div className="min-h-screen bg-slate-900">
         {/* Header moderne avec menu burger */}
         <header className="bg-slate-800/80 backdrop-blur-md border-b border-slate-700 sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 py-4">
@@ -456,7 +458,8 @@ export default function App({ Component, pageProps }: AppProps) {
             </div>
           </div>
         </footer>
-      </div>
-    </AuthContext.Provider>
+        </div>
+      </AuthContext.Provider>
+    </ErrorBoundary>
   )
 } 
