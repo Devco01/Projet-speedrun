@@ -9,22 +9,12 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',
   },
-  reactStrictMode: true,
-  swcMinify: true,
+  
+  // Solution minimale pour les erreurs d'hydratation
+  reactStrictMode: false,
   experimental: {
-    suppressHydrationWarning: true
+    suppressHydrationWarning: true,
   },
-  onError: (err) => {
-    if (
-      process.env.NODE_ENV === 'production' && 
-      err.message && 
-      (err.message.includes('Minified React error #425') ||
-       err.message.includes('Minified React error #418') ||
-       err.message.includes('Minified React error #423'))
-    ) {
-      return
-    }
-  }
 }
 
 module.exports = nextConfig 
