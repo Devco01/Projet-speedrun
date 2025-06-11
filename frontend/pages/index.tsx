@@ -45,109 +45,68 @@ export default function HomePage() {
     setEstMonte(true)
   }, [])
 
-  useEffect(() => {
+    useEffect(() => {
     const chargerJeuxPopulaires = async () => {
       try {
-        // Vérifier le cache (localStorage) - seulement côté client
-        if (typeof window === 'undefined') return
-        
-        const cacheKey = 'jeux-populaires-cache'
-        const cacheData = localStorage.getItem(cacheKey)
-        const cacheTime = localStorage.getItem(`${cacheKey}-time`)
-        
-        // Si les données sont en cache et récentes (moins de 10 minutes)
-        if (cacheData && cacheTime) {
-          const timeDiff = Date.now() - parseInt(cacheTime)
-          if (timeDiff < 10 * 60 * 1000) { // 10 minutes
-            setJeuxPopulaires(JSON.parse(cacheData))
-            return
-          }
-        }
-
         setChargementJeux(true)
         
         // Liste des jeux populaires avec leurs IDs Speedrun.com
         const jeuxIds = [
-          { 
-            id: 'sm64', 
-            nom: 'Super Mario 64'
-          },
-          { 
-            id: 'oot', 
-            nom: 'Zelda: OOT'
-          },
-          { 
-            id: 'celeste', 
-            nom: 'Celeste'
-          }
+          { id: 'sm64', nom: 'Super Mario 64' },
+          { id: 'oot', nom: 'Zelda: OOT' },
+          { id: 'celeste', nom: 'Celeste' }
         ]
 
-        // Timeout de 3 secondes par requête
-        const fetchAvecTimeout = async (url: string, timeout = 3000) => {
-          const controller = new AbortController()
-          const timeoutId = setTimeout(() => controller.abort(), timeout)
-          
-          try {
-            const response = await fetch(url, { signal: controller.signal })
-            clearTimeout(timeoutId)
-            return response
-          } catch (error) {
-            clearTimeout(timeoutId)
-            throw error
-          }
-        }
+        // Toujours essayer l'API d'abord (locale ou déployée)
+        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '')
+        console.log('🚀 Tentative de chargement depuis l\'API:', apiUrl)
 
-        const jeuxDataPromises = jeuxIds.map(async (jeu) => {
-          try {
-            // Récupérer les stats du jeu avec timeout
-            const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '')
-            const response = await fetchAvecTimeout(`${apiUrl}/api/speedrun/game-stats/${jeu.id}`)
-            
-            if (response.ok) {
-              const stats = await response.json()
-              return {
-                id: jeu.id,
-                nom: jeu.nom,
-                nombreJoueurs: stats.players || 0,
-                recordTemps: stats.worldRecord || 'N/A',
-                categorie: stats.category || 'Any%'
+        const jeuxData = await Promise.all(
+          jeuxIds.map(async (jeu) => {
+            try {
+              const response = await fetch(`${apiUrl}/api/speedrun/game-stats/${jeu.id}`)
+              
+              if (response.ok) {
+                const stats = await response.json()
+                console.log(`✅ API réussie pour ${jeu.nom}:`, stats)
+                return {
+                  id: jeu.id,
+                  nom: jeu.nom,
+                  nombreJoueurs: stats.players || 0,
+                  recordTemps: stats.worldRecord || 'N/A',
+                  categorie: stats.category || 'Any%'
+                }
+              } else {
+                console.log(`⚠️ API échouée pour ${jeu.nom} (${response.status}), utilisation des données statiques`)
               }
+            } catch (error) {
+              console.log(`⚠️ Erreur API pour ${jeu.nom}, utilisation des données statiques:`, error instanceof Error ? error.message : error)
             }
-          } catch (error) {
-            console.error(`Erreur lors du chargement de ${jeu.nom}:`, error)
-          }
-          
-          // Fallback vers les données statiques
-          return donneesStatiques.find(d => d.id === jeu.id) || {
-            id: jeu.id,
-            nom: jeu.nom,
-            nombreJoueurs: 0,
-            recordTemps: 'N/A',
-            categorie: 'Any%'
-          }
-        })
+            
+            // Fallback vers les données statiques si l'API échoue
+            const fallback = donneesStatiques.find(d => d.id === jeu.id) || {
+              id: jeu.id,
+              nom: jeu.nom,
+              nombreJoueurs: 0,
+              recordTemps: 'N/A',
+              categorie: 'Any%'
+            }
+            return fallback
+          })
+        )
 
-        const jeuxData = await Promise.all(jeuxDataPromises)
-        
-        // Mettre en cache les données - seulement côté client
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(cacheKey, JSON.stringify(jeuxData))
-          localStorage.setItem(`${cacheKey}-time`, Date.now().toString())
-        }
-        
         setJeuxPopulaires(jeuxData)
+        console.log('📊 Données finales chargées:', jeuxData)
       } catch (error) {
-        console.error('Erreur lors du chargement des jeux populaires:', error)
-        // En cas d'erreur, garder les données statiques
+        console.log('⚠️ Erreur générale, utilisation des données statiques:', error instanceof Error ? error.message : error)
+        // En cas d'erreur générale, garder les données statiques
         setJeuxPopulaires(donneesStatiques)
       } finally {
         setChargementJeux(false)
       }
     }
 
-    // Délai de 100ms pour permettre l'affichage immédiat des données statiques
-    const timer = setTimeout(chargerJeuxPopulaires, 100)
-    return () => clearTimeout(timer)
+    chargerJeuxPopulaires()
   }, [])
 
   return (
