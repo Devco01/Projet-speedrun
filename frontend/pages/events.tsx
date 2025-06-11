@@ -102,10 +102,13 @@ export default function PageRaces() {
         setTimeRemaining(prev => {
           const newTime = prev - 1;
           
-          if (newTime === 0) {
-            setTimerState('racing');
-            setPersonalStartTime(new Date());
-            setRaceTime(0);
+          if (newTime <= 0) {
+            // Attendre 1 seconde supplémentaire pour afficher "0" avant de démarrer
+            setTimeout(() => {
+              setTimerState('racing');
+              setPersonalStartTime(new Date());
+              setRaceTime(0);
+            }, 1000);
             return 0;
           }
           
@@ -622,13 +625,18 @@ export default function PageRaces() {
 
     setRaces(races.map(race => {
       if (race.id === raceId && race.participants.length < race.maxParticipants) {
-        return {
-          ...race,
-          participants: [
-            ...race.participants,
-            { id: utilisateurActuel.id, nomUtilisateur: utilisateurActuel.nomUtilisateur, statut: 'inscrit' }
-          ]
-        };
+        // Vérifier si l'utilisateur n'est pas déjà participant
+        const dejaParticipant = race.participants.some(p => p.id === utilisateurActuel.id);
+        
+        if (!dejaParticipant) {
+          return {
+            ...race,
+            participants: [
+              ...race.participants,
+              { id: utilisateurActuel.id, nomUtilisateur: utilisateurActuel.nomUtilisateur, statut: 'inscrit' }
+            ]
+          };
+        }
       }
       return race;
     }));
@@ -704,8 +712,25 @@ export default function PageRaces() {
     }
   };
 
-  const changerStatutParticipant = (raceId: string, nouveauStatut: ParticipantRace['statut']) => {
+  const changerStatutParticipant = async (raceId: string, nouveauStatut: ParticipantRace['statut']) => {
     if (!utilisateurActuel) return;
+
+    // Appeler l'API pour persister le changement
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const token = localStorage.getItem('authToken');
+      
+      await fetch(`${apiUrl}/api/races/${raceId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: nouveauStatut })
+      });
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut:', error);
+    }
 
     setRaces(races.map(race => {
       if (race.id === raceId) {
@@ -714,7 +739,9 @@ export default function PageRaces() {
             return {
               ...participant,
               statut: nouveauStatut,
-              ...(nouveauStatut === 'termine' ? { tempsFin: Date.now() } : {})
+              ...(nouveauStatut === 'termine' ? { 
+                tempsFin: raceTime * 1000 // Convertir les secondes en millisecondes
+              } : {})
             };
           }
           return participant;
@@ -724,8 +751,13 @@ export default function PageRaces() {
         let nouveauStatutRace = race.statut;
         const tousParticipantsPrets = participantsMisAJour.every(p => p.statut === 'pret');
         const auMoinsUnEnCourse = participantsMisAJour.some(p => p.statut === 'en-course');
+        const tousParticipantsTermines = participantsMisAJour.every(p => 
+          p.statut === 'termine' || p.statut === 'abandon'
+        );
         
-        if (tousParticipantsPrets && participantsMisAJour.length >= 2) {
+        if (tousParticipantsTermines && participantsMisAJour.length > 0 && race.statut === 'en-cours') {
+          nouveauStatutRace = 'terminee';
+        } else if (tousParticipantsPrets && participantsMisAJour.length >= 2) {
           nouveauStatutRace = 'prete';
         } else if (auMoinsUnEnCourse) {
           nouveauStatutRace = 'en-cours';
@@ -735,13 +767,31 @@ export default function PageRaces() {
           ...race,
           participants: participantsMisAJour,
           statut: nouveauStatutRace,
-          ...(nouveauStatutRace === 'en-cours' && !race.heureDebut ? { heureDebut: new Date().toISOString() } : {})
+          ...(nouveauStatutRace === 'en-cours' && !race.heureDebut ? { heureDebut: new Date().toISOString() } : {}),
+          ...(nouveauStatutRace === 'terminee' && !race.heureFin ? { heureFin: new Date().toISOString() } : {})
         };
 
         // Mettre à jour la race sélectionnée si c'est celle-ci
         if (raceSelectionnee && raceSelectionnee.id === raceId) {
           setRaceSelectionnee(raceMisAJour);
+          
+          // Ajouter un message spécial si la course vient de se terminer
+          if (nouveauStatutRace === 'terminee' && race.statut !== 'terminee') {
+            const messageFinCourse: MessageChat = {
+              id: (Date.now() + 1).toString(),
+              nomUtilisateur: 'Système',
+              message: '🏁 La course est terminée ! Tous les participants ont fini ou abandonné.',
+              horodatage: new Date().toISOString(),
+              type: 'systeme'
+            };
+            
+            setTimeout(() => {
+              setMessagesChat(prev => [...prev, messageFinCourse]);
+            }, 1000);
+          }
         }
+
+        // Le statut de la race est automatiquement mis à jour par le backend
 
         return raceMisAJour;
       }
@@ -817,14 +867,54 @@ export default function PageRaces() {
     );
   };
 
-  const formaterTemps = (secondes: number): string => {
-    const minutes = Math.floor(secondes / 60);
-    const secs = secondes % 60;
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  const formaterTemps = (millisecondesOuSecondes: number): string => {
+    // Détecter si c'est un timestamp (> 1000000000000) ou des secondes/millisecondes
+    let millisecondes: number;
+    
+    if (millisecondesOuSecondes > 1000000000000) {
+      // C'est un timestamp, on ne peut pas le convertir en durée sans heure de début
+      return "Calcul en cours...";
+    } else if (millisecondesOuSecondes > 86400) { // Plus de 24h en secondes
+      // C'est probablement des millisecondes
+      millisecondes = millisecondesOuSecondes;
+    } else {
+      // C'est des secondes avec décimales
+      millisecondes = millisecondesOuSecondes * 1000;
+    }
+    
+    const totalSecondes = Math.floor(millisecondes / 1000);
+    const heures = Math.floor(totalSecondes / 3600);
+    const minutes = Math.floor((totalSecondes % 3600) / 60);
+    const secondes = totalSecondes % 60;
+    const ms = Math.floor(millisecondes % 1000);
+    
+    if (heures > 0) {
+      return `${heures}:${minutes.toString().padStart(2, '0')}:${secondes.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+    } else {
+      return `${minutes}:${secondes.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+    }
   };
 
   const obtenirTempsEcoule = (heureDebut: string): number => {
     return Math.floor((Date.now() - new Date(heureDebut).getTime()) / 1000);
+  };
+
+
+
+  // Fonction spécialement pour formater les temps finaux des participants
+  const formaterTempsFinal = (tempsFin: number): string => {
+    // tempsFin est en millisecondes (durée de la course)
+    const totalSecondes = Math.floor(tempsFin / 1000);
+    const heures = Math.floor(totalSecondes / 3600);
+    const minutes = Math.floor((totalSecondes % 3600) / 60);
+    const secondes = totalSecondes % 60;
+    const millisecondes = Math.floor(tempsFin % 1000);
+    
+    if (heures > 0) {
+      return `${heures}:${minutes.toString().padStart(2, '0')}:${secondes.toString().padStart(2, '0')}.${millisecondes.toString().padStart(3, '0')}`;
+    } else {
+      return `${minutes}:${secondes.toString().padStart(2, '0')}.${millisecondes.toString().padStart(3, '0')}`;
+    }
   };
 
   if (!estAuthentifie) {
@@ -1416,7 +1506,7 @@ export default function PageRaces() {
                     <div className="flex items-center space-x-2">
                       {participant.tempsFin && (
                         <span className="font-mono text-green-400">
-                          {formaterTemps(participant.tempsFin)}
+                          {formaterTempsFinal(participant.tempsFin)}
                         </span>
                       )}
                       {participant.urlStream && (
