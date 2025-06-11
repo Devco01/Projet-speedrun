@@ -139,13 +139,7 @@ export default function App({ Component, pageProps }: AppProps) {
               <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity" onClick={closeMobileMenu}>
                 <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-cyan-500 rounded-lg flex items-center justify-center">
                   <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none">
-                    <defs>
-                      <linearGradient id="iconGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#8b5cf6" />
-                        <stop offset="100%" stopColor="#06b6d4" />
-                      </linearGradient>
-                    </defs>
-                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="url(#iconGradient1)" />
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="white" />
                   </svg>
                 </div>
                 <div className="hidden sm:block">
@@ -156,7 +150,7 @@ export default function App({ Component, pageProps }: AppProps) {
                 </div>
                 <div className="block sm:hidden">
                   <h1 className="text-lg font-bold bg-gradient-to-r from-violet-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
-                    Speedrun
+                    SpeedrunSchedule
                   </h1>
                 </div>
               </Link>
