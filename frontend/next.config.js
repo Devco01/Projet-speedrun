@@ -9,21 +9,19 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',
   },
-  reactStrictMode: true,
+  // Désactiver le strict mode pour éviter les erreurs d'hydratation amplifiées
+  reactStrictMode: false,
   swcMinify: true,
-  experimental: {
-    suppressHydrationWarning: true
+  // Optimisations pour éviter les erreurs d'hydratation
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error']
+    } : false,
   },
-  onError: (err) => {
-    if (
-      process.env.NODE_ENV === 'production' && 
-      err.message && 
-      (err.message.includes('Minified React error #425') ||
-       err.message.includes('Minified React error #418') ||
-       err.message.includes('Minified React error #423'))
-    ) {
-      return
-    }
+  experimental: {
+    suppressHydrationWarning: true,
+    // Désactiver l'optimisation SSR qui peut causer des problèmes
+    esmExternals: false
   }
 }
 
