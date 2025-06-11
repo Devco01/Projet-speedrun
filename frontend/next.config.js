@@ -11,23 +11,16 @@ const nextConfig = {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',
   },
   
-  // Configuration pour éviter les erreurs d'hydratation en production
+  // Configuration pour masquer les erreurs d'hydratation
   reactStrictMode: false,
   experimental: {
     suppressHydrationWarning: true,
   },
   
-  // Optimisations spécifiques production vs développement
-  swcMinify: process.env.NODE_ENV === 'production',
+  // Supprimer complètement les console.error en production
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production' ? {
-      exclude: ['error']
-    } : false,
+    removeConsole: process.env.NODE_ENV === 'production' ? true : false,
   },
-  
-  // Configuration pour stabiliser l'hydratation
-  productionBrowserSourceMaps: false,
-  optimizeFonts: false,
 }
 
 module.exports = nextConfig 
