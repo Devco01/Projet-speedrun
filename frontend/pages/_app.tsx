@@ -6,8 +6,8 @@ import ErrorBoundary from '../components/ErrorBoundary'
 import ClientOnly from '../components/ClientOnly'
 import '../styles/globals.css'
 
-// Masquer les erreurs React minifiées spécifiques en production
-if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
+// Masquer les erreurs React minifiées spécifiques (dev et prod)
+if (typeof window !== 'undefined') {
   const originalError = console.error;
   console.error = (...args: any[]) => {
     const message = args[0]?.toString() || '';
