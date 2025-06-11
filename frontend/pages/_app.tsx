@@ -185,7 +185,7 @@ export default function App({ Component, pageProps }: AppProps) {
                       
                       {/* Informations utilisateur */}
                       <div className="flex items-center space-x-2 bg-slate-800 rounded-lg px-3 py-2">
-                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center overflow-hidden">
+                        <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-cyan-500 rounded-full flex items-center justify-center overflow-hidden">
                           {utilisateurActuel.imageProfile && utilisateurActuel.imageProfile.startsWith('data:') ? (
                             <img 
                               src={utilisateurActuel.imageProfile} 
@@ -193,13 +193,7 @@ export default function App({ Component, pageProps }: AppProps) {
                               className="w-full h-full object-cover" 
                             />
                           ) : (
-                            <svg 
-                              className="w-5 h-5 text-white" 
-                              fill="currentColor" 
-                              viewBox="0 0 24 24"
-                            >
-                              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                            </svg>
+                            <span className="text-white text-sm font-bold">⚡</span>
                           )}
                         </div>
                         <div className="text-right">
