@@ -284,7 +284,7 @@ export default function PageRaces() {
     
     try {
       // Utiliser l'API speedrun exhaustive comme dans leaderboards
-      const response = await fetch(`http://localhost:5000/api/speedrun/games/search/exhaustive?q=${encodeURIComponent(query)}&limit=20`);
+              const response = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '')}/api/speedrun/games/search/exhaustive?q=${encodeURIComponent(query)}&limit=20`);
       let jeuxAPI: JeuSpeedrun[] = [];
       
       if (response.ok) {
@@ -412,7 +412,7 @@ export default function PageRaces() {
   const chargerCategories = async (gameId: string) => {
     setChargementCategories(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/speedrun/games/${gameId}/categories`);
+              const response = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '')}/api/speedrun/games/${gameId}/categories`);
       if (response.ok) {
         const data = await response.json();
         setCategories(data.categories || []);
