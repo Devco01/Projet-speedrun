@@ -9,20 +9,12 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',
   },
-  // Désactiver le strict mode pour éviter les erreurs d'hydratation amplifiées
+  
+  // Solution minimale pour les erreurs d'hydratation
   reactStrictMode: false,
-  swcMinify: true,
-  // Optimisations pour éviter les erreurs d'hydratation
-  compiler: {
-    removeConsole: process.env.NODE_ENV === 'production' ? {
-      exclude: ['error']
-    } : false,
-  },
   experimental: {
     suppressHydrationWarning: true,
-    // Désactiver l'optimisation SSR qui peut causer des problèmes
-    esmExternals: false
-  }
+  },
 }
 
 module.exports = nextConfig 
