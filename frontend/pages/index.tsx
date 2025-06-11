@@ -128,13 +128,7 @@ export default function HomePage() {
           <div className="mb-6 md:mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-violet-500 to-cyan-500 rounded-2xl mb-4 md:mb-6 animate-pulse hover:animate-none transition-all duration-300 hover:scale-110 hover:rotate-3">
               <svg className="w-8 h-8 md:w-12 md:h-12 text-white" viewBox="0 0 24 24" fill="none">
-                <defs>
-                  <linearGradient id="heroIconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#c4b5fd" />
-                    <stop offset="100%" stopColor="#67e8f9" />
-                  </linearGradient>
-                </defs>
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="url(#heroIconGradient)" />
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="white" />
               </svg>
             </div>
           </div>
