@@ -38,11 +38,19 @@ export default function HomePage() {
 
   const [jeuxPopulaires, setJeuxPopulaires] = useState<JeuStats[]>(donneesStatiques)
   const [chargementJeux, setChargementJeux] = useState(false)
+  const [estMonte, setEstMonte] = useState(false)
+
+  // Protection contre les problèmes d'hydratation
+  useEffect(() => {
+    setEstMonte(true)
+  }, [])
 
   useEffect(() => {
     const chargerJeuxPopulaires = async () => {
       try {
-        // Vérifier le cache (localStorage)
+        // Vérifier le cache (localStorage) - seulement côté client
+        if (typeof window === 'undefined') return
+        
         const cacheKey = 'jeux-populaires-cache'
         const cacheData = localStorage.getItem(cacheKey)
         const cacheTime = localStorage.getItem(`${cacheKey}-time`)
@@ -121,9 +129,11 @@ export default function HomePage() {
 
         const jeuxData = await Promise.all(jeuxDataPromises)
         
-        // Mettre en cache les données
-        localStorage.setItem(cacheKey, JSON.stringify(jeuxData))
-        localStorage.setItem(`${cacheKey}-time`, Date.now().toString())
+        // Mettre en cache les données - seulement côté client
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(cacheKey, JSON.stringify(jeuxData))
+          localStorage.setItem(`${cacheKey}-time`, Date.now().toString())
+        }
         
         setJeuxPopulaires(jeuxData)
       } catch (error) {

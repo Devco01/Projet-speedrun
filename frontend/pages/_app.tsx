@@ -1,5 +1,6 @@
 import type { AppProps } from 'next/app'
 import Link from 'next/link'
+import Head from 'next/head'
 import { useState, useEffect, createContext, useContext } from 'react'
 import '../styles/globals.css'
 
@@ -130,6 +131,11 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <AuthContext.Provider value={authValue}>
+      <Head>
+        <title>SpeedrunSchedule - Explorez les temps et records</title>
+        <meta name="description" content="Découvrez les temps record, classements et performances légendaires du speedrunning" />
+        <link rel="icon" href="/favicon.ico" />
+      </Head>
       <div className="min-h-screen bg-slate-900">
         {/* Header moderne avec menu burger */}
         <header className="bg-slate-800/80 backdrop-blur-md border-b border-slate-700 sticky top-0 z-50">
