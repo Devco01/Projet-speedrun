@@ -11,12 +11,51 @@ interface JeuStats {
 }
 
 export default function HomePage() {
-  const [jeuxPopulaires, setJeuxPopulaires] = useState<JeuStats[]>([])
-  const [chargementJeux, setChargementJeux] = useState(true)
+  // Données statiques affichées immédiatement
+  const donneesStatiques: JeuStats[] = [
+    {
+      id: 'sm64',
+      nom: 'Super Mario 64',
+      nombreJoueurs: 15420,
+      recordTemps: '14:35.13',
+      categorie: 'Any%'
+    },
+    {
+      id: 'oot',
+      nom: 'Zelda: OOT',
+      nombreJoueurs: 8765,
+      recordTemps: '16:58.50',
+      categorie: 'Any%'
+    },
+    {
+      id: 'celeste',
+      nom: 'Celeste',
+      nombreJoueurs: 12340,
+      recordTemps: '27:41.30',
+      categorie: 'Any%'
+    }
+  ]
+
+  const [jeuxPopulaires, setJeuxPopulaires] = useState<JeuStats[]>(donneesStatiques)
+  const [chargementJeux, setChargementJeux] = useState(false)
 
   useEffect(() => {
     const chargerJeuxPopulaires = async () => {
       try {
+        // Vérifier le cache (localStorage)
+        const cacheKey = 'jeux-populaires-cache'
+        const cacheData = localStorage.getItem(cacheKey)
+        const cacheTime = localStorage.getItem(`${cacheKey}-time`)
+        
+        // Si les données sont en cache et récentes (moins de 10 minutes)
+        if (cacheData && cacheTime) {
+          const timeDiff = Date.now() - parseInt(cacheTime)
+          if (timeDiff < 10 * 60 * 1000) { // 10 minutes
+            setJeuxPopulaires(JSON.parse(cacheData))
+            return
+          }
+        }
+
         setChargementJeux(true)
         
         // Liste des jeux populaires avec leurs IDs Speedrun.com
@@ -35,46 +74,70 @@ export default function HomePage() {
           }
         ]
 
-        const jeuxData = await Promise.all(
-          jeuxIds.map(async (jeu) => {
-            try {
-              // Récupérer les stats du jeu
-              const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '')
-              const response = await fetch(`${apiUrl}/api/speedrun/game-stats/${jeu.id}`)
-              if (response.ok) {
-                const stats = await response.json()
-                return {
-                  id: jeu.id,
-                  nom: jeu.nom,
-                  nombreJoueurs: stats.players || 0,
-                  recordTemps: stats.worldRecord || 'N/A',
-                  categorie: stats.category || 'Any%'
-                }
-              }
-            } catch (error) {
-              console.error(`Erreur lors du chargement de ${jeu.nom}:`, error)
-            }
-            
-            // Fallback en cas d'erreur
-            return {
-              id: jeu.id,
-              nom: jeu.nom,
-              nombreJoueurs: 0,
-              recordTemps: 'Chargement...',
-              categorie: 'Any%'
-            }
-          })
-        )
+        // Timeout de 3 secondes par requête
+        const fetchAvecTimeout = async (url: string, timeout = 3000) => {
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), timeout)
+          
+          try {
+            const response = await fetch(url, { signal: controller.signal })
+            clearTimeout(timeoutId)
+            return response
+          } catch (error) {
+            clearTimeout(timeoutId)
+            throw error
+          }
+        }
 
+        const jeuxDataPromises = jeuxIds.map(async (jeu) => {
+          try {
+            // Récupérer les stats du jeu avec timeout
+            const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '')
+            const response = await fetchAvecTimeout(`${apiUrl}/api/speedrun/game-stats/${jeu.id}`)
+            
+            if (response.ok) {
+              const stats = await response.json()
+              return {
+                id: jeu.id,
+                nom: jeu.nom,
+                nombreJoueurs: stats.players || 0,
+                recordTemps: stats.worldRecord || 'N/A',
+                categorie: stats.category || 'Any%'
+              }
+            }
+          } catch (error) {
+            console.error(`Erreur lors du chargement de ${jeu.nom}:`, error)
+          }
+          
+          // Fallback vers les données statiques
+          return donneesStatiques.find(d => d.id === jeu.id) || {
+            id: jeu.id,
+            nom: jeu.nom,
+            nombreJoueurs: 0,
+            recordTemps: 'N/A',
+            categorie: 'Any%'
+          }
+        })
+
+        const jeuxData = await Promise.all(jeuxDataPromises)
+        
+        // Mettre en cache les données
+        localStorage.setItem(cacheKey, JSON.stringify(jeuxData))
+        localStorage.setItem(`${cacheKey}-time`, Date.now().toString())
+        
         setJeuxPopulaires(jeuxData)
       } catch (error) {
         console.error('Erreur lors du chargement des jeux populaires:', error)
+        // En cas d'erreur, garder les données statiques
+        setJeuxPopulaires(donneesStatiques)
       } finally {
         setChargementJeux(false)
       }
     }
 
-    chargerJeuxPopulaires()
+    // Délai de 100ms pour permettre l'affichage immédiat des données statiques
+    const timer = setTimeout(chargerJeuxPopulaires, 100)
+    return () => clearTimeout(timer)
   }, [])
 
   return (
@@ -185,9 +248,7 @@ export default function HomePage() {
           </p>
           <div className="flex justify-center">
             <Link href="/register" className="group bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-700 hover:to-cyan-700 text-white font-semibold py-3 md:py-4 px-6 md:px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg inline-flex items-center text-sm md:text-base">
-              <svg className="w-4 h-4 md:w-5 md:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
+              <span className="w-4 h-4 md:w-5 md:h-5 mr-2 text-lg md:text-xl">⚡</span>
               <span>S'inscrire maintenant</span>
               <span className="ml-2 opacity-75 group-hover:opacity-100 transition-all duration-300 group-hover:translate-x-1">→</span>
             </Link>
