@@ -46,10 +46,10 @@ export default function AdminDashboard() {
   const [cleanupLoading, setCleanupLoading] = useState(false);
 
   useEffect(() => {
-    // Vérifier l'authentification admin
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-      router.push('/admin/login');
+    // Vérifier l'authentification utilisateur normal
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+      router.push('/login');
       return;
     }
     
@@ -64,9 +64,7 @@ export default function AdminDashboard() {
       const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '');
       console.log('DEBUG: API URL utilisée:', apiUrl);
       
-      const adminToken = localStorage.getItem('adminToken');
-      const authToken = localStorage.getItem('authToken');
-      const token = adminToken || authToken;
+      const token = localStorage.getItem('authToken');
       
       const headers: HeadersInit = {};
       if (token) {
@@ -123,9 +121,7 @@ export default function AdminDashboard() {
   const loadCleanupStats = async () => {
     try {
       const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '');
-      const adminToken = localStorage.getItem('adminToken');
-      const authToken = localStorage.getItem('authToken');
-      const token = adminToken || authToken;
+      const token = localStorage.getItem('authToken');
       
       const headers: HeadersInit = {};
       if (token) {
@@ -146,9 +142,7 @@ export default function AdminDashboard() {
     setCleanupLoading(true);
     try {
       const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '');
-      const adminToken = localStorage.getItem('adminToken');
-      const authToken = localStorage.getItem('authToken');
-      const token = adminToken || authToken;
+      const token = localStorage.getItem('authToken');
       
       const headers: HeadersInit = {};
       if (token) {
