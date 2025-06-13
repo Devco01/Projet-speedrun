@@ -209,7 +209,7 @@ class RaceController {
       });
 
       // Enregistrer l'activité analytique (désactivé car service supprimé)
-      // await analyticsService.recordActivity({
+              // Log de l'activité de course (analytics supprimé)
       //   userId,
       //   type: 'race_created',
       //   metadata: {

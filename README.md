@@ -25,23 +25,22 @@
 ### **Stack Backend (Node.js/Express)**
 - **Runtime** : Node.js 18+
 - **Framework** : Express.js avec TypeScript
-- **ORM/Database** : Prisma (PostgreSQL) + Mongoose (MongoDB)
+- **ORM/Database** : Prisma (PostgreSQL)
 - **Authentification** : JWT + bcrypt (salt 12)
 - **Middleware** : Authentification, CORS, validation
 - **API** : Architecture REST avec endpoints structurés
+- **Cache** : Système de cache intelligent avec expiration automatique
 
-### **Architecture Hybride de Bases de Données**
+### **Architecture Base de Données**
 
 #### **🐘 PostgreSQL (via Prisma ORM)**
-**Rôle** : Base de données relationnelle principale pour les données critiques
+**Rôle** : Base de données relationnelle principale pour toutes les données
 
-**Collections gérées :**
-- **Users** : Profils utilisateurs, authentification, avatars
-- **Games** : Catalogue des jeux speedrun avec métadonnées
-- **Runs** : Submissions de speedruns avec validation
-- **Categories** : Catégories de speedrun par jeu
-- **Events** : Événements et compétitions programmés
-- **Comments** : Système de commentaires sur les runs
+**Tables gérées :**
+- **Users** : Profils utilisateurs, authentification, avatars photos
+- **Races** : Événements de courses multijoueurs
+- **Participants** : Participants aux courses avec statuts
+- **Messages** : Système de chat en temps réel pour les courses
 
 **Avantages utilisés :**
 - **Intégrité référentielle** avec contraintes FK
@@ -49,64 +48,64 @@
 - **Index optimisés** pour les requêtes de performance
 - **Schéma strict** via Prisma pour la robustesse
 
-#### **🍃 MongoDB (via Mongoose ODM)**
-**Rôle** : Base NoSQL pour analytics avancées et données flexibles
+#### **🌐 Intégration API Speedrun.com**
+**Rôle** : Source externe de données speedrun avec cache intelligent
 
-**Collections gérées :**
-- **Analytics** : Métriques temps réel de la plateforme
-  - Activité quotidienne (nouveaux users, runs, records)
-  - Statistiques de croissance hebdomadaire
-  - Top performers avec agrégations complexes
-  - Popularité des jeux avec runners uniques
-- **Activity Feed** : Journal d'activité en temps réel
-  - Actions utilisateurs tracées (runs soumis, vérifiés)
-  - Feed social pour dashboard admin
-  - Historique détaillé avec contexte
-- **Custom Avatars** : Système d'avatars personnalisables
-  - Données flexibles (couleurs, styles, accessoires)
-  - Presets favoris par utilisateur
-  - Statistiques d'usage des styles populaires
-- **API Cache** : Cache intelligent des données externes
-  - Cache TTL pour API speedrun.com
-  - Optimisation des performances
-  - Réduction des appels API tiers
+**Données intégrées :**
+- **Jeux populaires** : Catalogue depuis speedrun.com
+- **Leaderboards** : Classements officiels en temps réel
+- **Runs récents** : Dernières soumissions vérifiées
+- **Catégories** : Métadonnées des jeux et leurs catégories
 
-**Avantages utilisés :**
-- **Aggregation Pipeline** pour analytics complexes
-- **Schéma flexible** pour données évolutives
-- **Performance** sur gros volumes de logs
-- **TTL automatique** pour expiration cache
+**Système de cache :**
+- **Cache automatique** : Expiration configurable (30min - 2h)
+- **Refresh en arrière-plan** : Mise à jour transparente
+- **Fallback intelligent** : Données en cache si API indisponible
+- **Optimisation performance** : Réduction drastique des appels API
 
-### **🚀 Fonctionnalités Exploitant l'Architecture Hybride**
+### **🚀 Fonctionnalités Principales**
 
-#### **Analytics Avancées (MongoDB + PostgreSQL)**
-- **Dashboard admin** avec métriques temps réel
-- **Croissance de plateforme** calculée via agrégations MongoDB
-- **Top performers** combinant données Prisma et analytics Mongo
-- **Activity feed** en temps réel pour traçabilité complète
-- **Contrôles temporels** (7, 30, 90 jours) avec performances optimisées
+#### **Authentification & Profils**
+- **Système complet** d'inscription/connexion avec JWT
+- **OAuth Google** pour connexion simplifiée
+- **Profils utilisateur** avec upload d'avatars photos
+- **Sécurisation** complète avec middleware d'authentification
 
-#### **Système d'Avatars Hybride**
-- **Avatars photos** stockés en base64 dans PostgreSQL
-- **Avatars personnalisables** avec données flexibles dans MongoDB
-- **Statistiques d'usage** des styles via aggregation pipeline
-- **Fallback intelligent** entre les deux systèmes
+#### **Courses Multijoueurs en Temps Réel**
+- **Création d'événements** de courses personnalisées
+- **Participation** et gestion des statuts en temps réel
+- **Chat intégré** pour communication entre participants
+- **Dashboard admin** pour supervision et nettoyage automatique
 
-#### **Cache et Performance**
-- **Cache API speedrun.com** dans MongoDB avec TTL
-- **Données relationnelles** optimisées dans PostgreSQL
-- **Requêtes complexes** distribuées entre les deux bases
-- **Failover gracieux** en cas d'indisponibilité d'une base
+#### **Intégration Speedrun.com**
+- **Catalogue de jeux** avec recherche avancée
+- **Leaderboards officiels** en temps réel
+- **Activité récente** : derniers runs et jeux actifs
+- **Cache intelligent** pour performances optimales
+
+#### **Administration & Maintenance**
+- **Dashboard admin** avec statistiques utilisateurs
+- **Gestion des courses** et nettoyage automatique
+- **Monitoring** des performances et état système
+
 
 ### **🔐 Sécurité Implémentée**
-- **Authentification JWT** avec expiration
+- **Authentification JWT** avec expiration et refresh automatique
 - **Hashage bcrypt** des mots de passe (salt: 12)
-- **CORS configuré** pour origines autorisées
-- **Validation stricte** des entrées utilisateur
-- **Protection contre** les injections SQL via Prisma
-- **Protection NoSQL** via Mongoose et validation schéma
-- **Accès admin** sécurisé pour analytics sensibles
-- **Gestion d'erreurs** sécurisée sans exposition
+- **CORS configuré** pour origines autorisées seulement
+- **Validation stricte** des entrées utilisateur côté client et serveur
+- **Protection contre** les injections SQL via Prisma ORM
+- **Middleware d'authentification** sur toutes les routes protégées
+- **Accès admin** sécurisé avec tokens spécialisés
+- **Gestion d'erreurs** sécurisée sans exposition de données sensibles
+
+### **⚡ Performance & Optimisation**
+- **Cache intelligent** avec expiration automatique (30min - 2h)
+- **Système de fallback** pour haute disponibilité
+- **Optimisation des requêtes** via Prisma et index PostgreSQL
+- **Compression des images** pour avatars utilisateur
+- **Nettoyage automatique** des données temporaires
+- **Monitoring** intégré des performances API
 
 
 **Développeur** : Devco01  

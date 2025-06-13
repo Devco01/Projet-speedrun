@@ -11,14 +11,10 @@ import authRoutes from './routes/authRoutes';
 // Les routes utilisateurs avec mock data ont été supprimées
 import speedrunRoutes from './routes/speedrunRoutes';
 import raceRoutes from './routes/raceRoutes';
-import avatarRoutes from './routes/avatarRoutes';
 import adminRoutes from './routes/adminRoutes';
-import analyticsRoutes from './routes/analyticsRoutes';
 // Service analytiques recréé avec données simulées
 
 // Services
-import mongoService from './services/mongoService';
-import analyticsService from './services/analyticsService';
 import cleanupService from './services/cleanupService';
 
 // Configuration
@@ -59,9 +55,7 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/speedrun', speedrunRoutes);
 app.use('/api/races', raceRoutes);
-app.use('/api/avatars', avatarRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/analytics', analyticsRoutes);
 
 // Route de test
 app.get('/', (req, res) => {
@@ -74,7 +68,7 @@ app.get('/', (req, res) => {
       auth: '/api/auth',
       speedrun: '/api/speedrun',
       races: '/api/races',
-      avatars: '/api/avatars',
+
       admin: '/api/admin'
     }
   });
@@ -204,25 +198,14 @@ app.use('*', (req, res) => {
   });
 });
 
-// Initialisation MongoDB et synchronisation des données réelles
+// Initialisation des services
 async function initializeServices() {
   try {
-    await mongoService.connect();
-    console.log('📦 Services MongoDB initialisés');
-    
-    // Synchroniser les données existantes de PostgreSQL vers MongoDB
-    await analyticsService.syncExistingData();
-    console.log('📊 Analytics initialisé avec vraies données');
-    
     // Démarrer le service de nettoyage automatique (compatible Vercel)
     cleanupService.start();
     console.log('🧹 Service de nettoyage démarré (déclenché par requêtes)');
   } catch (error) {
-    console.log('⚠️ MongoDB non disponible - mode dégradé');
-    
-    // Démarrer quand même le nettoyage (compatible Vercel, fonctionne avec PostgreSQL)
-    cleanupService.start();
-    console.log('🧹 Service de nettoyage démarré (mode dégradé, déclenché par requêtes)');
+    console.log('⚠️ Erreur initialisation services:', error);
   }
 }
 
@@ -254,12 +237,9 @@ app.listen(PORT, async () => {
   console.log('🚀 ======================================');
   console.log('📊 Available APIs:');
   console.log('   • Auth: /api/auth');
-  console.log('   • Runs: /api/runs');
-  console.log('   • Events: /api/events');
-  console.log('   • Users: /api/users');
-  console.log('   • Categories: /api/categories');
-  console.log('   • Leaderboards: /api/leaderboards');
   console.log('   • Speedrun: /api/speedrun');
+  console.log('   • Races: /api/races');
+  console.log('   • Admin: /api/admin');
   console.log('🚀 ======================================');
   console.log('💾 Using mock data for testing');
   console.log('🎯 Ready for TP DWWM demonstration!');

@@ -150,7 +150,7 @@ export default function PolitiqueConfidentialite() {
                   </div>
                   <div className="bg-slate-700/30 rounded-lg p-4">
                     <h4 className="font-semibold text-white">🔧 Données techniques</h4>
-                    <p className="text-sm">13 mois maximum (logs et analytics)</p>
+                    <p className="text-sm">13 mois maximum (logs système)</p>
                   </div>
                 </div>
               </div>

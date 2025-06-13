@@ -126,7 +126,7 @@ export default function MentionsLegales() {
                   <h3 className="font-semibold text-white mb-3">💾 Base de données</h3>
                   <div className="space-y-2 text-slate-300 text-sm">
                     <p><strong>PostgreSQL :</strong> Hébergement sécurisé en cloud</p>
-                    <p><strong>MongoDB :</strong> Analytics et métriques</p>
+                    <p><strong>Cache Local :</strong> Optimisation des performances</p>
                     <p><strong>Localisation :</strong> Europe (conformité RGPD)</p>
                     <p><strong>Sécurité :</strong> Chiffrement SSL/TLS</p>
                     <p><strong>Sauvegardes :</strong> Automatiques quotidiennes</p>
