@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth } from './_app';
@@ -9,9 +9,73 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [googleAuthStatus, setGoogleAuthStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   
   const { gererConnexion } = useAuth();
   const router = useRouter();
+
+  // Gestion de l'authentification Google automatique
+  useEffect(() => {
+    const handleGoogleAuth = async () => {
+      const { google_session } = router.query;
+      
+      if (!google_session || typeof google_session !== 'string' || googleAuthStatus !== 'idle') {
+        return;
+      }
+
+      setGoogleAuthStatus('processing');
+      console.log('🔐 Récupération des données Google depuis session:', google_session);
+
+      try {
+        const response = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '')}/api/auth/google/session/${google_session}`);
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null);
+          throw new Error(errorData?.message || `Erreur HTTP: ${response.status}`);
+        }
+        
+        const { data } = await response.json();
+        
+        if (!data || !data.token || !data.user) {
+          throw new Error('Données d\'authentification invalides');
+        }
+
+        console.log('🖼️ Données utilisateur reçues:', {
+          username: data.user.username,
+          email: data.user.email,
+          hasProfileImage: !!data.user.profileImage,
+          profileImageStart: data.user.profileImage?.substring(0, 50) + '...'
+        });
+
+        // Stocker les données d'authentification
+        localStorage.setItem('authToken', data.token);
+        
+        // Connecter l'utilisateur avec avatar
+        gererConnexion(data.user.username, data.user.email, data.user.profileImage);
+        
+        setGoogleAuthStatus('success');
+        
+        // Rediriger vers la page d'accueil
+        setTimeout(() => {
+          router.push('/');
+        }, 1000);
+        
+      } catch (error) {
+        console.error('❌ Erreur authentification Google:', error);
+        setGoogleAuthStatus('error');
+        setError(error instanceof Error ? error.message : 'Erreur d\'authentification Google');
+        
+        // Nettoyer l'URL après quelques secondes
+        setTimeout(() => {
+          router.replace('/login', undefined, { shallow: true });
+        }, 3000);
+      }
+    };
+
+    if (router.isReady) {
+      handleGoogleAuth();
+    }
+  }, [router.isReady, router.query, googleAuthStatus]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +108,7 @@ export default function LoginPage() {
 
       // Se connecter via le contexte global
       const user = data.data.user;
-      gererConnexion(user.username, user.email);
+      gererConnexion(user.username, user.email, user.profileImage);
       
       // Redirection vers la page d'événements
       router.push('/events');
@@ -66,11 +130,32 @@ export default function LoginPage() {
           <p className="text-slate-400">
             Accédez à votre compte speedrunner
           </p>
+          
+          {/* Statut authentification Google */}
+          {googleAuthStatus === 'processing' && (
+            <div className="mt-4 p-4 bg-blue-900/50 border border-blue-700 rounded-lg">
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400 mr-3"></div>
+                <span className="text-blue-300">Connexion Google en cours...</span>
+              </div>
+            </div>
+          )}
+          
+          {googleAuthStatus === 'success' && (
+            <div className="mt-4 p-4 bg-green-900/50 border border-green-700 rounded-lg">
+              <div className="flex items-center justify-center">
+                <span className="text-green-300 mr-2">✅</span>
+                <span className="text-green-300">Connexion réussie ! Redirection...</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Formulaire */}
         <div className="card">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6"
+                style={{ opacity: googleAuthStatus === 'processing' ? 0.5 : 1, 
+                        pointerEvents: googleAuthStatus === 'processing' ? 'none' : 'auto' }}>
             {error && (
               <div className="bg-red-900/50 border border-red-700 rounded-lg p-4">
                 <div className="flex items-center">

@@ -244,7 +244,7 @@ class SpeedrunApiClient {
    * Récupère les runs récents globaux (tous jeux confondus)
    */
   async getGlobalRecentRuns(limit = 20): Promise<RecentRun[]> {
-    return this.requestDirect(`/leaderboards/recent?limit=${limit}`);
+    return this.request<RecentRun[]>(`/runs/recent-global?limit=${limit}`);
   }
 
   /**

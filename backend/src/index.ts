@@ -8,17 +8,14 @@ import { connectWithRetry, testDatabaseConnection } from './config/database';
 
 // Routes
 import authRoutes from './routes/authRoutes';
-import runRoutes from './routes/runRoutes';
-import eventRoutes from './routes/eventRoutes';
-import userRoutes from './routes/userRoutes';
-import categoryRoutes from './routes/categoryRoutes';
-import leaderboardRoutes from './routes/leaderboardRoutes';
+// Les routes utilisateurs avec mock data ont été supprimées
 import speedrunRoutes from './routes/speedrunRoutes';
-import avatarRoutes from './routes/avatarRoutes';
+import raceRoutes from './routes/raceRoutes';
 import adminRoutes from './routes/adminRoutes';
+// Service analytiques recréé avec données simulées
 
 // Services
-import mongoService from './services/mongoService';
+import cleanupService from './services/cleanupService';
 
 // Configuration
 dotenv.config();
@@ -56,13 +53,8 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/runs', runRoutes);
-app.use('/api/events', eventRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/leaderboards', leaderboardRoutes);
 app.use('/api/speedrun', speedrunRoutes);
-app.use('/api/avatars', avatarRoutes);
+app.use('/api/races', raceRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Route de test
@@ -74,13 +66,10 @@ app.get('/', (req, res) => {
     timestamp: new Date().toISOString(),
     endpoints: {
       auth: '/api/auth',
-      runs: '/api/runs',
-      events: '/api/events',
-      users: '/api/users',
-      categories: '/api/categories',
-      leaderboards: '/api/leaderboards',
       speedrun: '/api/speedrun',
-      avatars: '/api/avatars'
+      races: '/api/races',
+
+      admin: '/api/admin'
     }
   });
 });
@@ -106,11 +95,8 @@ app.get('/health', async (req, res) => {
     },
     apis: {
       auth: 'operational',
-      runs: 'operational',
       events: 'operational',
       users: 'operational',
-      categories: 'operational',
-      leaderboards: 'operational',
       speedrun: 'operational'
     }
   });
@@ -183,6 +169,7 @@ app.get('/api', (req, res) => {
           'GET /games/:gameId - Détails d\'un jeu speedrun.com',
           'GET /games/:gameId/categories - Catégories d\'un jeu',
           'GET /games/:gameId/runs/recent - Runs récents d\'un jeu',
+          'GET /runs/recent-global - Runs récents globaux (tous jeux)',
           'GET /leaderboards/:gameId/:categoryId - Leaderboard d\'une catégorie',
           'GET /users/:userId/runs - Runs d\'un utilisateur speedrun.com'
         ]
@@ -211,13 +198,14 @@ app.use('*', (req, res) => {
   });
 });
 
-// Initialisation MongoDB (optionnel)
+// Initialisation des services
 async function initializeServices() {
   try {
-    await mongoService.connect();
-    console.log('📦 Services MongoDB initialisés');
+    // Démarrer le service de nettoyage automatique (compatible Vercel)
+    cleanupService.start();
+    console.log('🧹 Service de nettoyage démarré (déclenché par requêtes)');
   } catch (error) {
-    console.log('⚠️ MongoDB non disponible - mode dégradé');
+    console.log('⚠️ Erreur initialisation services:', error);
   }
 }
 
@@ -249,12 +237,9 @@ app.listen(PORT, async () => {
   console.log('🚀 ======================================');
   console.log('📊 Available APIs:');
   console.log('   • Auth: /api/auth');
-  console.log('   • Runs: /api/runs');
-  console.log('   • Events: /api/events');
-  console.log('   • Users: /api/users');
-  console.log('   • Categories: /api/categories');
-  console.log('   • Leaderboards: /api/leaderboards');
   console.log('   • Speedrun: /api/speedrun');
+  console.log('   • Races: /api/races');
+  console.log('   • Admin: /api/admin');
   console.log('🚀 ======================================');
   console.log('💾 Using mock data for testing');
   console.log('🎯 Ready for TP DWWM demonstration!');

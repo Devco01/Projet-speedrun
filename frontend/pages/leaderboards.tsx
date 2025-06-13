@@ -10,6 +10,11 @@ export default function LeaderboardsPage() {
   const [selectedCategory, setSelectedCategory] = useState<any | null>(null);
   const [leaderboard, setLeaderboard] = useState<Leaderboard | null>(null);
   
+  // États pour la pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+  
   // États pour la recherche
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SpeedrunGame[]>([]);
@@ -57,6 +62,8 @@ export default function LeaderboardsPage() {
             return;
           } catch (error) {
             console.error('Erreur lors du chargement du jeu depuis l\'URL:', error);
+            // Afficher un message d'erreur plus explicite
+            setError(`Le jeu demandé (ID: ${gameIdFromUrl}) n'a pas pu être trouvé. Chargement d'un jeu par défaut...`);
             // Continuer vers le fallback Mario 64
           }
         }
@@ -121,12 +128,21 @@ export default function LeaderboardsPage() {
         
         // Vérifier que categories est défini et est un tableau
         if (categories && Array.isArray(categories)) {
-          setGameCategories(categories);
+          // Filtrer les catégories valides
+          const validCategories = categories.filter(cat => {
+            const isValid = cat && cat.id && cat.name && cat.id.length >= 3;
+            if (!isValid) {
+              console.warn('Catégorie ignorée - données invalides:', cat);
+            }
+            return isValid;
+          });
+          
+          setGameCategories(validCategories);
           
           // OPTIMISATION : Sélectionner directement la première catégorie logique sans test
-          if (categories.length > 0) {
+          if (validCategories.length > 0) {
             // Trier les catégories par priorité mais sans les tester
-            const priorityOrder = categories.sort((a, b) => {
+            const priorityOrder = validCategories.sort((a, b) => {
               // Priorité aux catégories principales
               if (!a.isMiscellaneous && b.isMiscellaneous) return -1;
               if (a.isMiscellaneous && !b.isMiscellaneous) return 1;
@@ -141,6 +157,9 @@ export default function LeaderboardsPage() {
             // Sélectionner directement la première catégorie prioritaire
             console.log(`✅ Sélection directe de la catégorie: ${priorityOrder[0].name}`);
             setSelectedCategory(priorityOrder[0]);
+            setCurrentPage(1); // Reset pagination pour nouvelle catégorie
+          } else {
+            setError('Aucune catégorie valide disponible pour ce jeu');
           }
         } else {
           // Si categories est undefined ou pas un tableau, on initialise avec un tableau vide
@@ -169,23 +188,60 @@ export default function LeaderboardsPage() {
         setLoadingLeaderboard(true);
         setError(null);
         
+        // Toujours récupérer au moins 100 runs pour pouvoir faire de la pagination
+        const runsToFetch = 100; // Maximum qu'on peut récupérer
+        
         // OPTIMISATION : Une seule tentative avec paramètres génériques
         const leaderboardData = await speedrunApiClient.getLeaderboard(
           selectedGame.id, 
           selectedCategory.id,
-          { top: 20 } // Paramètres simples et génériques
+          { top: runsToFetch } // Toujours récupérer 100 runs
         );
         
         if (leaderboardData && leaderboardData.runs && leaderboardData.runs.length > 0) {
           setLeaderboard(leaderboardData);
+          
+          // Calculer le nombre total de pages en fonction des runs disponibles
+          const totalRuns = leaderboardData.runs.length;
+          const calculatedPages = Math.ceil(totalRuns / itemsPerPage);
+          
+          setTotalPages(calculatedPages);
+          
+          console.log('📊 Pagination calculée:', {
+            totalRuns,
+            itemsPerPage,
+            calculatedPages,
+            currentPage,
+            willShowPagination: calculatedPages > 1,
+            runsOnCurrentPage: Math.min(itemsPerPage, totalRuns - (currentPage - 1) * itemsPerPage)
+          });
+          
+          // Vérifier qu'on ne dépasse pas le nombre de pages disponibles
+          if (currentPage > calculatedPages) {
+            console.log('⚠️ Page actuelle trop élevée, reset à 1');
+            setCurrentPage(1);
+          }
         } else {
           setLeaderboard(null);
+          setTotalPages(1);
           setError(`Aucun run disponible pour "${selectedCategory.name}" de ${selectedGame.name}`);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Erreur lors du chargement du leaderboard:', error);
         setLeaderboard(null);
+        
+        // Gestion d'erreurs plus spécifique
+        if (error.message && error.message.includes('404')) {
+          setError(`La catégorie "${selectedCategory.name}" n'existe plus ou a été modifiée sur speedrun.com`);
+          // Nettoyer l'erreur après 5 secondes pour les erreurs 404
+          setTimeout(() => {
+            setError(null);
+          }, 5000);
+        } else if (error.message && error.message.includes('timeout')) {
+          setError('Délai d\'attente dépassé. Veuillez réessayer.');
+        } else {
         setError(`Impossible de charger le classement pour "${selectedCategory.name}"`);
+        }
       } finally {
         setLoadingLeaderboard(false);
       }
@@ -205,10 +261,236 @@ export default function LeaderboardsPage() {
     const delayedSearch = setTimeout(async () => {
       try {
         setLoadingSearch(true);
-        const results = await speedrunApiClient.searchGames(searchQuery, 8);
+        const results = await speedrunApiClient.searchGames(searchQuery, 20); // Augmenter le nombre de résultats
+        
         // S'assurer que results est un tableau
         if (Array.isArray(results)) {
-          setSearchResults(results);
+          // Algorithme de tri avancé - Priorité aux jeux officiels, ROM hacks seulement si nom complet
+          const sortedResults = results.sort((a, b) => {
+            const queryLower = searchQuery.toLowerCase().trim();
+            const aName = a.name.toLowerCase();
+            const bName = b.name.toLowerCase();
+            
+            // 1. Jeux iconiques officiels par franchise (priorité absolue)
+            const iconicTitles = {
+              'zelda': [
+                'the legend of zelda: ocarina of time',
+                'the legend of zelda: majora\'s mask', 
+                'the legend of zelda: breath of the wild',
+                'the legend of zelda: tears of the kingdom',
+                'the legend of zelda: twilight princess',
+                'the legend of zelda: wind waker',
+                'the legend of zelda: a link to the past',
+                'the legend of zelda: link\'s awakening',
+                'the legend of zelda',
+                'zelda ii: the adventure of link'
+              ],
+              'mario': [
+                'super mario 64',
+                'super mario odyssey',
+                'super mario world',
+                'super mario bros.',
+                'super mario sunshine',
+                'super mario galaxy',
+                'super mario bros. 3',
+                'mario kart 64',
+                'paper mario'
+              ],
+              'sonic': [
+                'sonic the hedgehog',
+                'sonic the hedgehog 2',
+                'sonic the hedgehog 3',
+                'sonic & knuckles',
+                'sonic adventure',
+                'sonic adventure 2',
+                'sonic mania'
+              ],
+              'metroid': [
+                'super metroid',
+                'metroid prime',
+                'metroid fusion',
+                'metroid dread'
+              ],
+              'pokemon': [
+                'pokemon red',
+                'pokemon blue',
+                'pokemon yellow',
+                'pokemon gold',
+                'pokemon silver',
+                'pokemon ruby',
+                'pokemon sapphire'
+              ]
+            };
+            
+            // 2. Tous les jeux officiels (deuxième priorité)
+            const allOfficialTitles = {
+              'zelda': [
+                ...iconicTitles.zelda,
+                'the legend of zelda: skyward sword',
+                'the legend of zelda: a link between worlds',
+                'the legend of zelda: tri force heroes',
+                'the legend of zelda: spirit tracks',
+                'the legend of zelda: phantom hourglass',
+                'the legend of zelda: minish cap',
+                'the legend of zelda: four swords adventures',
+                'the legend of zelda: oracle of seasons',
+                'the legend of zelda: oracle of ages',
+                'zelda (game & watch)',
+                'zelda classic'
+              ],
+              'mario': [
+                ...iconicTitles.mario,
+                'super mario galaxy 2',
+                'mario kart 8',
+                'mario kart: double dash',
+                'super mario bros. 2',
+                'super mario land',
+                'super mario land 2',
+                'super mario 3d world',
+                'super mario 3d land',
+                'new super mario bros.',
+                'mario party',
+                'mario & luigi'
+              ],
+              'sonic': [
+                ...iconicTitles.sonic,
+                'sonic 3 & knuckles',
+                'sonic cd',
+                'sonic heroes',
+                'sonic generations',
+                'sonic forces',
+                'sonic frontiers',
+                'sonic colors'
+              ],
+              'metroid': [
+                ...iconicTitles.metroid,
+                'metroid',
+                'metroid ii',
+                'metroid prime 2',
+                'metroid prime 3',
+                'metroid zero mission',
+                'metroid: other m',
+                'metroid: samus returns'
+              ],
+              'pokemon': [
+                ...iconicTitles.pokemon,
+                'pokemon crystal',
+                'pokemon emerald',
+                'pokemon diamond',
+                'pokemon pearl',
+                'pokemon platinum',
+                'pokemon black',
+                'pokemon white',
+                'pokemon black 2',
+                'pokemon white 2'
+              ]
+            };
+            
+            // 3. ROM hacks - Liste exhaustive pour filtrage strict
+            const knownHacks = [
+              // Zelda hacks
+              'parallel worlds', 'goddess of wisdom', 'missing link', 
+              'time to triumph', 'dawn & dusk', 'return of ganon', 'outlands',
+              'ancient stone tablets', 'bs zelda', 'master quest',
+              
+              // Mario hacks
+              'star road', 'last impact', 'sunshine 64', 'peach\'s fury',
+              'mario 64 chaos edition', 'mario builder', 'mario forever',
+              
+              // Sonic hacks
+              'sonic 2 xl', 'sonic classic heroes', 'sonic megamix',
+              'sonic 3 complete', 'sonic the hedgehog 2 nick arcade',
+              
+              // Pokemon hacks
+              'pokemon uranium', 'pokemon prism', 'pokemon dark rising',
+              'pokemon glazed', 'pokemon light platinum', 'pokemon flora sky'
+            ];
+            
+            // 4. Mots indicateurs de hacks (pour détection générale)
+            const hackIndicators = [
+              'hack', 'mod', 'randomizer', 'kaizo', 'romhack', 'rom hack', 'custom',
+              'fan made', 'fanmade', 'homebrew', 'beta', 'demo', 'challenge',
+              'difficulty', 'editor', 'maker', 'creator', 'remix', 'remaster',
+              'enhanced', 'redux', 'tribute', 'fan game', 'fangame', 'bootleg',
+              'tas', 'tool assisted', 'speedhack', 'practice', 'training'
+            ];
+            
+            // Détection des catégories
+            let aIsIconic = false;
+            let bIsIconic = false;
+            let aIsOfficial = false;
+            let bIsOfficial = false;
+            let aIsHack = false;
+            let bIsHack = false;
+            
+            // Détecter la franchise de la requête
+            for (const [franchise, titles] of Object.entries(iconicTitles)) {
+              if (queryLower.includes(franchise) && queryLower.length <= franchise.length + 3) {
+                // Requête simple de franchise (ex: "zelda", "mario")
+                
+                // Jeux iconiques
+                aIsIconic = titles.some(title => aName === title || aName.includes(title));
+                bIsIconic = titles.some(title => bName === title || bName.includes(title));
+                
+                                 // Tous les jeux officiels
+                 const allTitles = allOfficialTitles[franchise as keyof typeof allOfficialTitles] || [];
+                 aIsOfficial = allTitles.some((title: string) => aName === title || aName.includes(title));
+                 bIsOfficial = allTitles.some((title: string) => bName === title || bName.includes(title));
+                
+                break;
+              }
+            }
+            
+            // Détection des ROM hacks - STRICTE
+            // Seulement si le nom du hack est tapé en entier OU contient des mots indicateurs
+            const queryIsSpecificHack = knownHacks.some(hack => 
+              queryLower.includes(hack) && queryLower.length >= hack.length - 2
+            );
+            
+            if (!queryIsSpecificHack) {
+              // Si l'utilisateur ne cherche pas spécifiquement un hack, on les filtre
+              aIsHack = knownHacks.some(hack => aName.includes(hack)) || 
+                        hackIndicators.some(indicator => aName.includes(indicator));
+              bIsHack = knownHacks.some(hack => bName.includes(hack)) || 
+                        hackIndicators.some(indicator => bName.includes(indicator));
+            }
+            
+            // Logique de tri par priorité
+            
+            // Priorité 1: Jeux iconiques (pour requêtes simples comme "zelda")
+            if (aIsIconic && !bIsIconic) return -1;
+            if (!aIsIconic && bIsIconic) return 1;
+            
+            // Priorité 2: Jeux officiels
+            if (aIsOfficial && !bIsOfficial) return -1;
+            if (!aIsOfficial && bIsOfficial) return 1;
+            
+            // Priorité 3: Filtrer les ROM hacks (sauf si recherche spécifique)
+            if (!queryIsSpecificHack) {
+              if (!aIsHack && bIsHack) return -1;
+              if (aIsHack && !bIsHack) return 1;
+            }
+            
+            // Priorité 4: Match exact
+            if (aName === queryLower && bName !== queryLower) return -1;
+            if (bName === queryLower && aName !== queryLower) return 1;
+            
+            // Priorité 5: Commence par la requête
+            const aStarts = aName.startsWith(queryLower);
+            const bStarts = bName.startsWith(queryLower);
+            if (aStarts && !bStarts) return -1;
+            if (bStarts && !aStarts) return 1;
+            
+            // Priorité 6: Plus court = probablement plus officiel
+            const lengthDiff = aName.length - bName.length;
+            if (Math.abs(lengthDiff) > 15) return lengthDiff;
+            
+            // Par défaut: ordre alphabétique
+            return aName.localeCompare(bName);
+          });
+          
+          // Limiter à 8 résultats pour l'affichage
+          setSearchResults(sortedResults.slice(0, 8));
           setShowSearchResults(true);
         } else {
           console.warn('Résultats de recherche invalides:', results);
@@ -244,6 +526,7 @@ export default function LeaderboardsPage() {
     setSelectedGame(game);
     setSelectedCategory(null);
     setLeaderboard(null);
+    setCurrentPage(1); // Reset pagination
     setShowSearchResults(false);
     setSearchQuery('');
     setHasUserSelected(true);
@@ -465,7 +748,10 @@ export default function LeaderboardsPage() {
                 {gameCategories.map((category) => (
                   <div
                     key={category.id}
-                    onClick={() => setSelectedCategory(category)}
+                    onClick={() => {
+                      setSelectedCategory(category);
+                      setCurrentPage(1); // Reset pagination
+                    }}
                     className={`cursor-pointer p-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
                       selectedCategory?.id === category.id
                         ? 'border-violet-500 bg-violet-900/20'
@@ -532,15 +818,20 @@ export default function LeaderboardsPage() {
                 </div>
               </div>
               
-              {leaderboard.runs.map((entry, index) => (
+              {leaderboard.runs
+                .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                .map((entry, index) => {
+                  // Calculer l'index global pour le placement correct
+                  const globalIndex = (currentPage - 1) * itemsPerPage + index;
+                  return (
                 <div
                   key={entry.run.id}
                   className={`grid grid-cols-12 gap-4 items-center p-4 rounded-lg border transition-colors ${
-                    index === 0
+                    globalIndex === 0
                       ? 'border-yellow-500/50 bg-gradient-to-r from-yellow-900/20 to-amber-900/20'
-                      : index === 1
+                      : globalIndex === 1
                       ? 'border-gray-400/50 bg-gradient-to-r from-gray-800/20 to-slate-800/20'
-                      : index === 2
+                      : globalIndex === 2
                       ? 'border-orange-500/50 bg-gradient-to-r from-orange-900/20 to-red-900/20'
                       : 'border-slate-700 bg-slate-800/30 hover:bg-slate-800/50'
                   }`}
@@ -616,11 +907,60 @@ export default function LeaderboardsPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+              );
+            })}
             </div>
           ) : (
             <div className="text-center py-12">
               <p className="text-slate-300 text-lg">Aucun run trouvé pour cette catégorie</p>
+            </div>
+          )}
+          
+          {/* Contrôles de pagination du bas - Optimisé mobile */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center mt-8 px-4">
+              <div className="flex items-center space-x-3 bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-4 shadow-xl">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="group flex items-center px-4 py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-600 disabled:opacity-50 text-white font-semibold rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg disabled:hover:scale-100 min-w-[100px] justify-center"
+                >
+                  <svg className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  <span className="hidden sm:inline">Précédent</span>
+                  <span className="sm:hidden">‹</span>
+                </button>
+                
+                <div className="flex items-center space-x-3 px-4">
+                  <div className="text-slate-300 font-medium hidden sm:block">
+                    Page
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="px-4 py-2 bg-gradient-to-r from-violet-500 to-purple-500 text-white font-bold rounded-lg shadow-md min-w-[50px] text-center">
+                      {currentPage}
+                    </span>
+                    <span className="text-slate-400">
+                      /
+                    </span>
+                    <span className="px-4 py-2 bg-slate-700 text-slate-300 font-medium rounded-lg min-w-[50px] text-center">
+                      {totalPages}
+                    </span>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="group flex items-center px-4 py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-600 disabled:opacity-50 text-white font-semibold rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg disabled:hover:scale-100 min-w-[100px] justify-center"
+                >
+                  <span className="hidden sm:inline">Suivant</span>
+                  <span className="sm:hidden">›</span>
+                  <svg className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
             </div>
           )}
         </div>

@@ -25,27 +25,68 @@
 ### **Stack Backend (Node.js/Express)**
 - **Runtime** : Node.js 18+
 - **Framework** : Express.js avec TypeScript
-- **ORM/Database** : Prisma (PostgreSQL) + Mongoose (MongoDB)
+- **ORM/Database** : Prisma (PostgreSQL)
 - **Authentification** : JWT + bcrypt (salt 12)
 - **Middleware** : Authentification, CORS, validation
 - **API** : Architecture REST avec endpoints structurés
+- **Cache** : Système de cache intelligent avec expiration automatique
 
-### **Bases de Données**
-- **PostgreSQL** : Données relationnelles principales
-  - Users, Games, Runs, Events, Categories
-  - Contraintes relationnelles complexes
-  - Index optimisés pour les performances
-- **MongoDB** : Analytics et cache API externe
-  - Données non-relationnelles
-  - Stockage des analytics temps réel
+### **Architecture Base de Données**
 
-### **Sécurité Implémentée**
-- **Authentification JWT** avec expiration
-- **Hashage bcrypt** des mots de passe (salt: 12)
-- **CORS configuré** pour origines autorisées
-- **Validation stricte** des entrées utilisateur
-- **Protection contre** les injections SQL via Prisma
-- **Gestion d'erreurs** sécurisée sans exposition
+#### **🐘 PostgreSQL (via Prisma ORM)**
+**Rôle** : Base de données relationnelle principale pour toutes les données
+
+**Tables gérées :**
+- **Users** : Profils utilisateurs, authentification, avatars photos
+- **Races** : Événements de courses multijoueurs
+- **Participants** : Participants aux courses avec statuts
+- **Messages** : Système de chat en temps réel pour les courses
+
+**Avantages utilisés :**
+- **Intégrité référentielle** avec contraintes FK
+- **Transactions ACID** pour les opérations critiques
+- **Index optimisés** pour les requêtes de performance
+- **Schéma strict** via Prisma pour la robustesse
+
+#### **🌐 Intégration API Speedrun.com**
+**Rôle** : Source externe de données speedrun avec cache intelligent
+
+**Données intégrées :**
+- **Jeux populaires** : Catalogue depuis speedrun.com
+- **Leaderboards** : Classements officiels en temps réel
+- **Runs récents** : Dernières soumissions vérifiées
+- **Catégories** : Métadonnées des jeux et leurs catégories
+
+**Système de cache :**
+- **Cache automatique** : Expiration configurable (30min - 2h)
+- **Refresh en arrière-plan** : Mise à jour transparente
+- **Fallback intelligent** : Données en cache si API indisponible
+- **Optimisation performance** : Réduction drastique des appels API
+
+### **🚀 Fonctionnalités Principales**
+
+#### **Authentification & Profils**
+- **Système complet** d'inscription/connexion avec JWT
+- **OAuth Google** pour connexion simplifiée
+- **Profils utilisateur** avec upload d'avatars photos
+- **Sécurisation** complète avec middleware d'authentification
+
+#### **Courses Multijoueurs en Temps Réel**
+- **Création d'événements** de courses personnalisées
+- **Participation** et gestion des statuts en temps réel
+- **Chat intégré** pour communication entre participants
+- **Dashboard admin** pour supervision et nettoyage automatique
+
+#### **Intégration Speedrun.com**
+- **Catalogue de jeux** avec recherche avancée
+- **Leaderboards officiels** en temps réel
+- **Activité récente** : derniers runs et jeux actifs
+- **Cache intelligent** pour performances optimales
+
+#### **Administration & Maintenance**
+- **Dashboard admin** avec statistiques utilisateurs
+- **Gestion des courses** et nettoyage automatique
+- **Monitoring** des performances et état système
 
 ---
 
@@ -74,22 +115,22 @@
 ### **🔧 ACTIVITÉ TYPE 2 : Back-end Sécurisé**
 
 #### **2.1 Mettre en place une base de données relationnelle**
-- ✅ **Modélisation PostgreSQL** avec 6 entités principales
+- ✅ **Modélisation PostgreSQL** avec 4 entités principales
 - ✅ **Relations complexes** : One-to-Many, Many-to-Many
 - ✅ **Contraintes d'intégrité** et index optimisés
 - ✅ **Migrations Prisma** pour évolution du schéma
 
 #### **2.2 Développer des composants d'accès aux données**
 - ✅ **ORM Prisma** pour PostgreSQL (relationnelle)
-- ✅ **ODM Mongoose** pour MongoDB (NoSQL)
 - ✅ **Requêtes optimisées** avec jointures et agrégations
 - ✅ **Cache stratégique** pour performances
+- ✅ **Intégration API externe** avec cache intelligent
 
 #### **2.3 Développer des composants métier côté serveur**
-- ✅ **API REST complète** : 25+ endpoints structurés
+- ✅ **API REST complète** : 20+ endpoints structurés
 - ✅ **Architecture MVC** : Routes, Controllers, Services
-- ✅ **Logique métier** : Validation runs, calcul rankings
-- ✅ **Intégration API externe** : speedrun.com
+- ✅ **Logique métier** : Gestion courses, validation runs
+- ✅ **Intégration API externe** : speedrun.com avec cache
 
 ---
 
@@ -114,47 +155,44 @@
 - Middleware d'authentification JWT personnalisé
 - Validation des schémas avec TypeScript
 - Gestion d'erreurs globale et logging
-- Intégration base de données hybride (SQL/NoSQL)
+- Intégration base de données PostgreSQL/Prisma
 - Rate limiting et sécurisation CORS
-- API externe speedrun.com avec cache
+- API externe speedrun.com avec cache intelligent
 ```
 
-### **Base de Données (PostgreSQL + MongoDB)**
+### **Base de Données (PostgreSQL)**
 ```sql
--- Modélisation relationnelle complexe
-Users -> Runs (One-to-Many)
-Games -> Categories (One-to-Many)  
-Events -> Participants (Many-to-Many)
-Runs -> Verifications (One-to-One)
+-- Modélisation relationnelle optimisée
+Users -> Races (One-to-Many)
+Races -> Participants (One-to-Many)  
+Races -> Messages (One-to-Many)
+Users -> Messages (One-to-Many)
 
 -- Index et performances optimisés
 ```
 
 ---
 
-## 🔒 Sécurité et Bonnes Pratiques
+## 🔐 Sécurité Implémentée
+- **Authentification JWT** avec expiration et refresh automatique
+- **Hashage bcrypt** des mots de passe (salt: 12)
+- **CORS configuré** pour origines autorisées seulement
+- **Validation stricte** des entrées utilisateur côté client et serveur
+- **Protection contre** les injections SQL via Prisma ORM
+- **Middleware d'authentification** sur toutes les routes protégées
+- **Accès admin** sécurisé avec tokens spécialisés
+- **Gestion d'erreurs** sécurisée sans exposition de données sensibles
 
-### **Authentification Robuste**
-- JWT avec expiration configurable
-- Refresh tokens pour sessions longues
-- Hashage bcrypt avec salt élevé (12)
-- Validation stricte des mots de passe
-
-### **Protection des Données**
-- Validation des entrées côté client ET serveur
-- Sanitisation des données utilisateur
-- Protection CORS configurée finement
-- Gestion sécurisée des erreurs
-
-### **Performance et Scalabilité**
-- Cache MongoDB pour données externes
-- Index PostgreSQL optimisés
-- Lazy loading des composants React
-- Pagination côté serveur
-
-
-**Développeur** : Devco01
-**Formation** : Titre Professionnel DWWM  
-**Année** : 2024
+## ⚡ Performance & Optimisation
+- **Cache intelligent** avec expiration automatique (30min - 2h)
+- **Système de fallback** pour haute disponibilité
+- **Optimisation des requêtes** via Prisma et index PostgreSQL
+- **Compression des images** pour avatars utilisateur
+- **Nettoyage automatique** des données temporaires
+- **Monitoring** intégré des performances API
 
 ---
+
+**Développeur** : Devco01  
+**Formation** : Titre Professionnel DWWM  
+**Année** : 2025

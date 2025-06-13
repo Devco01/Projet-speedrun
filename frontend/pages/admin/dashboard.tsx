@@ -1,12 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import Link from 'next/link';
 import Head from 'next/head';
 
 interface Stats {
   totalUsers: number;
-  totalEvents: number;
-  pastEvents: number;
+  totalRaces: number;
+  activeRaces: number;
+  completedRaces: number;
+  newUsersThisMonth: number;
+}
+
+interface CleanupStats {
+  totalRaces: number;
+  finishedRaces: number;
+  racesToCleanup: number;
+  oldestFinishedRace?: string;
 }
 
 interface User {
@@ -15,17 +23,7 @@ interface User {
   email: string;
   profileImage?: string;
   createdAt: string;
-  runsCount: number;
   isActive: boolean;
-}
-
-interface Event {
-  id: string;
-  name: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  createdBy: string;
 }
 
 export default function AdminDashboard() {
@@ -34,12 +32,18 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<Stats>({
     totalUsers: 0,
-    totalEvents: 0,
-    pastEvents: 0
+    totalRaces: 0,
+    activeRaces: 0,
+    completedRaces: 0,
+    newUsersThisMonth: 0
   });
   const [users, setUsers] = useState<User[]>([]);
-  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
-  const [pastEvents, setPastEvents] = useState<Event[]>([]);
+  const [cleanupStats, setCleanupStats] = useState<CleanupStats>({
+    totalRaces: 0,
+    finishedRaces: 0,
+    racesToCleanup: 0
+  });
+  const [cleanupLoading, setCleanupLoading] = useState(false);
 
   useEffect(() => {
     // Vérifier l'authentification admin
@@ -51,6 +55,7 @@ export default function AdminDashboard() {
     
     setIsAuthenticated(true);
     loadRealData();
+    loadCleanupStats();
   }, []);
 
   const loadRealData = async () => {
@@ -59,16 +64,27 @@ export default function AdminDashboard() {
       const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '');
       console.log('DEBUG: API URL utilisée:', apiUrl);
       
+      const adminToken = localStorage.getItem('adminToken');
+      const authToken = localStorage.getItem('authToken');
+      const token = adminToken || authToken;
+      
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       // Récupérer les statistiques
-      const statsResponse = await fetch(`${apiUrl}/api/admin/stats`);
+      const statsResponse = await fetch(`${apiUrl}/api/admin/stats`, { headers });
       console.log('DEBUG: Stats response status:', statsResponse.status);
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();
         console.log('DEBUG: Stats data:', statsData);
         setStats({
-          totalUsers: statsData.data.totalUsers,
-          totalEvents: statsData.data.totalEvents,
-          pastEvents: statsData.data.pastEvents
+          totalUsers: statsData.data.totalUsers || 0,
+          totalRaces: statsData.data.totalRaces || 0,
+          activeRaces: statsData.data.activeRaces || 0,
+          completedRaces: statsData.data.completedRaces || 0,
+          newUsersThisMonth: statsData.data.newUsersThisMonth || 0
         });
       } else {
         console.error('DEBUG: Stats response error:', await statsResponse.text());
@@ -77,7 +93,7 @@ export default function AdminDashboard() {
       // Récupérer les utilisateurs
       const usersUrl = `${apiUrl}/api/admin/users?limit=50`;
       console.log('DEBUG: Tentative de récupération des utilisateurs:', usersUrl);
-      const usersResponse = await fetch(usersUrl);
+      const usersResponse = await fetch(usersUrl, { headers });
       console.log('DEBUG: Users response status:', usersResponse.status);
       if (usersResponse.ok) {
         const usersData = await usersResponse.json();
@@ -88,31 +104,75 @@ export default function AdminDashboard() {
         setUsers([]); // S'assurer que c'est vide en cas d'erreur
       }
 
-      // Récupérer les événements
-      const eventsResponse = await fetch(`${apiUrl}/api/admin/events`);
-      console.log('DEBUG: Events response status:', eventsResponse.status);
-      if (eventsResponse.ok) {
-        const eventsData = await eventsResponse.json();
-        console.log('DEBUG: Events data:', eventsData);
-        setUpcomingEvents(eventsData.data.upcoming);
-        setPastEvents(eventsData.data.past);
-      } else {
-        console.error('DEBUG: Events response error:', await eventsResponse.text());
-      }
-
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
       // Garder les données par défaut en cas d'erreur
       setStats({
         totalUsers: 0,
-        totalEvents: 0,
-        pastEvents: 0
+        totalRaces: 0,
+        activeRaces: 0,
+        completedRaces: 0,
+        newUsersThisMonth: 0
       });
       setUsers([]);
-      setUpcomingEvents([]);
-      setPastEvents([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCleanupStats = async () => {
+    try {
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '');
+      const adminToken = localStorage.getItem('adminToken');
+      const authToken = localStorage.getItem('authToken');
+      const token = adminToken || authToken;
+      
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(`${apiUrl}/api/admin/cleanup/stats`, { headers });
+      if (response.ok) {
+        const data = await response.json();
+        setCleanupStats(data.data);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des stats de nettoyage:', error);
+    }
+  };
+
+  const forceCleanup = async () => {
+    setCleanupLoading(true);
+    try {
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '');
+      const adminToken = localStorage.getItem('adminToken');
+      const authToken = localStorage.getItem('authToken');
+      const token = adminToken || authToken;
+      
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(`${apiUrl}/api/admin/cleanup`, {
+        method: 'POST',
+        headers
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        alert(`Nettoyage terminé: ${data.data.deletedCount} course(s) supprimée(s)`);
+        loadCleanupStats(); // Recharger les stats
+        loadRealData(); // Recharger les données générales
+      } else {
+        alert('Erreur lors du nettoyage');
+      }
+    } catch (error) {
+      console.error('Erreur lors du nettoyage forcé:', error);
+      alert('Erreur lors du nettoyage');
+    } finally {
+      setCleanupLoading(false);
     }
   };
 
@@ -155,10 +215,22 @@ export default function AdminDashboard() {
               </button>
             </div>
             <h1 className="text-4xl font-bold text-white flex items-center gap-3 mb-2 pr-24">
-              <span className="text-blue-400">⚡</span>
               Tableau de bord administrateur
             </h1>
             <p className="text-gray-400">Surveillance et statistiques de la plateforme speedrun</p>
+          </div>
+
+          {/* Actions rapides */}
+          <div className="mb-8">
+            <div className="flex flex-wrap gap-4">
+              <button 
+                onClick={forceCleanup}
+                disabled={cleanupLoading}
+                className="group bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-orange-500/25 border border-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {cleanupLoading ? '🧹 Nettoyage...' : '🧹 Nettoyer courses terminées'}
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -168,7 +240,7 @@ export default function AdminDashboard() {
           ) : (
             <div className="space-y-8">
               {/* Statistiques principales */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
                 <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-blue-500 transition-colors">
                   <div className="flex items-center">
                     <div className="p-3 bg-blue-600 rounded-lg">
@@ -184,11 +256,11 @@ export default function AdminDashboard() {
                 <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-purple-500 transition-colors">
                   <div className="flex items-center">
                     <div className="p-3 bg-purple-600 rounded-lg">
-                      <span className="text-white text-xl">📅</span>
+                      <span className="text-white text-xl">🏁</span>
                     </div>
                     <div className="ml-4">
-                      <p className="text-gray-400 text-sm">Événements à venir</p>
-                      <p className="text-white text-2xl font-bold">{stats.totalEvents.toLocaleString()}</p>
+                      <p className="text-gray-400 text-sm">Races actives</p>
+                      <p className="text-white text-2xl font-bold">{stats.activeRaces.toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
@@ -196,11 +268,35 @@ export default function AdminDashboard() {
                 <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-orange-500 transition-colors">
                   <div className="flex items-center">
                     <div className="p-3 bg-orange-600 rounded-lg">
-                      <span className="text-white text-xl">📚</span>
+                      <span className="text-white text-xl">🧹</span>
                     </div>
                     <div className="ml-4">
-                      <p className="text-gray-400 text-sm">Événements passés</p>
-                      <p className="text-white text-2xl font-bold">{stats.pastEvents.toLocaleString()}</p>
+                      <p className="text-gray-400 text-sm">Courses à nettoyer</p>
+                      <p className="text-white text-2xl font-bold">{cleanupStats.racesToCleanup.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-orange-500 transition-colors">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-orange-600 rounded-lg">
+                      <span className="text-white text-xl">🏆</span>
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-gray-400 text-sm">Races terminées</p>
+                      <p className="text-white text-2xl font-bold">{stats.completedRaces.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-green-500 transition-colors">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-green-600 rounded-lg">
+                      <span className="text-white text-xl">📈</span>
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-gray-400 text-sm">Nouveaux ce mois</p>
+                      <p className="text-white text-2xl font-bold">{stats.newUsersThisMonth.toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
@@ -236,9 +332,6 @@ export default function AdminDashboard() {
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                             Email
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Speedruns
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                             Date d'inscription
@@ -280,11 +373,6 @@ export default function AdminDashboard() {
                                 {user.email}
                               </div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-300">
-                                {user.runsCount}
-                              </div>
-                            </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                               {formatDate(user.createdAt)}
                             </td>
@@ -295,140 +383,6 @@ export default function AdminDashboard() {
                                   : 'bg-red-100 text-red-800'
                               }`}>
                                 {user.isActive ? 'Actif' : 'Inactif'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              </div>
-
-              {/* Événements à venir */}
-              <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
-                <div className="p-6 border-b border-gray-700">
-                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <span className="text-purple-400">📅</span>
-                    Événements en ligne à venir
-                  </h2>
-                </div>
-                
-                <div className="overflow-x-auto">
-                  {upcomingEvents.length === 0 ? (
-                    <div className="px-6 py-8 text-center">
-                      <p className="text-gray-400 text-lg">Aucun événement à venir</p>
-                      <p className="text-gray-500 text-sm mt-2">Les événements en ligne créés par les utilisateurs apparaîtront ici</p>
-                    </div>
-                  ) : (
-                    <table className="min-w-full">
-                      <thead className="bg-gray-700">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Nom de l'événement
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Créé par
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Date début
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Date fin
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-700">
-                        {upcomingEvents.map((event) => (
-                          <tr key={event.id} className="hover:bg-gray-750">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-white">
-                                {event.name}
-                              </div>
-                              <div className="text-xs text-gray-400">
-                                {event.description}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-300">
-                                {event.createdBy}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                              {formatDate(event.startDate)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                              {formatDate(event.endDate)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              </div>
-
-              {/* Historique des événements passés */}
-              <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
-                <div className="p-6 border-b border-gray-700">
-                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <span className="text-orange-400">📚</span>
-                    Historique des événements passés
-                  </h2>
-                </div>
-                
-                <div className="overflow-x-auto">
-                  {pastEvents.length === 0 ? (
-                    <div className="px-6 py-8 text-center">
-                      <p className="text-gray-400 text-lg">Aucun événement dans l'historique</p>
-                      <p className="text-gray-500 text-sm mt-2">Les événements terminés apparaîtront ici automatiquement</p>
-                    </div>
-                  ) : (
-                    <table className="min-w-full">
-                      <thead className="bg-gray-700">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Nom de l'événement
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Créé par
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Date début
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Date fin
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Statut
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-700">
-                        {pastEvents.map((event) => (
-                          <tr key={event.id} className="hover:bg-gray-750">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-white">
-                                {event.name}
-                              </div>
-                              <div className="text-xs text-gray-400">
-                                {event.description}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-300">
-                                {event.createdBy}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                              {formatDate(event.startDate)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                              {formatDate(event.endDate)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                                Terminé
                               </span>
                             </td>
                           </tr>

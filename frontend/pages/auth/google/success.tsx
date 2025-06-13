@@ -1,53 +1,102 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { useAuth } from '../../_app';
 
 export default function GoogleAuthSuccess() {
   const router = useRouter();
-  const { gererConnexion } = useAuth();
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [message, setMessage] = useState('Récupération des données d\'authentification...');
 
   useEffect(() => {
-    // Éviter le double traitement
-    if (isProcessing) return;
-
-    // Récupérer le token et les données utilisateur depuis l'URL
-    const { token, user } = router.query;
-
-    if (token && user && !isProcessing) {
-      setIsProcessing(true);
-      
+    const handleAuthSuccess = async () => {
       try {
-        // Décoder les données utilisateur
-        const userData = JSON.parse(decodeURIComponent(user as string));
+        const { session } = router.query;
         
-        // Stocker le token
-        localStorage.setItem('authToken', token as string);
+        if (!session || typeof session !== 'string') {
+          throw new Error('Session manquante');
+        }
+
+        console.log('🔐 Récupération des données de session sécurisée...');
         
-        // Connecter l'utilisateur dans le contexte global
-        gererConnexion(userData.username, userData.email);
+        // Récupérer les données depuis le serveur avec l'ID de session
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/google/session/${session}`);
         
-        // Rediriger vers le profil
-        router.replace('/profile?welcome=true&source=google');
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null);
+          throw new Error(errorData?.message || `Erreur HTTP: ${response.status}`);
+        }
+        
+        const { data } = await response.json();
+        
+        if (!data || !data.token || !data.user) {
+          throw new Error('Données d\'authentification invalides');
+        }
+
+        console.log('✅ Données récupérées, connexion...');
+        
+        // Stocker le token JWT
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        setStatus('success');
+        setMessage(`Bienvenue ${data.user.username} ! Redirection...`);
+        
+        // Rediriger vers la page d'accueil après un court délai
+        setTimeout(() => {
+          router.push('/');
+        }, 1500);
+        
       } catch (error) {
-        console.error('Erreur lors du traitement de l\'authentification Google:', error);
-        router.replace('/login?error=google_auth_error');
+        console.error('❌ Erreur d\'authentification Google:', error);
+        setStatus('error');
+        setMessage(error instanceof Error ? error.message : 'Erreur d\'authentification');
+        
+        // Rediriger vers login après 3 secondes en cas d'erreur
+        setTimeout(() => {
+          router.push('/auth/login');
+        }, 3000);
       }
-    } else if (!token || !user) {
-      // Rediriger vers la page de connexion si pas de données (seulement si les query params sont chargés)
-      if (router.isReady && !isProcessing) {
-        setIsProcessing(true);
-        router.replace('/login?error=missing_auth_data');
-      }
+    };
+
+    if (router.isReady) {
+      handleAuthSuccess();
     }
-  }, [router.isReady, router.query.token, router.query.user]); // Dépendances spécifiques
+  }, [router.isReady, router.query]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-        <h2 className="text-xl font-semibold text-white mb-2">Authentification Google en cours...</h2>
-        <p className="text-slate-400">Vous allez être redirigé automatiquement</p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
+      <div className="max-w-md w-full mx-auto">
+        <div className="bg-white rounded-lg shadow-xl p-8 text-center">
+          <div className="mb-6">
+            {status === 'loading' && (
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            )}
+            {status === 'success' && (
+              <div className="text-green-500 text-5xl">✓</div>
+            )}
+            {status === 'error' && (
+              <div className="text-red-500 text-5xl">✗</div>
+            )}
+          </div>
+          
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            {status === 'loading' && 'Authentification en cours...'}
+            {status === 'success' && 'Connexion réussie !'}
+            {status === 'error' && 'Erreur d\'authentification'}
+          </h1>
+          
+          <p className="text-gray-600 mb-6">
+            {message}
+          </p>
+          
+          {status === 'error' && (
+            <button
+              onClick={() => router.push('/auth/login')}
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Retour à la connexion
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

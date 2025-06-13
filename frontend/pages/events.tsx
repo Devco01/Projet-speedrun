@@ -86,6 +86,95 @@ export default function PageRaces() {
   const [messagesChat, setMessagesChat] = useState<MessageChat[]>([]);
   const [nouveauMessage, setNouveauMessage] = useState('');
 
+  // ⏱️ NOUVEAUX ÉTATS POUR LE TIMER EN TEMPS RÉEL
+  const [timerState, setTimerState] = useState<'waiting' | 'countdown' | 'racing' | 'finished'>('waiting');
+  const [timeRemaining, setTimeRemaining] = useState(30); // Décompte de 30 secondes
+  const [raceTime, setRaceTime] = useState(0); // Temps de course en secondes
+  const [personalStartTime, setPersonalStartTime] = useState<Date | null>(null);
+
+  // Timer en temps réel avec effets sonores
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    if (timerState === 'countdown' && timeRemaining > 0) {
+      // Décompte avant le début
+      interval = setInterval(() => {
+        setTimeRemaining(prev => {
+          const newTime = prev - 1;
+          
+          if (newTime <= 0) {
+            // Attendre 1 seconde supplémentaire pour afficher "0" avant de démarrer
+            setTimeout(() => {
+              setTimerState('racing');
+              setPersonalStartTime(new Date());
+              setRaceTime(0);
+            }, 1000);
+            return 0;
+          }
+          
+          return newTime;
+        });
+      }, 1000);
+    } else if (timerState === 'racing' && personalStartTime) {
+      // Chronomètre de course avec précision centième
+      interval = setInterval(() => {
+        const now = new Date();
+        const elapsed = (now.getTime() - personalStartTime.getTime()) / 1000;
+        setRaceTime(elapsed);
+      }, 10); // Mise à jour tous les 10ms pour une précision maximale
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [timerState, timeRemaining, personalStartTime]);
+
+  // Démarrer le décompte quand l'utilisateur clique sur "Commencer"
+  const startCountdown = () => {
+    setTimerState('countdown');
+    setTimeRemaining(30);
+    setRaceTime(0);
+    setPersonalStartTime(null);
+  };
+
+  // Arrêter la course (finish)
+  const finishRace = () => {
+    setTimerState('finished');
+    if (raceSelectionnee) {
+      changerStatutParticipant(raceSelectionnee.id, 'termine');
+    }
+  };
+
+  // Reset du timer (abandon ou nouvelle course)
+  const resetTimer = (isAbandon: boolean = false) => {
+    setTimerState('waiting');
+    setTimeRemaining(30);
+    setRaceTime(0);
+    setPersonalStartTime(null);
+    
+    if (raceSelectionnee && isAbandon) {
+      changerStatutParticipant(raceSelectionnee.id, 'abandon');
+    }
+  };
+
+  // Fonctions pour les clics de boutons (avec gestion d'événements)
+  const handleAbandonClick = () => resetTimer(true);
+  const handleNewRaceClick = () => resetTimer(false);
+
+  // Fonction pour formater le temps avec millisecondes
+  const formatRaceTime = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    const ms = Math.floor((seconds % 1) * 100); // Centièmes de seconde
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+    } else {
+      return `${minutes}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+    }
+  };
+
   // Liste de jeux populaires prédéfinis
   const jeuxPopulaires: JeuSpeedrun[] = [
     {
@@ -132,12 +221,59 @@ export default function PageRaces() {
     }
   ];
 
-  // Aucune donnée fictive - liste vide au départ
+  // Charger les races depuis l'API au démarrage
   useEffect(() => {
-    setRaces([]);
+    chargerRaces();
   }, []);
 
-  // Fonction pour rechercher des jeux
+  // Fonction pour charger les races depuis l'API
+  const chargerRaces = async () => {
+    setChargement(true);
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/races`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Transformer les données de l'API vers le format attendu par le frontend
+        const racesTransformees = data.data.map((race: any) => ({
+          id: race.id,
+          jeu: race.gameName,
+          jeuId: race.gameId,
+          categorie: race.categoryName,
+          categorieId: race.categoryId,
+          objectif: race.objective,
+          statut: race.status,
+          creePar: race.createdBy.username,
+          participants: race.participants.map((p: any) => ({
+            id: p.user.id,
+            nomUtilisateur: p.user.username,
+            statut: p.status,
+            tempsFin: p.finishTime,
+            urlStream: p.streamUrl,
+            place: p.position
+          })),
+          maxParticipants: race.maxParticipants,
+          heureDebut: race.startTime,
+          heureFin: race.endTime,
+          motDePasse: race.password,
+          creeA: race.createdAt
+        }));
+        setRaces(racesTransformees);
+        console.log('📊 Races chargées depuis API:', racesTransformees.length, 'races');
+      } else {
+        console.error('Erreur API:', response.status);
+        setRaces([]);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des races:', error);
+      setRaces([]);
+    } finally {
+      setChargement(false);
+    }
+  };
+
+  // Fonction pour rechercher des jeux (Algorithme avancé inspiré de leaderboards.tsx)
   const rechercherJeux = async (query: string) => {
     if (query.length < 2) {
       setJeuxSuggeres([]);
@@ -146,17 +282,9 @@ export default function PageRaces() {
 
     setChargementJeux(true);
     
-    const queryLower = query.toLowerCase();
-    
-    // D'abord chercher dans les jeux populaires locaux
-    const jeuxPopulairesCorrespondants = jeuxPopulaires.filter(jeu => 
-      (jeu.name || jeu.title || '').toLowerCase().includes(queryLower) ||
-      jeu.abbreviation.toLowerCase().includes(queryLower)
-    );
-
     try {
-      // Ensuite essayer l'API speedrun.com
-      const response = await fetch(`http://localhost:5000/api/speedrun/games/search?q=${encodeURIComponent(query)}&limit=10`);
+      // Utiliser l'API speedrun exhaustive comme dans leaderboards
+              const response = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '')}/api/speedrun/games/search/exhaustive?q=${encodeURIComponent(query)}&limit=20`);
       let jeuxAPI: JeuSpeedrun[] = [];
       
       if (response.ok) {
@@ -164,22 +292,117 @@ export default function PageRaces() {
         jeuxAPI = data.games || [];
       }
 
-      // Combiner les résultats : jeux populaires en premier, puis API
-      let jeuxTrouves = [...jeuxPopulairesCorrespondants, ...jeuxAPI];
-      
-      // Supprimer les doublons par ID
-      const idsVus = new Set();
-      jeuxTrouves = jeuxTrouves.filter(jeu => {
-        if (idsVus.has(jeu.id)) return false;
-        idsVus.add(jeu.id);
-        return true;
-      });
+      // Algorithme de tri avancé identique à leaderboards.tsx
+      if (Array.isArray(jeuxAPI)) {
+        const sortedResults = jeuxAPI.sort((a, b) => {
+          const queryLower = query.toLowerCase().trim();
+          const aName = (a.name || a.title || '').toLowerCase();
+          const bName = (b.name || b.title || '').toLowerCase();
+          
+          // 1. Jeux iconiques officiels par franchise (priorité absolue)
+          const iconicTitles = {
+            'zelda': [
+              'the legend of zelda: ocarina of time',
+              'the legend of zelda: majora\'s mask', 
+              'the legend of zelda: breath of the wild',
+              'the legend of zelda: tears of the kingdom',
+              'the legend of zelda: twilight princess',
+              'the legend of zelda: wind waker',
+              'the legend of zelda: a link to the past',
+              'the legend of zelda: link\'s awakening',
+              'the legend of zelda',
+              'zelda ii: the adventure of link'
+            ],
+            'mario': [
+              'super mario 64',
+              'super mario odyssey',
+              'super mario world',
+              'super mario bros.',
+              'super mario sunshine',
+              'super mario galaxy',
+              'super mario bros. 3',
+              'mario kart 64',
+              'paper mario'
+            ],
+            'sonic': [
+              'sonic the hedgehog',
+              'sonic the hedgehog 2',
+              'sonic the hedgehog 3',
+              'sonic & knuckles',
+              'sonic adventure',
+              'sonic adventure 2',
+              'sonic mania'
+            ],
+            'metroid': [
+              'super metroid',
+              'metroid prime',
+              'metroid fusion',
+              'metroid dread'
+            ],
+            'pokemon': [
+              'pokemon red',
+              'pokemon blue',
+              'pokemon yellow',
+              'pokemon gold',
+              'pokemon silver',
+              'pokemon ruby',
+              'pokemon sapphire'
+            ]
+          };
+          
+          // Détecter les franchises recherchées
+          let targetFranchise: keyof typeof iconicTitles | null = null;
+          for (const franchise of Object.keys(iconicTitles) as Array<keyof typeof iconicTitles>) {
+            if (queryLower.includes(franchise)) {
+              targetFranchise = franchise;
+              break;
+            }
+          }
+          
+          if (targetFranchise) {
+            const aIsIconic = iconicTitles[targetFranchise].includes(aName);
+            const bIsIconic = iconicTitles[targetFranchise].includes(bName);
+            
+            if (aIsIconic && !bIsIconic) return -1;
+            if (!aIsIconic && bIsIconic) return 1;
+          }
+          
+          // 2. Correspondance exacte du nom
+          if (aName === queryLower && bName !== queryLower) return -1;
+          if (aName !== queryLower && bName === queryLower) return 1;
+          
+          // 3. Commence par la requête
+          const aStartsWith = aName.startsWith(queryLower);
+          const bStartsWith = bName.startsWith(queryLower);
+          if (aStartsWith && !bStartsWith) return -1;
+          if (!aStartsWith && bStartsWith) return 1;
+          
+          // 4. Contient la requête (proche du début prioritaire)
+          const aIndex = aName.indexOf(queryLower);
+          const bIndex = bName.indexOf(queryLower);
+          if (aIndex !== -1 && bIndex === -1) return -1;
+          if (aIndex === -1 && bIndex !== -1) return 1;
+          if (aIndex !== -1 && bIndex !== -1 && aIndex !== bIndex) {
+            return aIndex - bIndex;
+          }
+          
+          // 5. Par longueur (plus court = plus pertinent)
+          return aName.length - bName.length;
+        });
 
-      setJeuxSuggeres(jeuxTrouves);
+        setJeuxSuggeres(sortedResults.slice(0, 10)); // Limiter à 10 résultats
+      } else {
+        setJeuxSuggeres([]);
+      }
     } catch (error) {
       console.error('Erreur lors de la recherche de jeux:', error);
       
-      // En cas d'erreur API, utiliser uniquement les jeux populaires
+      // Fallback : chercher dans les jeux populaires locaux
+      const queryLower = query.toLowerCase();
+      const jeuxPopulairesCorrespondants = jeuxPopulaires.filter(jeu => 
+        (jeu.name || jeu.title || '').toLowerCase().includes(queryLower) ||
+        jeu.abbreviation.toLowerCase().includes(queryLower)
+      );
       setJeuxSuggeres(jeuxPopulairesCorrespondants);
     }
     setChargementJeux(false);
@@ -189,7 +412,7 @@ export default function PageRaces() {
   const chargerCategories = async (gameId: string) => {
     setChargementCategories(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/speedrun/games/${gameId}/categories`);
+              const response = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '')}/api/speedrun/games/${gameId}/categories`);
       if (response.ok) {
         const data = await response.json();
         setCategories(data.categories || []);
@@ -331,7 +554,7 @@ export default function PageRaces() {
     }
   };
 
-  const creerRace = (e: React.FormEvent) => {
+  const creerRace = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!utilisateurActuel) return;
 
@@ -341,30 +564,60 @@ export default function PageRaces() {
       return;
     }
 
-    const race: Race = {
-      id: Date.now().toString(),
-      ...nouvelleRace,
-      statut: 'en-attente',
-      creePar: utilisateurActuel.nomUtilisateur,
-      participants: [
-        { id: utilisateurActuel.id, nomUtilisateur: utilisateurActuel.nomUtilisateur, statut: 'inscrit' }
-      ],
-      creeA: new Date().toISOString()
-    };
-    
-    setRaces([race, ...races]);
-    setNouvelleRace({
-      jeu: '',
-      jeuId: '',
-      categorie: '',
-      categorieId: '',
-      objectif: 'Meilleur temps',
-      maxParticipants: 4,
-      motDePasse: ''
-    });
-    setRechercheJeu('');
-    setCategories([]);
-    setVueActive('parcourir');
+    setChargement(true);
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const token = localStorage.getItem('authToken');
+      
+      const response = await fetch(`${apiUrl}/api/races`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          gameName: nouvelleRace.jeu,
+          gameId: nouvelleRace.jeuId,
+          categoryName: nouvelleRace.categorie,
+          categoryId: nouvelleRace.categorieId,
+          objective: nouvelleRace.objectif,
+          maxParticipants: nouvelleRace.maxParticipants,
+          password: nouvelleRace.motDePasse || null
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Race créée:', data.data);
+        
+        // Recharger les races depuis l'API
+        await chargerRaces();
+        
+        // Reset le formulaire
+        setNouvelleRace({
+          jeu: '',
+          jeuId: '',
+          categorie: '',
+          categorieId: '',
+          objectif: 'Meilleur temps',
+          maxParticipants: 4,
+          motDePasse: ''
+        });
+        setRechercheJeu('');
+        setCategories([]);
+        setVueActive('parcourir');
+        
+        alert('Race créée avec succès !');
+      } else {
+        const error = await response.json();
+        alert(`Erreur: ${error.message}`);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la création de la race:', error);
+      alert('Erreur lors de la création de la race');
+    } finally {
+      setChargement(false);
+    }
   };
 
   const rejoindreLaRace = (raceId: string) => {
@@ -372,13 +625,18 @@ export default function PageRaces() {
 
     setRaces(races.map(race => {
       if (race.id === raceId && race.participants.length < race.maxParticipants) {
-        return {
-          ...race,
-          participants: [
-            ...race.participants,
-            { id: utilisateurActuel.id, nomUtilisateur: utilisateurActuel.nomUtilisateur, statut: 'inscrit' }
-          ]
-        };
+        // Vérifier si l'utilisateur n'est pas déjà participant
+        const dejaParticipant = race.participants.some(p => p.id === utilisateurActuel.id);
+        
+        if (!dejaParticipant) {
+          return {
+            ...race,
+            participants: [
+              ...race.participants,
+              { id: utilisateurActuel.id, nomUtilisateur: utilisateurActuel.nomUtilisateur, statut: 'inscrit' }
+            ]
+          };
+        }
       }
       return race;
     }));
@@ -411,7 +669,7 @@ export default function PageRaces() {
     }
   };
 
-  const supprimerRace = (raceId: string) => {
+  const supprimerRace = async (raceId: string) => {
     if (!utilisateurActuel) return;
     
     const race = races.find(r => r.id === raceId);
@@ -421,18 +679,58 @@ export default function PageRaces() {
     }
     
     if (confirm('Êtes-vous sûr de vouloir supprimer cette course ?')) {
-      setRaces(races.filter(r => r.id !== raceId));
-      
-      // Si on supprime la race qu'on regardait, retourner à la vue parcourir
-      if (raceSelectionnee && raceSelectionnee.id === raceId) {
-        setVueActive('parcourir');
-        setRaceSelectionnee(null);
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const token = localStorage.getItem('authToken');
+        const response = await fetch(`${apiUrl}/api/races/${raceId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          // Supprimer localement seulement si l'API confirme
+          setRaces(races.filter(r => r.id !== raceId));
+          
+          // Si on supprime la race qu'on regardait, retourner à la vue parcourir
+          if (raceSelectionnee && raceSelectionnee.id === raceId) {
+            setVueActive('parcourir');
+            setRaceSelectionnee(null);
+          }
+          
+          console.log('✅ Race supprimée avec succès');
+        } else {
+          console.error('❌ Erreur lors de la suppression:', response.status);
+          alert('Erreur lors de la suppression de la course. Veuillez réessayer.');
+        }
+      } catch (error) {
+        console.error('❌ Erreur réseau lors de la suppression:', error);
+        alert('Erreur de connexion. Veuillez réessayer.');
       }
     }
   };
 
-  const changerStatutParticipant = (raceId: string, nouveauStatut: ParticipantRace['statut']) => {
+  const changerStatutParticipant = async (raceId: string, nouveauStatut: ParticipantRace['statut']) => {
     if (!utilisateurActuel) return;
+
+    // Appeler l'API pour persister le changement
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const token = localStorage.getItem('authToken');
+      
+      await fetch(`${apiUrl}/api/races/${raceId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: nouveauStatut })
+      });
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut:', error);
+    }
 
     setRaces(races.map(race => {
       if (race.id === raceId) {
@@ -441,7 +739,9 @@ export default function PageRaces() {
             return {
               ...participant,
               statut: nouveauStatut,
-              ...(nouveauStatut === 'termine' ? { tempsFin: Date.now() } : {})
+              ...(nouveauStatut === 'termine' ? { 
+                tempsFin: raceTime * 1000 // Convertir les secondes en millisecondes
+              } : {})
             };
           }
           return participant;
@@ -451,8 +751,13 @@ export default function PageRaces() {
         let nouveauStatutRace = race.statut;
         const tousParticipantsPrets = participantsMisAJour.every(p => p.statut === 'pret');
         const auMoinsUnEnCourse = participantsMisAJour.some(p => p.statut === 'en-course');
+        const tousParticipantsTermines = participantsMisAJour.every(p => 
+          p.statut === 'termine' || p.statut === 'abandon'
+        );
         
-        if (tousParticipantsPrets && participantsMisAJour.length >= 2) {
+        if (tousParticipantsTermines && participantsMisAJour.length > 0 && race.statut === 'en-cours') {
+          nouveauStatutRace = 'terminee';
+        } else if (tousParticipantsPrets && participantsMisAJour.length >= 2) {
           nouveauStatutRace = 'prete';
         } else if (auMoinsUnEnCourse) {
           nouveauStatutRace = 'en-cours';
@@ -462,13 +767,31 @@ export default function PageRaces() {
           ...race,
           participants: participantsMisAJour,
           statut: nouveauStatutRace,
-          ...(nouveauStatutRace === 'en-cours' && !race.heureDebut ? { heureDebut: new Date().toISOString() } : {})
+          ...(nouveauStatutRace === 'en-cours' && !race.heureDebut ? { heureDebut: new Date().toISOString() } : {}),
+          ...(nouveauStatutRace === 'terminee' && !race.heureFin ? { heureFin: new Date().toISOString() } : {})
         };
 
         // Mettre à jour la race sélectionnée si c'est celle-ci
         if (raceSelectionnee && raceSelectionnee.id === raceId) {
           setRaceSelectionnee(raceMisAJour);
+          
+          // Ajouter un message spécial si la course vient de se terminer
+          if (nouveauStatutRace === 'terminee' && race.statut !== 'terminee') {
+            const messageFinCourse: MessageChat = {
+              id: (Date.now() + 1).toString(),
+              nomUtilisateur: 'Système',
+              message: '🏁 La course est terminée ! Tous les participants ont fini ou abandonné.',
+              horodatage: new Date().toISOString(),
+              type: 'systeme'
+            };
+            
+            setTimeout(() => {
+              setMessagesChat(prev => [...prev, messageFinCourse]);
+            }, 1000);
+          }
         }
+
+        // Le statut de la race est automatiquement mis à jour par le backend
 
         return raceMisAJour;
       }
@@ -544,14 +867,54 @@ export default function PageRaces() {
     );
   };
 
-  const formaterTemps = (secondes: number): string => {
-    const minutes = Math.floor(secondes / 60);
-    const secs = secondes % 60;
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  const formaterTemps = (millisecondesOuSecondes: number): string => {
+    // Détecter si c'est un timestamp (> 1000000000000) ou des secondes/millisecondes
+    let millisecondes: number;
+    
+    if (millisecondesOuSecondes > 1000000000000) {
+      // C'est un timestamp, on ne peut pas le convertir en durée sans heure de début
+      return "Calcul en cours...";
+    } else if (millisecondesOuSecondes > 86400) { // Plus de 24h en secondes
+      // C'est probablement des millisecondes
+      millisecondes = millisecondesOuSecondes;
+    } else {
+      // C'est des secondes avec décimales
+      millisecondes = millisecondesOuSecondes * 1000;
+    }
+    
+    const totalSecondes = Math.floor(millisecondes / 1000);
+    const heures = Math.floor(totalSecondes / 3600);
+    const minutes = Math.floor((totalSecondes % 3600) / 60);
+    const secondes = totalSecondes % 60;
+    const ms = Math.floor(millisecondes % 1000);
+    
+    if (heures > 0) {
+      return `${heures}:${minutes.toString().padStart(2, '0')}:${secondes.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+    } else {
+      return `${minutes}:${secondes.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+    }
   };
 
   const obtenirTempsEcoule = (heureDebut: string): number => {
     return Math.floor((Date.now() - new Date(heureDebut).getTime()) / 1000);
+  };
+
+
+
+  // Fonction spécialement pour formater les temps finaux des participants
+  const formaterTempsFinal = (tempsFin: number): string => {
+    // tempsFin est en millisecondes (durée de la course)
+    const totalSecondes = Math.floor(tempsFin / 1000);
+    const heures = Math.floor(totalSecondes / 3600);
+    const minutes = Math.floor((totalSecondes % 3600) / 60);
+    const secondes = totalSecondes % 60;
+    const millisecondes = Math.floor(tempsFin % 1000);
+    
+    if (heures > 0) {
+      return `${heures}:${minutes.toString().padStart(2, '0')}:${secondes.toString().padStart(2, '0')}.${millisecondes.toString().padStart(3, '0')}`;
+    } else {
+      return `${minutes}:${secondes.toString().padStart(2, '0')}.${millisecondes.toString().padStart(3, '0')}`;
+    }
   };
 
   if (!estAuthentifie) {
@@ -612,7 +975,7 @@ export default function PageRaces() {
               <span className="ml-2 opacity-75 group-hover:opacity-100 transition-opacity">→</span>
             </button>
             <button
-              onClick={() => window.location.reload()}
+              onClick={chargerRaces}
               className="group bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg border border-slate-500/30"
             >
               <span>Actualiser</span>
@@ -1023,6 +1386,66 @@ export default function PageRaces() {
 
       {vueActive === 'course' && raceSelectionnee && (
         <div className="bg-slate-800 rounded-lg overflow-hidden">
+          {/* ⏱️ TIMER EN TEMPS RÉEL - Section principale */}
+          {timerState !== 'waiting' && (
+            <div className={`px-6 py-8 text-center border-b border-slate-600 ${
+              timerState === 'countdown' ? 'bg-gradient-to-r from-red-900/50 to-orange-900/50' :
+              timerState === 'racing' ? 'bg-gradient-to-r from-green-900/50 to-emerald-900/50' :
+              'bg-gradient-to-r from-blue-900/50 to-purple-900/50'
+            }`}>
+              {timerState === 'countdown' && (
+                <div className="space-y-4">
+                  <h3 className="text-white text-lg font-semibold">🏁 Course commence dans...</h3>
+                  <div className={`text-8xl font-black font-mono ${
+                    timeRemaining <= 3 ? 'text-red-400 animate-pulse' : 'text-orange-400'
+                  }`}>
+                    {timeRemaining}
+                  </div>
+                  <p className="text-slate-300">Préparez-vous ! La course démarre automatiquement.</p>
+                </div>
+              )}
+              
+              {timerState === 'racing' && (
+                <div className="space-y-4">
+                  <h3 className="text-white text-lg font-semibold">🚀 Course en cours !</h3>
+                  <div className="text-6xl font-black font-mono text-green-400">
+                    {formatRaceTime(raceTime)}
+                  </div>
+                  <div className="flex justify-center space-x-4">
+                    <button
+                      onClick={finishRace}
+                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105"
+                    >
+                      🏁 Finir la course
+                    </button>
+                    <button
+                      onClick={handleAbandonClick}
+                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-semibold"
+                    >
+                      ❌ Abandonner
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              {timerState === 'finished' && (
+                <div className="space-y-4">
+                  <h3 className="text-white text-xl font-bold">🎉 Course terminée !</h3>
+                  <div className="text-5xl font-black font-mono text-blue-400">
+                    {formatRaceTime(raceTime)}
+                  </div>
+                  <p className="text-slate-300">Félicitations ! Votre temps a été enregistré.</p>
+                  <button
+                    onClick={handleNewRaceClick}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold"
+                  >
+                    🔄 Nouvelle course
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* En-tête de la course */}
           <div className="bg-slate-700 px-6 py-4 border-b border-slate-600">
             <div className="flex items-center justify-between">
@@ -1083,7 +1506,7 @@ export default function PageRaces() {
                     <div className="flex items-center space-x-2">
                       {participant.tempsFin && (
                         <span className="font-mono text-green-400">
-                          {formaterTemps(participant.tempsFin)}
+                          {formaterTempsFinal(participant.tempsFin)}
                         </span>
                       )}
                       {participant.urlStream && (
@@ -1124,34 +1547,34 @@ export default function PageRaces() {
                     )}
                     
                     {/* Commencer (si prêt) */}
-                    {raceSelectionnee.participants.find(p => p.id === utilisateurActuel?.id)?.statut === 'pret' && (
+                    {raceSelectionnee.participants.find(p => p.id === utilisateurActuel?.id)?.statut === 'pret' && timerState === 'waiting' && (
                       <button 
-                        onClick={() => changerStatutParticipant(raceSelectionnee.id, 'en-course')}
-                        className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded text-sm font-medium"
+                        onClick={() => {
+                          startCountdown();
+                          changerStatutParticipant(raceSelectionnee.id, 'en-course');
+                        }}
+                        className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white px-6 py-3 rounded-lg font-bold text-lg transition-all duration-200 transform hover:scale-105 animate-pulse"
                       >
-                        🏃 Commencer
+                        🏁 DÉMARRER LA COURSE
                       </button>
+                    )}
+
+                    {/* Timer Info quand en cours */}
+                    {timerState === 'countdown' && (
+                      <div className="flex items-center space-x-2 text-orange-400">
+                        <span className="animate-spin">⏱️</span>
+                        <span className="font-mono font-bold">Course démarre dans {timeRemaining}s...</span>
+                      </div>
+                    )}
+
+                    {timerState === 'racing' && (
+                      <div className="flex items-center space-x-2 text-green-400">
+                        <span className="animate-pulse">🏃</span>
+                        <span className="font-mono font-bold">Course en cours : {formatRaceTime(raceTime)}</span>
+                      </div>
                     )}
                     
-                    {/* Terminé (si en course) */}
-                    {raceSelectionnee.participants.find(p => p.id === utilisateurActuel?.id)?.statut === 'en-course' && (
-                      <button 
-                        onClick={() => changerStatutParticipant(raceSelectionnee.id, 'termine')}
-                        className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded text-sm font-medium"
-                      >
-                        🏁 Terminé
-                      </button>
-                    )}
-                    
-                    {/* Abandon (si en course) */}
-                    {raceSelectionnee.participants.find(p => p.id === utilisateurActuel?.id)?.statut === 'en-course' && (
-                      <button 
-                        onClick={() => changerStatutParticipant(raceSelectionnee.id, 'abandon')}
-                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-medium"
-                      >
-                        ❌ Abandon
-                      </button>
-                    )}
+                    {/* Note: Les boutons Terminé et Abandon sont maintenant dans la section timer principale */}
                   </div>
                 )}
                 

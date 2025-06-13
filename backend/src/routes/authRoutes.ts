@@ -25,6 +25,7 @@ router.get('/google/debug', (req, res) => {
 // Routes Google OAuth
 router.get('/google', authController.googleAuth);
 router.get('/google/callback', authController.googleCallback);
+router.get('/google/session/:sessionId', authController.getGoogleSession);
 
 // Routes protégées
 router.get('/profile', authenticate, authController.getProfile);

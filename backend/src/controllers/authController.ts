@@ -6,6 +6,23 @@ import passport from '../config/passport';
 import prisma from '../config/database';
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
 
+// Stockage temporaire des sessions Google (en mémoire, expire après 5 minutes)
+const tempGoogleSessions = new Map<string, { 
+  token: string; 
+  user: any; 
+  expiresAt: number; 
+}>();
+
+// Nettoyer les sessions expirées toutes les minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [sessionId, session] of tempGoogleSessions.entries()) {
+    if (now > session.expiresAt) {
+      tempGoogleSessions.delete(sessionId);
+    }
+  }
+}, 60000);
+
 class AuthController {
   /**
    * Inscription d'un nouvel utilisateur
@@ -221,20 +238,186 @@ class AuthController {
    * Callback Google OAuth
    */
   googleCallback = (req: Request, res: Response, next: any) => {
+    console.log('🔐 Début du callback Google OAuth');
+    console.log('URL complète:', req.originalUrl);
+    console.log('Query params:', req.query);
+    console.log('Headers:', req.headers['user-agent']);
+    
+    // Protection contre les appels multiples - vérifier si le code a déjà été traité
+    const authCode = req.query.code as string;
+    if (!authCode) {
+      console.log('❌ Aucun code d\'autorisation Google fourni');
+      const frontendUrl = process.env.FRONTEND_URL || 'https://projet-speedrun.vercel.app';
+      return res.redirect(`${frontendUrl}/login?error=missing_auth_code`);
+    }
+    
+    // Créer un identifiant unique pour ce callback pour éviter les conflits
+    const callbackId = `${authCode.substring(0, 10)}-${Date.now()}`;
+    console.log(`🔄 Traitement du callback ${callbackId}`);
+    
     passport.authenticate('google', { session: false }, (err, authResult) => {
+      console.log('🔐 Résultat de l\'authentification Passport:', { 
+        callbackId,
+        hasError: !!err, 
+        hasAuthResult: !!authResult,
+        errorMessage: err?.message,
+        errorCode: err?.code,
+        userExists: !!authResult?.user 
+      });
+
+      const frontendUrl = process.env.FRONTEND_URL || 'https://projet-speedrun.vercel.app';
+
       if (err) {
-        console.error('Erreur Google OAuth:', err);
-        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=google_auth_failed`);
+        console.error(`❌ Erreur Google OAuth (${callbackId}):`, err);
+        
+        // Gestion spécifique de l'erreur "invalid_grant" (code déjà utilisé)
+        if (err.code === 'invalid_grant') {
+          console.log(`⚠️ Code d'autorisation déjà utilisé (${callbackId}) - redirection vers profil`);
+          // Utiliser une redirection HTML au lieu d'une redirection HTTP pour éviter les 502
+          return res.send(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <title>Redirection en cours...</title>
+              <script>
+                console.log('🔄 Redirection automatique vers le profil');
+                window.location.href = '${frontendUrl}/profile?welcome=true&source=google&note=already_processed';
+              </script>
+            </head>
+            <body>
+              <p>Redirection en cours...</p>
+            </body>
+            </html>
+          `);
+        }
+        
+        // Autres erreurs - redirection HTML
+        return res.send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Erreur d'authentification</title>
+            <script>
+              console.log('❌ Erreur Google OAuth, redirection vers login');
+              window.location.href = '${frontendUrl}/login?error=google_auth_failed&details=${encodeURIComponent(err.message)}';
+            </script>
+          </head>
+          <body>
+            <p>Erreur d'authentification, redirection...</p>
+          </body>
+          </html>
+        `);
       }
 
       if (!authResult) {
-        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=google_auth_cancelled`);
+        console.log(`❌ Pas de résultat d'authentification (${callbackId})`);
+        return res.send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Authentification annulée</title>
+            <script>
+              console.log('❌ Authentification Google annulée');
+              window.location.href = '${frontendUrl}/login?error=google_auth_cancelled';
+            </script>
+          </head>
+          <body>
+            <p>Authentification annulée, redirection...</p>
+          </body>
+          </html>
+        `);
       }
 
-      // Rediriger vers le frontend avec le token
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      res.redirect(`${frontendUrl}/auth/google/success?token=${authResult.token}&user=${encodeURIComponent(JSON.stringify(authResult.user))}`);
+      // Authentification réussie - utiliser une redirection HTML
+      const userData = encodeURIComponent(JSON.stringify(authResult.user));
+      console.log(`✅ Authentification réussie (${callbackId}), redirection vers page de succès`);
+      console.log('👤 Utilisateur:', authResult.user.username, authResult.user.email);
+      
+      // Créer une session temporaire sécurisée (expire dans 5 minutes)
+      const sessionId = `gs_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+      const expiresAt = Date.now() + (5 * 60 * 1000); // 5 minutes
+      
+      tempGoogleSessions.set(sessionId, {
+        token: authResult.token,
+        user: authResult.user,
+        expiresAt
+      });
+      
+      console.log(`📦 Session temporaire créée: ${sessionId} (expire dans 5min)`);
+      
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Authentification réussie</title>
+          <script>
+            console.log('✅ Authentification Google réussie, redirection avec session sécurisée');
+            
+            // Au lieu de rediriger vers une page success séparée, utilisons la page login
+            // qui peut gérer l'authentification automatique avec le paramètre session
+            window.location.href = '${frontendUrl}/login?google_session=${sessionId}';
+          </script>
+        </head>
+        <body>
+          <p>Authentification réussie, redirection...</p>
+        </body>
+        </html>
+      `);
     })(req, res, next);
+  };
+
+  /**
+   * Récupérer et consommer une session Google temporaire
+   */
+  getGoogleSession = (req: Request, res: Response) => {
+    try {
+      const { sessionId } = req.params;
+      
+      if (!sessionId || !sessionId.startsWith('gs_')) {
+        return res.status(400).json({
+          success: false,
+          message: 'ID de session invalide'
+        });
+      }
+      
+      const session = tempGoogleSessions.get(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({
+          success: false,
+          message: 'Session expirée ou introuvable'
+        });
+      }
+      
+      // Vérifier l'expiration
+      if (Date.now() > session.expiresAt) {
+        tempGoogleSessions.delete(sessionId);
+        return res.status(410).json({
+          success: false,
+          message: 'Session expirée'
+        });
+      }
+      
+      // Consommer la session (usage unique)
+      tempGoogleSessions.delete(sessionId);
+      
+      console.log(`📦 Session consommée: ${sessionId} pour ${session.user.username}`);
+      
+      res.json({
+        success: true,
+        data: {
+          token: session.token,
+          user: session.user
+        }
+      });
+      
+    } catch (error) {
+      console.error('Erreur lors de la récupération de session Google:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur interne du serveur'
+      });
+    }
   };
 
   /**
@@ -259,34 +442,7 @@ class AuthController {
           email: true,
           profileImage: true,
           bio: true,
-          createdAt: true,
-          runs: {
-            select: {
-              id: true,
-              time: true,
-              isVerified: true,
-              submittedAt: true,
-              game: {
-                select: {
-                  title: true
-                }
-              },
-              category: {
-                select: {
-                  name: true
-                }
-              }
-            },
-            orderBy: {
-              submittedAt: 'desc'
-            },
-            take: 5
-          },
-          _count: {
-            select: {
-              runs: true
-            }
-          }
+          createdAt: true
         }
       });
 
