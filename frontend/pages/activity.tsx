@@ -1,123 +1,34 @@
 import { useState, useEffect } from 'react';
 import { speedrunApiClient, SpeedrunGame, RecentRun, EnrichedRecentRun } from '../services/speedrunApiClient';
 import Link from 'next/link';
+import useCacheWithExpiry from '../hooks/useCacheWithExpiry';
 
 export default function ActivityPage() {
-  const [recentActiveGames, setRecentActiveGames] = useState<SpeedrunGame[]>([]);
-  const [recentRuns, setRecentRuns] = useState<EnrichedRecentRun[]>([]);
-  const [loadingGames, setLoadingGames] = useState(true);
-  const [loadingRuns, setLoadingRuns] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Charger les jeux actifs récemment
-  useEffect(() => {
-    const loadRecentActiveGames = async () => {
-      try {
-        setLoadingGames(true);
-        setError(null);
+  // Fonction pour charger les jeux actifs récemment (utilisée par le cache)
+  const loadRecentActiveGamesData = async (): Promise<SpeedrunGame[]> => {
+    try {
+      // Récupérer les runs récents globaux
+      const recentRunsData = await speedrunApiClient.getGlobalRecentRuns(50);
+      
+      // Extraire les jeux uniques des runs récents avec leur dernière activité
+      const gameMap = new Map<string, { game: SpeedrunGame; lastActivity: Date }>();
+      
+      for (const run of recentRunsData) {
+        const gameId = run.game.id;
+        const runDate = new Date(run.submittedAt);
         
-        // Récupérer les runs récents globaux
-        const recentRunsData = await speedrunApiClient.getGlobalRecentRuns(50);
-        
-        // Extraire les jeux uniques des runs récents avec leur dernière activité
-        const gameMap = new Map<string, { game: SpeedrunGame; lastActivity: Date }>();
-        
-        for (const run of recentRunsData) {
-          const gameId = run.game.id;
-          const runDate = new Date(run.submittedAt);
-          
-          // Validation : ignorer les jeux sans ID valide ou sans nom
-          if (!gameId || !run.game.title || gameId.length < 3) {
-            console.warn('Jeu ignoré - ID ou nom invalide:', { id: gameId, title: run.game.title });
-            continue;
-          }
-          
-          if (!gameMap.has(gameId) || runDate > gameMap.get(gameId)!.lastActivity) {
-            // Créer un objet SpeedrunGame à partir des données de run
-            const gameData: SpeedrunGame = {
-              id: run.game.id,
-              name: run.game.title,
-              abbreviation: run.game.id, // Fallback
-              weblink: `https://www.speedrun.com/games/${run.game.id}`,
-              platforms: [],
-              genres: [],
-              developers: [],
-              publishers: [],
-              coverImage: run.game.cover || undefined,
-              externalData: {
-                speedruncom: {
-                  id: run.game.id,
-                  abbreviation: run.game.id,
-                  weblink: `https://www.speedrun.com/games/${run.game.id}`,
-                  assets: {},
-                  moderators: {}
-                }
-              }
-            };
-            
-            gameMap.set(gameId, {
-              game: gameData,
-              lastActivity: runDate
-            });
-          }
+        // Validation : ignorer les jeux sans ID valide ou sans nom
+        if (!gameId || !run.game.title || gameId.length < 3) {
+          console.warn('Jeu ignoré - ID ou nom invalide:', { id: gameId, title: run.game.title });
+          continue;
         }
         
-        // Convertir en array et trier par activité la plus récente
-        const sortedGames = Array.from(gameMap.values())
-          .sort((a, b) => b.lastActivity.getTime() - a.lastActivity.getTime())
-          .slice(0, 18) // Limiter à 18 jeux pour l'affichage
-          .map(item => item.game);
-        
-        setRecentActiveGames(sortedGames);
-      } catch (error) {
-        console.error('Erreur lors du chargement des jeux actifs récemment:', error);
-        setRecentActiveGames([]);
-        setError('Impossible de charger les jeux actifs récemment');
-      } finally {
-        setLoadingGames(false);
-      }
-    };
-
-    loadRecentActiveGames();
-  }, []);
-
-  // Charger les runs récents
-  useEffect(() => {
-    const loadRecentRuns = async () => {
-      try {
-        setLoadingRuns(true);
-        
-        // Récupérer 20 runs récents (plus qu'avant)
-        const recentRunsData = await speedrunApiClient.getGlobalRecentRuns(20);
-        
-        // Filtrer les runs avec des données de jeu valides
-        const validRuns = recentRunsData.filter(run => {
-          // Validation simplifiée - le backend s'assure déjà que les données sont valides
-          const hasBasicData = run.id && run.game && run.game.id && run.game.title;
-          const titleNotUndefined = run.game.title !== 'undefined' && run.game.title !== undefined;
-          const isValid = hasBasicData && titleNotUndefined;
-          
-          if (!isValid) {
-            console.warn('Run ignoré - données de base manquantes:', {
-              runId: run.id,
-              hasId: !!run.id,
-              hasGame: !!run.game,
-              hasGameId: !!run.game?.id,
-              hasGameTitle: !!run.game?.title,
-              gameTitle: run.game?.title,
-              titleNotUndefined
-            });
-          }
-          return isValid;
-        });
-        
-        // Pas besoin d'enrichir car les données sont déjà complètes
-        const enrichedRuns = validRuns.map((run) => ({
-          ...run,
-          gameDetails: {
+        if (!gameMap.has(gameId) || runDate > gameMap.get(gameId)!.lastActivity) {
+          // Créer un objet SpeedrunGame à partir des données de run
+          const gameData: SpeedrunGame = {
             id: run.game.id,
             name: run.game.title,
-            abbreviation: run.game.id,
+            abbreviation: run.game.id, // Fallback
             weblink: `https://www.speedrun.com/games/${run.game.id}`,
             platforms: [],
             genres: [],
@@ -133,27 +44,122 @@ export default function ActivityPage() {
                 moderators: {}
               }
             }
-          } as SpeedrunGame
-        }));
-        
-        // Trier par date de soumission (plus récent en premier)
-        enrichedRuns.sort((a, b) => {
-          const dateA = new Date(a.submittedAt);
-          const dateB = new Date(b.submittedAt);
-          return dateB.getTime() - dateA.getTime();
-        });
-        
-        setRecentRuns(enrichedRuns);
-      } catch (error) {
-        console.error('Erreur lors du chargement des runs récents:', error);
-        setRecentRuns([]);
-      } finally {
-        setLoadingRuns(false);
+          };
+          
+          gameMap.set(gameId, {
+            game: gameData,
+            lastActivity: runDate
+          });
+        }
       }
-    };
+      
+      // Convertir en array et trier par activité la plus récente
+      const sortedGames = Array.from(gameMap.values())
+        .sort((a, b) => b.lastActivity.getTime() - a.lastActivity.getTime())
+        .slice(0, 18) // Limiter à 18 jeux pour l'affichage
+        .map(item => item.game);
+      
+      return sortedGames;
+    } catch (error) {
+      console.error('Erreur lors du chargement des jeux actifs récemment:', error);
+      throw new Error('Impossible de charger les jeux actifs récemment');
+    }
+  };
 
-    loadRecentRuns();
-  }, []);
+  // Fonction pour charger les runs récents (utilisée par le cache)
+  const loadRecentRunsData = async (): Promise<EnrichedRecentRun[]> => {
+    try {
+      // Récupérer 20 runs récents (plus qu'avant)
+      const recentRunsData = await speedrunApiClient.getGlobalRecentRuns(20);
+      
+      // Filtrer les runs avec des données de jeu valides
+      const validRuns = recentRunsData.filter(run => {
+        // Validation simplifiée - le backend s'assure déjà que les données sont valides
+        const hasBasicData = run.id && run.game && run.game.id && run.game.title;
+        const titleNotUndefined = run.game.title !== 'undefined' && run.game.title !== undefined;
+        const isValid = hasBasicData && titleNotUndefined;
+        
+        if (!isValid) {
+          console.warn('Run ignoré - données de base manquantes:', {
+            runId: run.id,
+            hasId: !!run.id,
+            hasGame: !!run.game,
+            hasGameId: !!run.game?.id,
+            hasGameTitle: !!run.game?.title,
+            gameTitle: run.game?.title,
+            titleNotUndefined
+          });
+        }
+        return isValid;
+      });
+      
+      // Pas besoin d'enrichir car les données sont déjà complètes
+      const enrichedRuns = validRuns.map((run) => ({
+        ...run,
+        gameDetails: {
+          id: run.game.id,
+          name: run.game.title,
+          abbreviation: run.game.id,
+          weblink: `https://www.speedrun.com/games/${run.game.id}`,
+          platforms: [],
+          genres: [],
+          developers: [],
+          publishers: [],
+          coverImage: run.game.cover || undefined,
+          externalData: {
+            speedruncom: {
+              id: run.game.id,
+              abbreviation: run.game.id,
+              weblink: `https://www.speedrun.com/games/${run.game.id}`,
+              assets: {},
+              moderators: {}
+            }
+          }
+        } as SpeedrunGame
+      }));
+      
+      // Trier par date de soumission (plus récent en premier)
+      enrichedRuns.sort((a, b) => {
+        const dateA = new Date(a.submittedAt);
+        const dateB = new Date(b.submittedAt);
+        return dateB.getTime() - dateA.getTime();
+      });
+      
+      return enrichedRuns;
+    } catch (error) {
+      console.error('Erreur lors du chargement des runs récents:', error);
+      throw new Error('Impossible de charger les runs récents');
+    }
+  };
+
+  // Utiliser le cache avec expiration pour les jeux actifs (refresh toutes les 2 heures)
+  const {
+    data: recentActiveGames,
+    loading: loadingGames,
+    error: gamesError,
+    lastUpdate: gamesLastUpdate,
+    refresh: refreshGames
+  } = useCacheWithExpiry<SpeedrunGame[]>(
+    'recent_active_games',
+    loadRecentActiveGamesData,
+    { expiryMinutes: 120, refreshOnExpiry: true }
+  );
+
+  // Utiliser le cache avec expiration pour les runs récents (refresh toutes les 30 minutes)
+  const {
+    data: recentRuns,
+    loading: loadingRuns,
+    error: runsError,
+    lastUpdate: runsLastUpdate,
+    refresh: refreshRuns
+  } = useCacheWithExpiry<EnrichedRecentRun[]>(
+    'recent_runs',
+    loadRecentRunsData,
+    { expiryMinutes: 30, refreshOnExpiry: true }
+  );
+
+  // Combiner les erreurs
+  const error = gamesError || runsError;
 
   const formatTime = (seconds: number): string => {
     return speedrunApiClient.formatTime(seconds);
@@ -195,7 +201,29 @@ export default function ActivityPage() {
         <p className="text-slate-300 text-lg">
           Découvrez les dernières activités de la communauté speedrunning
         </p>
+        
+        {/* Indicateur de dernière mise à jour */}
+        {(gamesLastUpdate || runsLastUpdate) && (
+          <div className="mt-4 text-sm text-slate-400">
+            <div className="flex flex-wrap justify-center gap-4">
+              {gamesLastUpdate && (
+                <div className="flex items-center space-x-2">
+                  <span>🎮 Jeux mis à jour :</span>
+                  <span>{gamesLastUpdate.toLocaleTimeString('fr-FR')}</span>
+                </div>
+              )}
+              {runsLastUpdate && (
+                <div className="flex items-center space-x-2">
+                  <span>🏃 Runs mis à jour :</span>
+                  <span>{runsLastUpdate.toLocaleTimeString('fr-FR')}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
+
 
       {error && (
         <div className="bg-red-900/50 border border-red-700/50 text-red-200 px-6 py-4 rounded-lg">
@@ -218,7 +246,7 @@ export default function ActivityPage() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
             <p className="text-slate-300">Chargement des jeux actifs...</p>
           </div>
-        ) : recentActiveGames.length > 0 ? (
+        ) : recentActiveGames && recentActiveGames.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4">
             {recentActiveGames.map((game) => (
               <Link key={game.id} href={`/leaderboards?game=${game.id}`}>
@@ -239,7 +267,9 @@ export default function ActivityPage() {
                       </div>
                     )}
                     <h3 className="font-semibold text-white text-xs sm:text-sm group-hover:text-green-300 transition-colors truncate leading-tight">
-                      {game.name}
+                      {game.name && game.name !== 'undefined' && game.name.trim() !== ''
+                        ? game.name
+                        : `Nom inconnu (${game.id})`}
                     </h3>
                   </div>
                 </div>
@@ -271,7 +301,7 @@ export default function ActivityPage() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
             <p className="text-slate-300">Chargement des runs récents...</p>
           </div>
-        ) : recentRuns.length > 0 ? (
+        ) : recentRuns && recentRuns.length > 0 ? (
           <div className="space-y-3">
             {recentRuns.map((run, index) => (
               <Link key={run.id} href={`/leaderboards?game=${run.game.id}&category=${run.category.id}`}>
@@ -303,7 +333,9 @@ export default function ActivityPage() {
                     {/* Infos principales */}
                     <div className="flex-grow min-w-0 space-y-1">
                       <h3 className="font-bold text-white text-lg group-hover:text-green-300 transition-colors truncate">
-                        {run.gameDetails?.name || 'Jeu inconnu'}
+                        {run.gameDetails?.name && run.gameDetails?.name !== 'undefined' && run.gameDetails?.name.trim() !== ''
+                          ? run.gameDetails?.name
+                          : `Nom inconnu (${run.gameDetails?.id || run.game.id})`}
                       </h3>
                       <div className="flex items-center space-x-4 text-sm">
                         <span className="flex items-center text-amber-400">
@@ -360,7 +392,9 @@ export default function ActivityPage() {
 
                     <div className="flex-grow min-w-0">
                       <h3 className="font-semibold text-white truncate mb-1">
-                        {run.gameDetails?.name || 'Jeu inconnu'}
+                        {run.gameDetails?.name && run.gameDetails?.name !== 'undefined' && run.gameDetails?.name.trim() !== ''
+                          ? run.gameDetails?.name
+                          : `Nom inconnu (${run.gameDetails?.id || run.game.id})`}
                       </h3>
                       <div className="flex items-center justify-between">
                         <div className="space-y-1 text-xs text-slate-400">
@@ -408,7 +442,9 @@ export default function ActivityPage() {
                       <div className="flex-grow min-w-0 space-y-2">
                         <div className="flex items-start justify-between">
                           <h3 className="font-semibold text-white text-sm leading-tight pr-2">
-                            {run.gameDetails?.name || 'Jeu inconnu'}
+                            {run.gameDetails?.name && run.gameDetails?.name !== 'undefined' && run.gameDetails?.name.trim() !== ''
+                              ? run.gameDetails?.name
+                              : `Nom inconnu (${run.gameDetails?.id || run.game.id})`}
                           </h3>
                           <div className="text-green-400 font-mono font-bold text-base whitespace-nowrap">
                             {formatTime(run.time)}
@@ -453,8 +489,6 @@ export default function ActivityPage() {
           </div>
         )}
       </div>
-
-
     </div>
   );
 } 
