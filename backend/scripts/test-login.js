@@ -57,7 +57,7 @@ async function testLogin(email, password) {
     console.log(`   Username: ${user.username}`);
     console.log(`   Rôle: ${user.role}`);
     console.log('');
-    console.log('✅ Connexion réussie ! Vous pouvez maintenant accéder aux analytics.');
+          console.log('✅ Connexion réussie ! Vous pouvez maintenant accéder au dashboard admin.');
     
   } catch (error) {
     console.error('❌ Erreur lors du test de connexion:', error.message);

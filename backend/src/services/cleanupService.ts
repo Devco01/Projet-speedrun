@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import analyticsService from './analyticsService';
 
 const prisma = new PrismaClient();
 
@@ -88,15 +87,8 @@ class CleanupService {
             where: { id: race.id }
           });
 
-          // Enregistrer l'activité de nettoyage automatique
-          await analyticsService.recordActivity({
-            userId: 'system',
-            username: 'Système',
-            action: `a automatiquement supprimé la course terminée "${race.gameName}"`,
-            type: 'race' as const,
-            gameId: race.gameId,
-            gameName: race.gameName
-          });
+          // Log du nettoyage automatique
+          console.log(`🧹 Nettoyage automatique: Course "${race.gameName}" supprimée`);
 
           console.log(`🧹 Course auto-supprimée: "${race.gameName}" (créée par ${race.createdBy.username})`);
         } catch (deleteError) {

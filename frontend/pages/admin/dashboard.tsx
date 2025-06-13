@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import Link from 'next/link';
 import Head from 'next/head';
 
 interface Stats {
@@ -224,13 +223,6 @@ export default function AdminDashboard() {
           {/* Actions rapides */}
           <div className="mb-8">
             <div className="flex flex-wrap gap-4">
-              <Link 
-                href="/analytics"
-                className="group bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-purple-500/25 border border-purple-500/20"
-              >
-                Analytics Avancées
-              </Link>
-              
               <button 
                 onClick={forceCleanup}
                 disabled={cleanupLoading}
