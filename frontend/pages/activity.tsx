@@ -17,9 +17,21 @@ export default function ActivityPage() {
         const gameId = run.game.id;
         const runDate = new Date(run.submittedAt);
         
-        // Validation : ignorer les jeux sans ID valide ou sans nom
-        if (!gameId || !run.game.title || gameId.length < 3) {
-          console.warn('Jeu ignoré - ID ou nom invalide:', { id: gameId, title: run.game.title });
+        // Validation renforcée : ignorer les jeux qui ne s'affichent pas correctement
+        const hasValidId = gameId && gameId.length >= 3;
+        const hasValidTitle = run.game.title && 
+                             run.game.title !== 'undefined' && 
+                             run.game.title.trim() !== '' && 
+                             run.game.title.toLowerCase() !== 'unknown' &&
+                             run.game.title.toLowerCase() !== 'untitled';
+        
+        if (!hasValidId || !hasValidTitle) {
+          console.warn('Jeu ignoré - données d\'affichage invalides:', { 
+            id: gameId, 
+            title: run.game.title,
+            hasValidId,
+            hasValidTitle
+          });
           continue;
         }
         
@@ -72,22 +84,30 @@ export default function ActivityPage() {
       // Récupérer 20 runs récents (plus qu'avant)
       const recentRunsData = await speedrunApiClient.getGlobalRecentRuns(20);
       
-      // Filtrer les runs avec des données de jeu valides
+      // Filtrer les runs avec des données de jeu valides et affichables
       const validRuns = recentRunsData.filter(run => {
-        // Validation simplifiée - le backend s'assure déjà que les données sont valides
         const hasBasicData = run.id && run.game && run.game.id && run.game.title;
-        const titleNotUndefined = run.game.title !== 'undefined' && run.game.title !== undefined;
-        const isValid = hasBasicData && titleNotUndefined;
+        const hasValidGameId = run.game.id && run.game.id.length >= 3;
+        const hasValidGameTitle = run.game.title && 
+                                 run.game.title !== 'undefined' && 
+                                 run.game.title !== undefined &&
+                                 run.game.title.trim() !== '' &&
+                                 run.game.title.toLowerCase() !== 'unknown' &&
+                                 run.game.title.toLowerCase() !== 'untitled';
+        const hasValidCategory = run.category && run.category.name && run.category.name.trim() !== '';
+        
+        const isValid = hasBasicData && hasValidGameId && hasValidGameTitle && hasValidCategory;
         
         if (!isValid) {
-          console.warn('Run ignoré - données de base manquantes:', {
+          console.warn('Run ignoré - données d\'affichage invalides:', {
             runId: run.id,
-            hasId: !!run.id,
-            hasGame: !!run.game,
-            hasGameId: !!run.game?.id,
-            hasGameTitle: !!run.game?.title,
+            hasBasicData,
+            hasValidGameId,
+            hasValidGameTitle,
+            hasValidCategory,
+            gameId: run.game?.id,
             gameTitle: run.game?.title,
-            titleNotUndefined
+            categoryName: run.category?.name
           });
         }
         return isValid;
@@ -267,9 +287,7 @@ export default function ActivityPage() {
                       </div>
                     )}
                     <h3 className="font-semibold text-white text-xs sm:text-sm group-hover:text-green-300 transition-colors truncate leading-tight">
-                      {game.name && game.name !== 'undefined' && game.name.trim() !== ''
-                        ? game.name
-                        : `Nom inconnu (${game.id})`}
+                      {game.name}
                     </h3>
                   </div>
                 </div>
@@ -333,9 +351,7 @@ export default function ActivityPage() {
                     {/* Infos principales */}
                     <div className="flex-grow min-w-0 space-y-1">
                       <h3 className="font-bold text-white text-lg group-hover:text-green-300 transition-colors truncate">
-                        {run.gameDetails?.name && run.gameDetails?.name !== 'undefined' && run.gameDetails?.name.trim() !== ''
-                          ? run.gameDetails?.name
-                          : `Nom inconnu (${run.gameDetails?.id || run.game.id})`}
+                        {run.gameDetails?.name}
                       </h3>
                       <div className="flex items-center space-x-4 text-sm">
                         <span className="flex items-center text-amber-400">
@@ -392,9 +408,7 @@ export default function ActivityPage() {
 
                     <div className="flex-grow min-w-0">
                       <h3 className="font-semibold text-white truncate mb-1">
-                        {run.gameDetails?.name && run.gameDetails?.name !== 'undefined' && run.gameDetails?.name.trim() !== ''
-                          ? run.gameDetails?.name
-                          : `Nom inconnu (${run.gameDetails?.id || run.game.id})`}
+                        {run.gameDetails?.name}
                       </h3>
                       <div className="flex items-center justify-between">
                         <div className="space-y-1 text-xs text-slate-400">
@@ -442,9 +456,7 @@ export default function ActivityPage() {
                       <div className="flex-grow min-w-0 space-y-2">
                         <div className="flex items-start justify-between">
                           <h3 className="font-semibold text-white text-sm leading-tight pr-2">
-                            {run.gameDetails?.name && run.gameDetails?.name !== 'undefined' && run.gameDetails?.name.trim() !== ''
-                              ? run.gameDetails?.name
-                              : `Nom inconnu (${run.gameDetails?.id || run.game.id})`}
+                            {run.gameDetails?.name}
                           </h3>
                           <div className="text-green-400 font-mono font-bold text-base whitespace-nowrap">
                             {formatTime(run.time)}
