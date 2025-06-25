@@ -284,260 +284,105 @@ export default function PageRaces() {
     }
 
     setChargementJeux(true);
+    console.log(`🔍 Events: Recherche pour "${query}"`);
     
     try {
-      // Utiliser la même API que leaderboards pour cohérence
-      const results = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '')}/api/speedrun/games/search?q=${encodeURIComponent(query)}&limit=20`);
+      // Utiliser la même API que leaderboards pour cohérence avec timeout
+      const apiUrl = `${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '')}/api/speedrun/games/search?q=${encodeURIComponent(query)}&limit=20`;
+      console.log(`📡 Events: Appel API vers ${apiUrl}`);
+      
+      // Ajouter un timeout de 10 secondes
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      const results = await fetch(apiUrl, {
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      clearTimeout(timeoutId);
+      
       let jeuxAPI: JeuSpeedrun[] = [];
       
       if (results.ok) {
         const data = await results.json();
         jeuxAPI = data.games || [];
+        console.log(`✅ Events: ${jeuxAPI.length} jeux reçus de l'API`);
+      } else {
+        console.warn(`⚠️ Events: API error ${results.status}: ${results.statusText}`);
+        throw new Error(`API error: ${results.status}`);
       }
 
       // S'assurer que jeuxAPI est un tableau
-      if (Array.isArray(jeuxAPI)) {
-        // Algorithme de tri EXACTEMENT identique à leaderboards.tsx
+      if (Array.isArray(jeuxAPI) && jeuxAPI.length > 0) {
+        console.log(`🎯 Events: Tri de ${jeuxAPI.length} jeux avec algorithme sophistiqué`);
+        
+        // Algorithme de tri simplifié pour éviter les erreurs
         const sortedResults = jeuxAPI.sort((a, b) => {
           const queryLower = query.toLowerCase().trim();
           const aName = (a.name || a.title || '').toLowerCase();
           const bName = (b.name || b.title || '').toLowerCase();
           
-          // 1. Jeux iconiques officiels par franchise (priorité absolue)
-          const iconicTitles = {
-            'zelda': [
-              'the legend of zelda: ocarina of time',
-              'the legend of zelda: majora\'s mask', 
-              'the legend of zelda: breath of the wild',
-              'the legend of zelda: tears of the kingdom',
-              'the legend of zelda: twilight princess',
-              'the legend of zelda: wind waker',
-              'the legend of zelda: a link to the past',
-              'the legend of zelda: link\'s awakening',
-              'the legend of zelda',
-              'zelda ii: the adventure of link'
-            ],
-            'mario': [
-              'super mario 64',
-              'super mario odyssey',
-              'super mario world',
-              'super mario bros.',
-              'super mario sunshine',
-              'super mario galaxy',
-              'super mario bros. 3',
-              'mario kart 64',
-              'paper mario'
-            ],
-            'sonic': [
-              'sonic the hedgehog',
-              'sonic the hedgehog 2',
-              'sonic the hedgehog 3',
-              'sonic & knuckles',
-              'sonic adventure',
-              'sonic adventure 2',
-              'sonic mania'
-            ],
-            'metroid': [
-              'super metroid',
-              'metroid prime',
-              'metroid fusion',
-              'metroid dread'
-            ],
-            'pokemon': [
-              'pokemon red',
-              'pokemon blue',
-              'pokemon yellow',
-              'pokemon gold',
-              'pokemon silver',
-              'pokemon ruby',
-              'pokemon sapphire'
-            ]
-          };
-          
-          // 2. Tous les jeux officiels (deuxième priorité)
-          const allOfficialTitles = {
-            'zelda': [
-              ...iconicTitles.zelda,
-              'the legend of zelda: skyward sword',
-              'the legend of zelda: a link between worlds',
-              'the legend of zelda: tri force heroes',
-              'the legend of zelda: spirit tracks',
-              'the legend of zelda: phantom hourglass',
-              'the legend of zelda: minish cap',
-              'the legend of zelda: four swords adventures',
-              'the legend of zelda: oracle of seasons',
-              'the legend of zelda: oracle of ages',
-              'zelda (game & watch)',
-              'zelda classic'
-            ],
-            'mario': [
-              ...iconicTitles.mario,
-              'super mario galaxy 2',
-              'mario kart 8',
-              'mario kart: double dash',
-              'super mario bros. 2',
-              'super mario land',
-              'super mario land 2',
-              'super mario 3d world',
-              'super mario 3d land',
-              'new super mario bros.',
-              'mario party',
-              'mario & luigi'
-            ],
-            'sonic': [
-              ...iconicTitles.sonic,
-              'sonic 3 & knuckles',
-              'sonic cd',
-              'sonic heroes',
-              'sonic generations',
-              'sonic forces',
-              'sonic frontiers',
-              'sonic colors'
-            ],
-            'metroid': [
-              ...iconicTitles.metroid,
-              'metroid',
-              'metroid ii',
-              'metroid prime 2',
-              'metroid prime 3',
-              'metroid zero mission',
-              'metroid: other m',
-              'metroid: samus returns'
-            ],
-            'pokemon': [
-              ...iconicTitles.pokemon,
-              'pokemon crystal',
-              'pokemon emerald',
-              'pokemon diamond',
-              'pokemon pearl',
-              'pokemon platinum',
-              'pokemon black',
-              'pokemon white',
-              'pokemon black 2',
-              'pokemon white 2'
-            ]
-          };
-          
-          // 3. ROM hacks - Liste exhaustive pour filtrage strict
-          const knownHacks = [
-            // Zelda hacks
-            'parallel worlds', 'goddess of wisdom', 'missing link', 
-            'time to triumph', 'dawn & dusk', 'return of ganon', 'outlands',
-            'ancient stone tablets', 'bs zelda', 'master quest',
-            
-            // Mario hacks
-            'star road', 'last impact', 'sunshine 64', 'peach\'s fury',
-            'mario 64 chaos edition', 'mario builder', 'mario forever',
-            
-            // Sonic hacks
-            'sonic 2 xl', 'sonic classic heroes', 'sonic megamix',
-            'sonic 3 complete', 'sonic the hedgehog 2 nick arcade',
-            
-            // Pokemon hacks
-            'pokemon uranium', 'pokemon prism', 'pokemon dark rising',
-            'pokemon glazed', 'pokemon light platinum', 'pokemon flora sky'
-          ];
-          
-          // 4. Mots indicateurs de hacks (pour détection générale)
-          const hackIndicators = [
-            'hack', 'mod', 'randomizer', 'kaizo', 'romhack', 'rom hack', 'custom',
-            'fan made', 'fanmade', 'homebrew', 'beta', 'demo', 'challenge',
-            'difficulty', 'editor', 'maker', 'creator', 'remix', 'remaster',
-            'enhanced', 'redux', 'tribute', 'fan game', 'fangame', 'bootleg',
-            'tas', 'tool assisted', 'speedhack', 'practice', 'training'
-          ];
-          
-          // Détection des catégories
-          let aIsIconic = false;
-          let bIsIconic = false;
-          let aIsOfficial = false;
-          let bIsOfficial = false;
-          let aIsHack = false;
-          let bIsHack = false;
-          
-          // Détecter la franchise de la requête
-          for (const [franchise, titles] of Object.entries(iconicTitles)) {
-            if (queryLower.includes(franchise) && queryLower.length <= franchise.length + 3) {
-              // Requête simple de franchise (ex: "zelda", "mario")
-              
-              // Jeux iconiques
-              aIsIconic = titles.some(title => aName === title || aName.includes(title));
-              bIsIconic = titles.some(title => bName === title || bName.includes(title));
-              
-              // Tous les jeux officiels
-              const allTitles = allOfficialTitles[franchise as keyof typeof allOfficialTitles] || [];
-              aIsOfficial = allTitles.some((title: string) => aName === title || aName.includes(title));
-              bIsOfficial = allTitles.some((title: string) => bName === title || bName.includes(title));
-              
-              break;
-            }
-          }
-          
-          // Détection des ROM hacks - STRICTE
-          // Seulement si le nom du hack est tapé en entier OU contient des mots indicateurs
-          const queryIsSpecificHack = knownHacks.some(hack => 
-            queryLower.includes(hack) && queryLower.length >= hack.length - 2
-          );
-          
-          if (!queryIsSpecificHack) {
-            // Si l'utilisateur ne cherche pas spécifiquement un hack, on les filtre
-            aIsHack = knownHacks.some(hack => aName.includes(hack)) || 
-                      hackIndicators.some(indicator => aName.includes(indicator));
-            bIsHack = knownHacks.some(hack => bName.includes(hack)) || 
-                      hackIndicators.some(indicator => bName.includes(indicator));
-          }
-          
-          // Logique de tri par priorité
-          
-          // Priorité 1: Jeux iconiques (pour requêtes simples comme "zelda")
-          if (aIsIconic && !bIsIconic) return -1;
-          if (!aIsIconic && bIsIconic) return 1;
-          
-          // Priorité 2: Jeux officiels
-          if (aIsOfficial && !bIsOfficial) return -1;
-          if (!aIsOfficial && bIsOfficial) return 1;
-          
-          // Priorité 3: Filtrer les ROM hacks (sauf si recherche spécifique)
-          if (!queryIsSpecificHack) {
-            if (!aIsHack && bIsHack) return -1;
-            if (aIsHack && !bIsHack) return 1;
-          }
-          
-          // Priorité 4: Match exact
+          // Priorité 1: Match exact
           if (aName === queryLower && bName !== queryLower) return -1;
           if (bName === queryLower && aName !== queryLower) return 1;
           
-          // Priorité 5: Commence par la requête
+          // Priorité 2: Commence par la requête
           const aStarts = aName.startsWith(queryLower);
           const bStarts = bName.startsWith(queryLower);
           if (aStarts && !bStarts) return -1;
           if (bStarts && !aStarts) return 1;
           
-          // Priorité 6: Plus court = probablement plus officiel
-          const lengthDiff = aName.length - bName.length;
-          if (Math.abs(lengthDiff) > 15) return lengthDiff;
+          // Priorité 3: Contient la requête (plus proche du début = mieux)
+          const aIndex = aName.indexOf(queryLower);
+          const bIndex = bName.indexOf(queryLower);
+          if (aIndex !== -1 && bIndex === -1) return -1;
+          if (aIndex === -1 && bIndex !== -1) return 1;
+          if (aIndex !== -1 && bIndex !== -1 && aIndex !== bIndex) {
+            return aIndex - bIndex;
+          }
           
-          // Par défaut: ordre alphabétique
-          return aName.localeCompare(bName);
+          // Priorité 4: Plus court = probablement plus pertinent
+          return aName.length - bName.length;
         });
 
-        // Limiter à 10 résultats pour l'affichage (cohérent avec leaderboards)
-        setJeuxSuggeres(sortedResults.slice(0, 10));
+        // Limiter à 8 résultats pour éviter la surcharge
+        const limitedResults = sortedResults.slice(0, 8);
+        setJeuxSuggeres(limitedResults);
+        console.log(`✅ Events: ${limitedResults.length} jeux triés et affichés`);
       } else {
+        console.log(`📭 Events: Aucun jeu trouvé, utilisation du fallback`);
         setJeuxSuggeres([]);
       }
     } catch (error) {
-      console.error('Erreur lors de la recherche de jeux:', error);
+      console.error(`❌ Events: Erreur lors de la recherche de jeux:`, error);
       
-      // Fallback : chercher dans les jeux populaires locaux
-      const queryLower = query.toLowerCase();
-      const jeuxPopulairesCorrespondants = jeuxPopulaires.filter(jeu => 
-        (jeu.name || jeu.title || '').toLowerCase().includes(queryLower) ||
-        jeu.abbreviation.toLowerCase().includes(queryLower)
-      );
-      setJeuxSuggeres(jeuxPopulairesCorrespondants);
+      // Fallback intelligent : chercher dans les jeux populaires locaux
+      try {
+        const queryLower = query.toLowerCase();
+        const jeuxPopulairesCorrespondants = jeuxPopulaires.filter(jeu => 
+          (jeu.name || jeu.title || '').toLowerCase().includes(queryLower) ||
+          jeu.abbreviation.toLowerCase().includes(queryLower)
+        );
+        
+        if (jeuxPopulairesCorrespondants.length > 0) {
+          console.log(`🔄 Events: Fallback trouvé ${jeuxPopulairesCorrespondants.length} jeux locaux`);
+          setJeuxSuggeres(jeuxPopulairesCorrespondants);
+        } else {
+          console.log(`📭 Events: Aucun fallback disponible`);
+          setJeuxSuggeres([]);
+        }
+      } catch (fallbackError) {
+        console.error(`❌ Events: Erreur dans le fallback:`, fallbackError);
+        setJeuxSuggeres([]);
+      }
+    } finally {
+      // TOUJOURS arrêter le loading, même en cas d'erreur
+      setChargementJeux(false);
+      console.log(`🏁 Events: Recherche terminée pour "${query}"`);
     }
-    setChargementJeux(false);
   };
 
   // Fonction pour charger les catégories d'un jeu
@@ -1030,8 +875,6 @@ export default function PageRaces() {
   const obtenirTempsEcoule = (heureDebut: string): number => {
     return Math.floor((Date.now() - new Date(heureDebut).getTime()) / 1000);
   };
-
-
 
   // Fonction spécialement pour formater les temps finaux des participants
   const formaterTempsFinal = (tempsFin: number): string => {
