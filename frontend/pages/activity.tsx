@@ -24,13 +24,19 @@ export default function ActivityPage() {
                              run.game.title.trim() !== '' && 
                              run.game.title.toLowerCase() !== 'unknown' &&
                              run.game.title.toLowerCase() !== 'untitled';
+        const hasValidImage = run.game.cover && 
+                             run.game.cover.trim() !== '' && 
+                             run.game.cover !== 'undefined' &&
+                             (run.game.cover.startsWith('http://') || run.game.cover.startsWith('https://'));
         
-        if (!hasValidId || !hasValidTitle) {
+        if (!hasValidId || !hasValidTitle || !hasValidImage) {
           console.warn('Jeu ignoré - données d\'affichage invalides:', { 
             id: gameId, 
             title: run.game.title,
+            cover: run.game.cover,
             hasValidId,
-            hasValidTitle
+            hasValidTitle,
+            hasValidImage
           });
           continue;
         }
