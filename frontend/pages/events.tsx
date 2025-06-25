@@ -10,6 +10,8 @@ interface JeuSpeedrun {
   abbreviation: string;
   coverImage?: string;  // Backend utilise coverImage
   cover?: string;       // Fallback
+  isOfficial?: boolean; // Indicateur de jeu officiel
+  platforms?: string[]; // Plateformes supportées
 }
 
 interface CategorieSpeedrun {
@@ -273,7 +275,7 @@ export default function PageRaces() {
     }
   };
 
-  // Fonction pour rechercher des jeux (Algorithme avancé inspiré de leaderboards.tsx)
+  // Fonction pour rechercher des jeux (Algorithme sophistiqué identique à leaderboards.tsx)
   const rechercherJeux = async (query: string) => {
     if (query.length < 2) {
       setJeuxSuggeres([]);
@@ -283,17 +285,18 @@ export default function PageRaces() {
     setChargementJeux(true);
     
     try {
-      // Utiliser l'API speedrun exhaustive comme dans leaderboards
-              const response = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '')}/api/speedrun/games/search/exhaustive?q=${encodeURIComponent(query)}&limit=20`);
+      // Utiliser la même API que leaderboards pour cohérence
+      const results = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '')}/api/speedrun/games/search?q=${encodeURIComponent(query)}&limit=20`);
       let jeuxAPI: JeuSpeedrun[] = [];
       
-      if (response.ok) {
-        const data = await response.json();
+      if (results.ok) {
+        const data = await results.json();
         jeuxAPI = data.games || [];
       }
 
-      // Algorithme de tri avancé identique à leaderboards.tsx
+      // S'assurer que jeuxAPI est un tableau
       if (Array.isArray(jeuxAPI)) {
+        // Algorithme de tri EXACTEMENT identique à leaderboards.tsx
         const sortedResults = jeuxAPI.sort((a, b) => {
           const queryLower = query.toLowerCase().trim();
           const aName = (a.name || a.title || '').toLowerCase();
@@ -350,47 +353,175 @@ export default function PageRaces() {
             ]
           };
           
-          // Détecter les franchises recherchées
-          let targetFranchise: keyof typeof iconicTitles | null = null;
-          for (const franchise of Object.keys(iconicTitles) as Array<keyof typeof iconicTitles>) {
-            if (queryLower.includes(franchise)) {
-              targetFranchise = franchise;
+          // 2. Tous les jeux officiels (deuxième priorité)
+          const allOfficialTitles = {
+            'zelda': [
+              ...iconicTitles.zelda,
+              'the legend of zelda: skyward sword',
+              'the legend of zelda: a link between worlds',
+              'the legend of zelda: tri force heroes',
+              'the legend of zelda: spirit tracks',
+              'the legend of zelda: phantom hourglass',
+              'the legend of zelda: minish cap',
+              'the legend of zelda: four swords adventures',
+              'the legend of zelda: oracle of seasons',
+              'the legend of zelda: oracle of ages',
+              'zelda (game & watch)',
+              'zelda classic'
+            ],
+            'mario': [
+              ...iconicTitles.mario,
+              'super mario galaxy 2',
+              'mario kart 8',
+              'mario kart: double dash',
+              'super mario bros. 2',
+              'super mario land',
+              'super mario land 2',
+              'super mario 3d world',
+              'super mario 3d land',
+              'new super mario bros.',
+              'mario party',
+              'mario & luigi'
+            ],
+            'sonic': [
+              ...iconicTitles.sonic,
+              'sonic 3 & knuckles',
+              'sonic cd',
+              'sonic heroes',
+              'sonic generations',
+              'sonic forces',
+              'sonic frontiers',
+              'sonic colors'
+            ],
+            'metroid': [
+              ...iconicTitles.metroid,
+              'metroid',
+              'metroid ii',
+              'metroid prime 2',
+              'metroid prime 3',
+              'metroid zero mission',
+              'metroid: other m',
+              'metroid: samus returns'
+            ],
+            'pokemon': [
+              ...iconicTitles.pokemon,
+              'pokemon crystal',
+              'pokemon emerald',
+              'pokemon diamond',
+              'pokemon pearl',
+              'pokemon platinum',
+              'pokemon black',
+              'pokemon white',
+              'pokemon black 2',
+              'pokemon white 2'
+            ]
+          };
+          
+          // 3. ROM hacks - Liste exhaustive pour filtrage strict
+          const knownHacks = [
+            // Zelda hacks
+            'parallel worlds', 'goddess of wisdom', 'missing link', 
+            'time to triumph', 'dawn & dusk', 'return of ganon', 'outlands',
+            'ancient stone tablets', 'bs zelda', 'master quest',
+            
+            // Mario hacks
+            'star road', 'last impact', 'sunshine 64', 'peach\'s fury',
+            'mario 64 chaos edition', 'mario builder', 'mario forever',
+            
+            // Sonic hacks
+            'sonic 2 xl', 'sonic classic heroes', 'sonic megamix',
+            'sonic 3 complete', 'sonic the hedgehog 2 nick arcade',
+            
+            // Pokemon hacks
+            'pokemon uranium', 'pokemon prism', 'pokemon dark rising',
+            'pokemon glazed', 'pokemon light platinum', 'pokemon flora sky'
+          ];
+          
+          // 4. Mots indicateurs de hacks (pour détection générale)
+          const hackIndicators = [
+            'hack', 'mod', 'randomizer', 'kaizo', 'romhack', 'rom hack', 'custom',
+            'fan made', 'fanmade', 'homebrew', 'beta', 'demo', 'challenge',
+            'difficulty', 'editor', 'maker', 'creator', 'remix', 'remaster',
+            'enhanced', 'redux', 'tribute', 'fan game', 'fangame', 'bootleg',
+            'tas', 'tool assisted', 'speedhack', 'practice', 'training'
+          ];
+          
+          // Détection des catégories
+          let aIsIconic = false;
+          let bIsIconic = false;
+          let aIsOfficial = false;
+          let bIsOfficial = false;
+          let aIsHack = false;
+          let bIsHack = false;
+          
+          // Détecter la franchise de la requête
+          for (const [franchise, titles] of Object.entries(iconicTitles)) {
+            if (queryLower.includes(franchise) && queryLower.length <= franchise.length + 3) {
+              // Requête simple de franchise (ex: "zelda", "mario")
+              
+              // Jeux iconiques
+              aIsIconic = titles.some(title => aName === title || aName.includes(title));
+              bIsIconic = titles.some(title => bName === title || bName.includes(title));
+              
+              // Tous les jeux officiels
+              const allTitles = allOfficialTitles[franchise as keyof typeof allOfficialTitles] || [];
+              aIsOfficial = allTitles.some((title: string) => aName === title || aName.includes(title));
+              bIsOfficial = allTitles.some((title: string) => bName === title || bName.includes(title));
+              
               break;
             }
           }
           
-          if (targetFranchise) {
-            const aIsIconic = iconicTitles[targetFranchise].includes(aName);
-            const bIsIconic = iconicTitles[targetFranchise].includes(bName);
-            
-            if (aIsIconic && !bIsIconic) return -1;
-            if (!aIsIconic && bIsIconic) return 1;
+          // Détection des ROM hacks - STRICTE
+          // Seulement si le nom du hack est tapé en entier OU contient des mots indicateurs
+          const queryIsSpecificHack = knownHacks.some(hack => 
+            queryLower.includes(hack) && queryLower.length >= hack.length - 2
+          );
+          
+          if (!queryIsSpecificHack) {
+            // Si l'utilisateur ne cherche pas spécifiquement un hack, on les filtre
+            aIsHack = knownHacks.some(hack => aName.includes(hack)) || 
+                      hackIndicators.some(indicator => aName.includes(indicator));
+            bIsHack = knownHacks.some(hack => bName.includes(hack)) || 
+                      hackIndicators.some(indicator => bName.includes(indicator));
           }
           
-          // 2. Correspondance exacte du nom
+          // Logique de tri par priorité
+          
+          // Priorité 1: Jeux iconiques (pour requêtes simples comme "zelda")
+          if (aIsIconic && !bIsIconic) return -1;
+          if (!aIsIconic && bIsIconic) return 1;
+          
+          // Priorité 2: Jeux officiels
+          if (aIsOfficial && !bIsOfficial) return -1;
+          if (!aIsOfficial && bIsOfficial) return 1;
+          
+          // Priorité 3: Filtrer les ROM hacks (sauf si recherche spécifique)
+          if (!queryIsSpecificHack) {
+            if (!aIsHack && bIsHack) return -1;
+            if (aIsHack && !bIsHack) return 1;
+          }
+          
+          // Priorité 4: Match exact
           if (aName === queryLower && bName !== queryLower) return -1;
-          if (aName !== queryLower && bName === queryLower) return 1;
+          if (bName === queryLower && aName !== queryLower) return 1;
           
-          // 3. Commence par la requête
-          const aStartsWith = aName.startsWith(queryLower);
-          const bStartsWith = bName.startsWith(queryLower);
-          if (aStartsWith && !bStartsWith) return -1;
-          if (!aStartsWith && bStartsWith) return 1;
+          // Priorité 5: Commence par la requête
+          const aStarts = aName.startsWith(queryLower);
+          const bStarts = bName.startsWith(queryLower);
+          if (aStarts && !bStarts) return -1;
+          if (bStarts && !aStarts) return 1;
           
-          // 4. Contient la requête (proche du début prioritaire)
-          const aIndex = aName.indexOf(queryLower);
-          const bIndex = bName.indexOf(queryLower);
-          if (aIndex !== -1 && bIndex === -1) return -1;
-          if (aIndex === -1 && bIndex !== -1) return 1;
-          if (aIndex !== -1 && bIndex !== -1 && aIndex !== bIndex) {
-            return aIndex - bIndex;
-          }
+          // Priorité 6: Plus court = probablement plus officiel
+          const lengthDiff = aName.length - bName.length;
+          if (Math.abs(lengthDiff) > 15) return lengthDiff;
           
-          // 5. Par longueur (plus court = plus pertinent)
-          return aName.length - bName.length;
+          // Par défaut: ordre alphabétique
+          return aName.localeCompare(bName);
         });
 
-        setJeuxSuggeres(sortedResults.slice(0, 10)); // Limiter à 10 résultats
+        // Limiter à 10 résultats pour l'affichage (cohérent avec leaderboards)
+        setJeuxSuggeres(sortedResults.slice(0, 10));
       } else {
         setJeuxSuggeres([]);
       }
@@ -1197,27 +1328,20 @@ export default function PageRaces() {
                     )}
                     
                     {!chargementJeux && jeuxSuggeres.length === 0 && recherchejeu.length >= 2 && (
-                      <div className="p-3 text-slate-400 text-center">
-                        <div className="mb-2">Aucun jeu trouvé pour "{recherchejeu}"</div>
-                        <div className="text-xs text-slate-500">
-                          💡 <strong>Jeux populaires à essayer :</strong>
-                          <br />
-                          • <strong>mario</strong> - Super Mario 64, Mario Kart, etc.
-                          <br />
-                          • <strong>oot</strong> - The Legend of Zelda: Ocarina of Time
-                          <br />
-                          • <strong>botw</strong> - Zelda: Breath of the Wild
-                          <br />
-                          • <strong>sm64</strong> - Super Mario 64
-                          <br />
-                          • <strong>sonic</strong> - Sonic the Hedgehog
-                          <br />
-                          • <strong>celeste</strong> - Celeste
-                          <br />
-                          • <strong>smw</strong> - Super Mario World
-                          <br />
-                          <br />
-                          <span className="text-blue-400">Tip: Utilisez les abréviations comme "oot", "sm64", "botw"</span>
+                      <div className="p-4 text-slate-400 text-center">
+                        <div className="mb-3 text-base">🔍 Aucun jeu trouvé pour "<span className="text-white font-medium">{recherchejeu}</span>"</div>
+                        <div className="text-sm text-slate-500 bg-slate-800 rounded-lg p-3">
+                          <div className="text-violet-400 font-medium mb-2">💡 Suggestions de recherche :</div>
+                          <div className="grid grid-cols-1 gap-1 text-left">
+                            <div><span className="text-blue-400 font-mono">mario</span> → Super Mario 64, Mario Odyssey</div>
+                            <div><span className="text-blue-400 font-mono">zelda</span> → Ocarina of Time, Breath of the Wild</div>
+                            <div><span className="text-blue-400 font-mono">sonic</span> → Sonic the Hedgehog 1, 2, 3</div>
+                            <div><span className="text-blue-400 font-mono">metroid</span> → Super Metroid, Prime</div>
+                            <div><span className="text-blue-400 font-mono">pokemon</span> → Red/Blue, Gold/Silver</div>
+                          </div>
+                          <div className="text-xs text-slate-400 mt-2 border-t border-slate-700 pt-2">
+                            💡 L'algorithme privilégie les jeux officiels et filtre automatiquement les ROM hacks
+                          </div>
                         </div>
                       </div>
                     )}
@@ -1227,34 +1351,45 @@ export default function PageRaces() {
                         key={jeu.id}
                         type="button"
                         onClick={() => selectionnerJeu(jeu)}
-                        className="w-full text-left p-3 hover:bg-slate-600 transition-colors border-b border-slate-600 last:border-b-0"
+                        className="w-full text-left p-3 hover:bg-slate-600 transition-colors border-b border-slate-600 last:border-b-0 group"
                       >
                         <div className="flex items-center space-x-3">
                           {(jeu.coverImage || jeu.cover) ? (
                             <img 
                               src={jeu.coverImage || jeu.cover} 
                               alt={jeu.title || jeu.name} 
-                              className="w-8 h-8 rounded object-cover"
+                              className="w-10 h-10 rounded-lg object-cover flex-shrink-0 group-hover:ring-2 group-hover:ring-violet-500/50 transition-all"
                               onError={(e) => {
-                                // Masquer l'image si elle ne se charge pas
+                                // Remplacer par placeholder si échec
                                 e.currentTarget.style.display = 'none';
+                                const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                                if (placeholder) placeholder.style.display = 'flex';
                               }}
                             />
-                          ) : (
-                            <div className="w-8 h-8 rounded bg-slate-600 flex items-center justify-center text-xs text-slate-400">
-                              🎮
-                            </div>
-                          )}
+                          ) : null}
+                          <div className="w-10 h-10 rounded-lg bg-slate-600 flex items-center justify-center text-sm text-slate-400 flex-shrink-0" style={{display: (jeu.coverImage || jeu.cover) ? 'none' : 'flex'}}>
+                            🎮
+                          </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-white font-medium truncate">
+                            <div className="text-white font-medium truncate text-sm">
                               {jeu.title || jeu.name}
+                              {jeu.isOfficial && (
+                                <span className="ml-2 text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded-full border border-green-500/30">
+                                  ✓ Officiel
+                                </span>
+                              )}
                               {jeu.id.includes('-fallback') && (
-                                <span className="ml-2 text-xs bg-blue-600 text-blue-100 px-2 py-0.5 rounded">
-                                  Populaire
+                                <span className="ml-2 text-xs bg-blue-600/20 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/30">
+                                  ⭐ Populaire
                                 </span>
                               )}
                             </div>
-                            <div className="text-slate-400 text-xs truncate">{jeu.abbreviation}</div>
+                            <div className="text-slate-400 text-xs truncate">
+                              {jeu.abbreviation}
+                              {jeu.platforms && jeu.platforms.length > 0 && (
+                                <span className="ml-2">• {jeu.platforms[0]}</span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </button>
