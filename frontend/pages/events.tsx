@@ -287,8 +287,9 @@ export default function PageRaces() {
     console.log(`🔍 Events: Recherche pour "${query}"`);
     
     try {
-      // Utiliser la même API que leaderboards pour cohérence avec timeout
-      const apiUrl = `${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '')}/api/speedrun/games/search?q=${encodeURIComponent(query)}&limit=20`;
+      // Utiliser directement l'URL backend complète car le rewrite Vercel ne fonctionne pas
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const apiUrl = `${backendUrl}/api/speedrun/games/search?q=${encodeURIComponent(query)}&limit=20`;
       console.log(`📡 Events: Appel API vers ${apiUrl}`);
       
       // Ajouter un timeout de 10 secondes
@@ -308,7 +309,7 @@ export default function PageRaces() {
       
       if (results.ok) {
         const data = await results.json();
-        jeuxAPI = data.games || [];
+        jeuxAPI = data.data || []; // Backend Render utilise data.data pas data.games
         console.log(`✅ Events: ${jeuxAPI.length} jeux reçus de l'API`);
       } else {
         console.warn(`⚠️ Events: API error ${results.status}: ${results.statusText}`);
