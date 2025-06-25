@@ -1,20 +1,16 @@
 import { PrismaClient } from '@prisma/client';
 
-// Configuration robuste pour Render PostgreSQL
+// Configuration simplifiée pour NeonDB
 const databaseUrl = process.env.DATABASE_URL;
-let enhancedUrl = databaseUrl;
 
-if (databaseUrl && !databaseUrl.includes('connect_timeout')) {
-  // Ajouter les paramètres de timeout si pas déjà présents
-  const separator = databaseUrl.includes('?') ? '&' : '?';
-  enhancedUrl = `${databaseUrl}${separator}connect_timeout=15&pool_timeout=15&statement_timeout=30000`;
-}
+console.log('🔍 DATABASE_URL reçue:', databaseUrl ? 'Présente' : 'Manquante');
+console.log('🔍 Type de protocole:', databaseUrl ? databaseUrl.split('://')[0] : 'N/A');
 
 // Configuration Prisma avec gestion d'erreurs
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: enhancedUrl
+      url: databaseUrl
     }
   },
   log: ['error', 'warn'],
