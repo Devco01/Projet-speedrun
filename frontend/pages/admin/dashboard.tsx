@@ -46,10 +46,10 @@ export default function AdminDashboard() {
   const [cleanupLoading, setCleanupLoading] = useState(false);
 
   useEffect(() => {
-    // Vérifier l'authentification admin
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-      router.push('/admin/login');
+    // Vérifier l'authentification utilisateur normal
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+      router.push('/login');
       return;
     }
     
@@ -64,9 +64,7 @@ export default function AdminDashboard() {
       const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '');
       console.log('DEBUG: API URL utilisée:', apiUrl);
       
-      const adminToken = localStorage.getItem('adminToken');
-      const authToken = localStorage.getItem('authToken');
-      const token = adminToken || authToken;
+      const token = localStorage.getItem('authToken');
       
       const headers: HeadersInit = {};
       if (token) {
@@ -123,9 +121,7 @@ export default function AdminDashboard() {
   const loadCleanupStats = async () => {
     try {
       const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '');
-      const adminToken = localStorage.getItem('adminToken');
-      const authToken = localStorage.getItem('authToken');
-      const token = adminToken || authToken;
+      const token = localStorage.getItem('authToken');
       
       const headers: HeadersInit = {};
       if (token) {
@@ -146,9 +142,7 @@ export default function AdminDashboard() {
     setCleanupLoading(true);
     try {
       const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '');
-      const adminToken = localStorage.getItem('adminToken');
-      const authToken = localStorage.getItem('authToken');
-      const token = adminToken || authToken;
+      const token = localStorage.getItem('authToken');
       
       const headers: HeadersInit = {};
       if (token) {
@@ -201,20 +195,9 @@ export default function AdminDashboard() {
       <div className="min-h-screen bg-gray-900">
         {/* Contenu principal */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Titre avec bouton de déconnexion */}
-          <div className="mb-8 relative">
-            <div className="absolute top-0 right-0">
-              <button
-                onClick={() => {
-                  localStorage.removeItem('adminToken');
-                  router.push('/');
-                }}
-                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-4 py-2 rounded-lg transition-all duration-200 transform hover:scale-105 text-sm"
-              >
-                Déconnexion
-              </button>
-            </div>
-            <h1 className="text-4xl font-bold text-white flex items-center gap-3 mb-2 pr-24">
+          {/* Titre */}
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold text-white flex items-center gap-3 mb-2">
               Tableau de bord administrateur
             </h1>
             <p className="text-gray-400">Surveillance et statistiques de la plateforme speedrun</p>
