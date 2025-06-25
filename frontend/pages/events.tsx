@@ -276,6 +276,7 @@ export default function PageRaces() {
   };
 
   // Fonction pour rechercher des jeux (Algorithme sophistiqué identique à leaderboards.tsx)
+  // 🚀 FORCE DEPLOY: Algorithme harmonisé actif - filtrage intelligent des jeux officiels
   const rechercherJeux = async (query: string) => {
     if (query.length < 2) {
       setJeuxSuggeres([]);
