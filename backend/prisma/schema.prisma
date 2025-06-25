@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,7 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Modèle pour les utilisateurs
 model User {
   id               String            @id @default(uuid())
   username         String            @unique
@@ -18,16 +14,15 @@ model User {
   password         String
   profileImage     String?
   bio              String?
-  role             String            @default("user") // "user" ou "admin"
+  role             String            @default("user")
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
+  createdRaces     Race[]
+  raceMessages     RaceMessage[]
+  raceParticipants RaceParticipant[]
   favorites        Game[]            @relation("UserFavorites")
-  createdRaces     Race[] // Races créées par l'utilisateur
-  raceParticipants RaceParticipant[] // Participations aux races
-  raceMessages     RaceMessage[] // Messages dans les races
 }
 
-// Modèle pour les jeux
 model Game {
   id          String    @id @default(uuid())
   title       String
@@ -44,53 +39,48 @@ model Game {
   favoriteBy  User[]    @relation("UserFavorites")
 }
 
-// Les événements généraux ont été remplacés par les races speedrun
-
-// Modèle pour les races speedrun
 model Race {
   id              String            @id @default(uuid())
-  gameName        String // Nom du jeu
-  gameId          String // ID du jeu speedrun.com
-  categoryName    String // Nom de la catégorie
-  categoryId      String // ID de la catégorie
+  gameName        String
+  gameId          String
+  categoryName    String
+  categoryId      String
   objective       String            @default("Meilleur temps")
-  status          String            @default("en-attente") // en-attente, prete, en-cours, terminee
+  status          String            @default("en-attente")
   maxParticipants Int               @default(4)
-  password        String? // Mot de passe optionnel
-  startTime       DateTime? // Heure de début de la course
-  endTime         DateTime? // Heure de fin de la course
-  createdById     String // ID du créateur
-  createdBy       User              @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  password        String?
+  startTime       DateTime?
+  endTime         DateTime?
+  createdById     String
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
-  participants    RaceParticipant[]
+  createdBy       User              @relation(fields: [createdById], references: [id], onDelete: Cascade)
   messages        RaceMessage[]
+  participants    RaceParticipant[]
 }
 
-// Modèle pour les participants à une race
 model RaceParticipant {
   id         String   @id @default(uuid())
   raceId     String
-  race       Race     @relation(fields: [raceId], references: [id], onDelete: Cascade)
   userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status     String   @default("inscrit") // inscrit, pret, en-course, termine, abandon
-  finishTime Int? // Temps de fin en secondes
-  streamUrl  String? // URL du stream
-  position   Int? // Position finale
+  status     String   @default("inscrit")
+  finishTime Int?
+  streamUrl  String?
+  position   Int?
   joinedAt   DateTime @default(now())
+  race       Race     @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([raceId, userId]) // Un utilisateur ne peut participer qu'une fois à une race
+  @@unique([raceId, userId])
 }
 
-// Modèle pour les messages de chat de race
 model RaceMessage {
   id        String   @id @default(uuid())
   raceId    String
-  race      Race     @relation(fields: [raceId], references: [id], onDelete: Cascade)
-  userId    String? // Null pour les messages système
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String?
   content   String
-  type      String   @default("chat") // chat, systeme
+  type      String   @default("chat")
   createdAt DateTime @default(now())
+  race      Race     @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
