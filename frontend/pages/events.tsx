@@ -463,32 +463,83 @@ export default function PageRaces() {
 
   // Fonction pour charger les catégories d'un jeu
   const chargerCategories = async (gameId: string) => {
+    console.log(`🎯 Events: Chargement catégories pour jeu ID: ${gameId}`);
     setChargementCategories(true);
+    
     try {
-              const response = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '')}/api/speedrun/games/${gameId}/categories`);
+      // Utiliser la même URL backend directe que pour la recherche
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const apiUrl = `${backendUrl}/api/speedrun/games/${gameId}/categories`;
+      console.log(`📡 Events: Appel API catégories vers ${apiUrl}`);
+      
+      // Ajouter timeout comme pour la recherche
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      const response = await fetch(apiUrl, {
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      clearTimeout(timeoutId);
+      
       if (response.ok) {
         const data = await response.json();
-        setCategories(data.categories || []);
+        console.log(`✅ Events: Catégories reçues:`, data);
+        console.log(`🔍 Events: Structure complète de la réponse:`, JSON.stringify(data, null, 2));
+        
+        // Backend peut retourner data.data ou data.categories
+        const categoriesData = data.data || data.categories || [];
+        console.log(`📋 Events: ${categoriesData.length} catégories extraites:`, categoriesData);
+        setCategories(categoriesData);
         
         // Sélectionner automatiquement la première catégorie ou Any% si disponible
-        const categoriesData = data.categories || [];
         if (categoriesData.length > 0) {
           const anyPercent = categoriesData.find((cat: CategorieSpeedrun) => 
             cat.name.toLowerCase().includes('any%')
           );
           const premiereCat = anyPercent || categoriesData[0];
+          
+          console.log(`🎯 Events: Catégorie auto-sélectionnée: ${premiereCat.name} (ID: ${premiereCat.id})`);
+          
           setNouvelleRace(prev => ({
             ...prev,
             categorie: premiereCat.name,
             categorieId: premiereCat.id
           }));
+        } else {
+          console.warn(`⚠️ Events: Aucune catégorie trouvée pour ${gameId}`);
         }
+      } else {
+        const errorText = await response.text();
+        console.warn(`⚠️ Events: API catégories erreur ${response.status}: ${response.statusText}`);
+        console.warn(`📄 Events: Réponse d'erreur complète:`, errorText);
+        throw new Error(`API error: ${response.status} - ${errorText}`);
       }
     } catch (error) {
-      console.error('Erreur lors du chargement des catégories:', error);
-      setCategories([]);
+      console.error(`❌ Events: Erreur lors du chargement des catégories:`, error);
+      
+      // Fallback avec catégories génériques
+      console.log(`🔄 Events: Utilisation de catégories génériques pour ${gameId}`);
+      const categoriesGeneriques: CategorieSpeedrun[] = [
+        { id: 'any-percent', name: 'Any%', type: 'full-game' },
+        { id: '100-percent', name: '100%', type: 'full-game' },
+        { id: 'glitchless', name: 'Glitchless', type: 'full-game' },
+        { id: 'low-percent', name: 'Low%', type: 'full-game' }
+      ];
+      
+      setCategories(categoriesGeneriques);
+      setNouvelleRace(prev => ({
+        ...prev,
+        categorie: 'Any%',
+        categorieId: 'any-percent'
+      }));
+    } finally {
+      setChargementCategories(false);
+      console.log(`🏁 Events: Chargement catégories terminé pour ${gameId}`);
     }
-    setChargementCategories(false);
   };
 
   // Gérer la recherche de jeux avec debounce
@@ -505,6 +556,13 @@ export default function PageRaces() {
   // Sélectionner un jeu depuis les suggestions
   const selectionnerJeu = (jeu: JeuSpeedrun) => {
     const nomJeu = jeu.title || jeu.name || 'Jeu inconnu';
+    console.log(`🎮 Events: Sélection du jeu:`, {
+      nom: nomJeu,
+      id: jeu.id,
+      abbreviation: jeu.abbreviation,
+      estFallback: jeu.id.includes('-fallback')
+    });
+    
     setNouvelleRace(prev => ({
       ...prev,
       jeu: nomJeu,
@@ -518,6 +576,7 @@ export default function PageRaces() {
     
     // Si c'est un jeu populaire prédéfini (fallback), créer des catégories spécifiques
     if (jeu.id.includes('-fallback')) {
+      console.log(`📝 Events: Utilisation de catégories prédéfinies pour ${jeu.id}`);
       let categoriesParDefaut: CategorieSpeedrun[] = [];
       
       switch (jeu.id) {
