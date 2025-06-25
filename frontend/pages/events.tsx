@@ -318,41 +318,116 @@ export default function PageRaces() {
 
       // S'assurer que jeuxAPI est un tableau
       if (Array.isArray(jeuxAPI) && jeuxAPI.length > 0) {
-        console.log(`🎯 Events: Tri de ${jeuxAPI.length} jeux avec algorithme sophistiqué`);
+        console.log(`🎯 Events: Tri de ${jeuxAPI.length} jeux avec algorithme intelligent`);
         
-        // Algorithme de tri simplifié pour éviter les erreurs
-        const sortedResults = jeuxAPI.sort((a, b) => {
+        // Algorithme de tri intelligent avec scoring
+        const gamesWithScore = jeuxAPI.map((game: any) => {
           const queryLower = query.toLowerCase().trim();
-          const aName = (a.name || a.title || '').toLowerCase();
-          const bName = (b.name || b.title || '').toLowerCase();
+          const gameName = (game.name || game.title || '').toLowerCase();
+          const gameAbbr = (game.abbreviation || '').toLowerCase();
           
-          // Priorité 1: Match exact
-          if (aName === queryLower && bName !== queryLower) return -1;
-          if (bName === queryLower && aName !== queryLower) return 1;
+          let score = 0;
           
-          // Priorité 2: Commence par la requête
-          const aStarts = aName.startsWith(queryLower);
-          const bStarts = bName.startsWith(queryLower);
-          if (aStarts && !bStarts) return -1;
-          if (bStarts && !aStarts) return 1;
+          // === SCORING SYSTEM ===
           
-          // Priorité 3: Contient la requête (plus proche du début = mieux)
-          const aIndex = aName.indexOf(queryLower);
-          const bIndex = bName.indexOf(queryLower);
-          if (aIndex !== -1 && bIndex === -1) return -1;
-          if (aIndex === -1 && bIndex !== -1) return 1;
-          if (aIndex !== -1 && bIndex !== -1 && aIndex !== bIndex) {
-            return aIndex - bIndex;
+          // 1. Match exact complet = Score maximum
+          if (gameName === queryLower) {
+            score += 1000;
           }
           
-          // Priorité 4: Plus court = probablement plus pertinent
-          return aName.length - bName.length;
+          // 2. Match abréviation exacte
+          if (gameAbbr === queryLower) {
+            score += 900;
+          }
+          
+          // 3. Commence par la requête = Très important
+          if (gameName.startsWith(queryLower)) {
+            score += 800;
+          }
+          
+          // 4. Contient la requête au début = Important
+          const queryIndex = gameName.indexOf(queryLower);
+          if (queryIndex !== -1) {
+            // Plus c'est tôt dans le nom, mieux c'est
+            score += Math.max(500 - queryIndex * 10, 100);
+          }
+          
+          // 5. Correspondance par mots-clés pour requêtes longues
+          if (queryLower.length > 10) {
+            const queryWords = queryLower.split(/[\s:.-]+/).filter((w: string) => w.length > 2);
+            const nameWords = gameName.split(/[\s:.-]+/).filter((w: string) => w.length > 2);
+            
+            let matchingWords = 0;
+            queryWords.forEach((qWord: string) => {
+              if (nameWords.some((nWord: string) => nWord.includes(qWord) || qWord.includes(nWord))) {
+                matchingWords++;
+              }
+            });
+            
+            // Bonus si beaucoup de mots correspondent
+            if (matchingWords >= queryWords.length * 0.7) {
+              score += 600; // Pour "the legend of zelda ocarina of time"
+            } else if (matchingWords >= queryWords.length * 0.5) {
+              score += 300;
+            }
+          }
+          
+          // 6. Filtrage strict des ROM hacks - seulement si nom spécifique tapé
+          const hackIndicators = [
+            'hack', 'mod', 'randomizer', 'kaizo', 'custom', 'fan', 'homebrew', 'beta', 'demo',
+            'edition', 'remix', 'remastered', 'enhanced', 'redux', 'tribute', 'bootleg',
+            'practice', 'training', 'challenge', 'difficulty', 'editor', 'maker', 'creator'
+          ];
+          
+          const isLikelyHack = hackIndicators.some(indicator => gameName.includes(indicator));
+          
+          // Si c'est un hack, vérifier si l'utilisateur le cherche spécifiquement
+          if (isLikelyHack) {
+            // Permettre seulement si le nom du hack correspond bien à la recherche
+            const hackNameMatch = gameName.includes(queryLower) && queryLower.length > gameName.length * 0.6;
+            
+            if (!hackNameMatch) {
+              score -= 500; // Forte pénalité pour éliminer les hacks non recherchés
+            } else {
+              score -= 100; // Petite pénalité même si recherché spécifiquement
+            }
+          }
+          
+          // 7. Bonus pour les jeux iconiques
+          const iconicGames = [
+            'ocarina of time', 'majora\'s mask', 'breath of the wild', 'twilight princess',
+            'super mario 64', 'super mario odyssey', 'super mario world',
+            'sonic the hedgehog', 'sonic adventure', 'metroid prime'
+          ];
+          
+          if (iconicGames.some(iconic => gameName.includes(iconic))) {
+            score += 100;
+          }
+          
+          // 8. Pénalité pour noms très longs (souvent des descriptions ou hacks)
+          if (gameName.length > 80) {
+            score -= 50;
+          }
+          
+          // 9. Bonus pour correspondance d'abréviation dans la requête
+          if (queryLower.includes(gameAbbr) && gameAbbr.length > 1) {
+            score += 400;
+          }
+          
+          console.log(`📊 ${gameName.substring(0, 30)}... → Score: ${score}`);
+          
+          return { game, score };
         });
+        
+        // Trier par score décroissant
+        const sortedResults = gamesWithScore
+          .sort((a, b) => b.score - a.score)
+          .map(item => item.game);
 
         // Limiter à 8 résultats pour éviter la surcharge
         const limitedResults = sortedResults.slice(0, 8);
         setJeuxSuggeres(limitedResults);
-        console.log(`✅ Events: ${limitedResults.length} jeux triés et affichés`);
+        console.log(`✅ Events: ${limitedResults.length} jeux triés par pertinence`);
       } else {
         console.log(`📭 Events: Aucun jeu trouvé, utilisation du fallback`);
         setJeuxSuggeres([]);
@@ -1218,11 +1293,6 @@ export default function PageRaces() {
                           <div className="flex-1 min-w-0">
                             <div className="text-white font-medium truncate text-sm">
                               {jeu.title || jeu.name}
-                              {jeu.isOfficial && (
-                                <span className="ml-2 text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded-full border border-green-500/30">
-                                  ✓ Officiel
-                                </span>
-                              )}
                               {jeu.id.includes('-fallback') && (
                                 <span className="ml-2 text-xs bg-blue-600/20 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/30">
                                   ⭐ Populaire
