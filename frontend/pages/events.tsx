@@ -1092,25 +1092,7 @@ export default function PageRaces() {
             </button>
           </div>
 
-          {/* Stats rapides */}
-          <div className="grid grid-cols-4 gap-4">
-            <div className="bg-slate-800 p-4 rounded">
-              <div className="text-2xl font-bold text-white">{races.length}</div>
-              <div className="text-slate-400 text-sm">Total des Courses</div>
-            </div>
-            <div className="bg-slate-800 p-4 rounded">
-              <div className="text-2xl font-bold text-green-400">{races.filter(r => r.statut === 'en-cours').length}</div>
-              <div className="text-slate-400 text-sm">En Cours</div>
-            </div>
-            <div className="bg-slate-800 p-4 rounded">
-              <div className="text-2xl font-bold text-yellow-400">{races.filter(r => r.statut === 'prete').length}</div>
-              <div className="text-slate-400 text-sm">Prêtes à Démarrer</div>
-            </div>
-            <div className="bg-slate-800 p-4 rounded">
-              <div className="text-2xl font-bold text-blue-400">{races.filter(r => r.statut === 'en-attente').length}</div>
-              <div className="text-slate-400 text-sm">En Attente</div>
-            </div>
-          </div>
+
 
           {/* Liste des courses */}
           <div className="bg-slate-800 rounded-lg overflow-hidden">
